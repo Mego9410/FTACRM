@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { contactName } from "@/lib/contact-helpers";
 import { LinkTabs } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/primitives";
+import { StageTracker, type StageState } from "@/components/deals/stage-tracker";
 import { formatGBP, relativeTime } from "@/lib/utils";
 
 export default async function DealLayout({
@@ -15,17 +16,28 @@ export default async function DealLayout({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const { data: deal } = await supabase
-    .from("deals")
-    .select(
-      `id, ref, status, agreed_price, target_completion_date, last_activity_at, completed_at,
-       practices!deals_practice_id_fkey(id, display_title, ref),
-       buyer:contacts!deals_buyer_contact_id_fkey(id, first_name, last_name, company_name),
-       seller:contacts!deals_seller_contact_id_fkey(id, first_name, last_name, company_name)`,
-    )
-    .eq("id", id)
-    .maybeSingle();
+  const [{ data: deal }, { data: stages }, { data: events }] = await Promise.all([
+    supabase
+      .from("deals")
+      .select(
+        `id, ref, status, agreed_price, target_completion_date, last_activity_at, completed_at,
+         practices!deals_practice_id_fkey(id, display_title, ref),
+         buyer:contacts!deals_buyer_contact_id_fkey(id, first_name, last_name, company_name),
+         seller:contacts!deals_seller_contact_id_fkey(id, first_name, last_name, company_name)`,
+      )
+      .eq("id", id)
+      .maybeSingle(),
+    supabase.from("deal_stages").select("id, label, sort_order").order("sort_order"),
+    supabase.from("deal_stage_events").select("stage_id, achieved_on").eq("deal_id", id),
+  ]);
   if (!deal) notFound();
+
+  const stageStates: StageState[] = (stages ?? []).map((s) => ({
+    id: s.id,
+    label: s.label,
+    sort_order: s.sort_order,
+    achieved_on: (events ?? []).find((e) => e.stage_id === s.id)?.achieved_on ?? null,
+  }));
 
   const practice = deal.practices as unknown as { id: string; display_title: string; ref: string } | null;
   const buyer = deal.buyer as unknown as { id: string; first_name: string | null; last_name: string | null; company_name: string | null } | null;
@@ -72,6 +84,12 @@ export default async function DealLayout({
           {deal.target_completion_date ? <span>Target completion {deal.target_completion_date}</span> : null}
         </p>
       </div>
+      {stageStates.length ? (
+        <div className="mb-5 rounded-lg border border-line bg-surface-1 px-5 pb-4 pt-3.5">
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-fg-4">Sales progression</p>
+          <StageTracker stages={stageStates} size="lg" dealStatus={deal.status} />
+        </div>
+      ) : null}
       <LinkTabs
         className="mb-5"
         tabs={[
