@@ -6,7 +6,7 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │  Vercel (Next.js 15 App Router, TypeScript)                     │
 │  ├─ Server Components (reads)  ├─ Server Actions (writes)       │
-│  ├─ Route handlers: /api/webhooks/{resend,graph}                │
+│  ├─ Route handlers: /api/webhooks/{resend,graph,3cx}            │
 │  └─ Vercel Cron: token refresh, subscription renewal,           │
 │     campaign dispatch, stalled-deal scan, digest jobs           │
 └──────────┬──────────────────────────────────────────────────────┘
@@ -21,6 +21,8 @@
 External: Resend (bulk + transactional email, webhooks in)
           Microsoft Graph (mail delta sync, calendar 2-way, per-user OAuth)
           Anthropic API (AI features, server-side only)
+          3CX cloud PBX (call journaling webhook in; XAPI for history + recordings) — phase 8b
+          Deepgram (call transcription, EU endpoint) — phase 8b
 ```
 
 ## Project structure
@@ -42,6 +44,7 @@ src/
     api/
       webhooks/resend/route.ts
       webhooks/graph/route.ts
+      webhooks/3cx/route.ts    # phase 8b — call journaling events
       cron/[job]/route.ts      # secured with CRON_SECRET
   components/
     ui/                        # shadcn primitives, FTA-restyled
@@ -54,6 +57,8 @@ src/
     graph/                     # Microsoft Graph client, token store, delta sync
     resend/                    # campaign dispatcher, webhook verification
     ai/                        # Anthropic client, prompt builders, feature fns
+    telephony/                 # phase 8b — 3CX client (XAPI), webhook types, E.164 normalise
+    transcription/             # phase 8b — Deepgram client (swappable vendor wrapper)
     matching/                  # pure matching/scoring functions (unit-tested)
     merge-tags/                # template token rendering (unit-tested)
     audit.ts                   # audit-log write helper
@@ -89,9 +94,10 @@ supabase/
   data (FTA is one firm; branch scoping is a filter, not a security boundary). Writes checked
   against role. Sensitive tables (`graph_connections`, `audit_log`, `ai_jobs`) restricted:
   users see only their own connections; audit read-only for all, insert via server only.
-- **Secrets**: Supabase service-role key, Resend key, Graph client secret, Anthropic key —
-  Vercel server env only. Webhooks verify signatures (Resend Svix signature; Graph
-  `clientState` + validation-token handshake).
+- **Secrets**: Supabase service-role key, Resend key, Graph client secret, Anthropic key,
+  3CX API credentials, Deepgram key — Vercel server env only. Webhooks verify signatures
+  (Resend Svix signature; Graph `clientState` + validation-token handshake; 3CX
+  shared-secret header).
 - **Graph tokens**: refresh tokens encrypted with `pgcrypto` (`ENCRYPTION_KEY` env) in
   `graph_connections`; decrypted server-side only.
 - **Cron endpoints**: require `Authorization: Bearer ${CRON_SECRET}`.
@@ -109,6 +115,8 @@ supabase/
 | `stalled-deal-scan` | daily 07:00 | Flag deals with no activity ≥ N days; notify deal owner |
 | `smart-list-refresh` | hourly | Recompute saved-list counts for dashboard |
 | `ai-digest` | daily 07:30 | Optional per-user "your day ahead" brief |
+| `telephony-sync` | every 10 min | Phase 8b safety-net poll of 3CX call history (webhooks are primary) |
+| `telephony-recording-fetch` | every 5 min | Phase 8b: fetch pending 3CX recordings → Storage → transcribe → queue AI analysis |
 
 ## Environments
 
