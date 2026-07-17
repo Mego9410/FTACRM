@@ -4,6 +4,21 @@ import { NextResponse, type NextRequest } from "next/server";
 const PUBLIC_PATHS = ["/sign-in", "/unsubscribe", "/api/webhooks", "/api/cron", "/auth"];
 
 export async function middleware(request: NextRequest) {
+  // Unconfigured deployment (no Supabase env vars): show the setup notice
+  // instead of crashing on every request.
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    if (request.nextUrl.pathname === "/setup") return NextResponse.next();
+    const url = request.nextUrl.clone();
+    url.pathname = "/setup";
+    url.search = "";
+    return NextResponse.rewrite(url);
+  }
+  if (request.nextUrl.pathname === "/setup") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
