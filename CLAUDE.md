@@ -1,8 +1,17 @@
 # FTA CRM — agent instructions
 
-You are building a ground-up CRM for Frank Taylor & Associates (FTA), a UK dental-practice
+You are working on a ground-up CRM for Frank Taylor & Associates (FTA), a UK dental-practice
 sales agency. **Read `PLAN.md` first** — it is the master plan and document map. Then read
 the spec for whichever phase you're working on in `docs/features/`.
+
+## Build status
+
+Phases 0–7 are **built** (see README.md): foundations/admin, contacts, practices, deals,
+matching, campaigns (sending stubbed — no Resend linked, by request), calendar/tasks,
+reporting. Not built: AI features (phase 8, out of scope for this build), data migration
+(phase 9, awaits legacy exports), M365 mail/calendar delta sync (OAuth + token storage
+exist; sync is the next step). The local-validation Postgres workflow lives in
+`scripts/local/` + `pnpm db:apply:local`.
 
 ## Orientation
 

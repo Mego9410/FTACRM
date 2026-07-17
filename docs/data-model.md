@@ -5,7 +5,13 @@ document is the design reference. All tables get `id uuid pk default gen_random_
 `created_at timestamptz default now()`, `updated_at timestamptz` (trigger-maintained) unless
 noted. RLS enabled on everything (see `architecture.md`).
 
-Extensions: `postgis`, `pg_trgm`, `pgcrypto`, `unaccent`.
+Extensions: `pg_trgm`, `pgcrypto`, `unaccent`, `citext`.
+
+> **Build note:** the implementation replaced the planned PostGIS `geography` columns with
+> plain `lat`/`lng` doubles plus a `haversine_miles()` SQL function (and the same pure
+> function in `src/lib/matching/`). Identical behaviour at FTA's scale, one less extension
+> to operate, and fully testable on vanilla Postgres. References to `geography(point)`
+> below should be read as `lat double precision, lng double precision`.
 
 ---
 
