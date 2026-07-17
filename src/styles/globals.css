@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+/* ── FTA brand tokens (from design-system/colors_and_type.css) mapped into Tailwind ── */
+@theme {
+  --color-gold: #e4ad25;
+  --color-gold-hover: #ce9a1b;
+  --color-gold-deep: #b4862a;
+  --color-gold-tint: #fbf1d6;
+  --color-gold-tint-2: #f6e7be;
+
+  --color-ink: #0f0f0a;
+  --color-ink-pure: #090909;
+  --color-fg-1: #1a1a17;
+  --color-fg-2: #5e5e5a;
+  --color-fg-3: #8c8c88;
+  --color-fg-4: #b6b6b2;
+
+  --color-surface: #ffffff;
+  --color-surface-2: #f4f4f3;
+  --color-surface-3: #efefee;
+  --color-surface-disc: #f3f3f1;
+
+  --color-line: #e7e7e4;
+  --color-line-strong: #1a1a17;
+
+  --color-available: #2dd443;
+  --color-available-fg: #1aa836;
+  --color-nhs-bg: #e6f0fa;
+  --color-nhs-fg: #2f77be;
+  --color-mixed-bg: #f7e8f6;
+  --color-mixed-fg: #a23b9e;
+  --color-private-bg: #e5f7ea;
+  --color-private-fg: #1f9d4d;
+
+  /* App-only extensions (approved in docs/design.md — brand has no error red) */
+  --color-danger: #c4382d;
+  --color-danger-bg: #faeae8;
+  --color-warn: #b4862a;
+  --color-warn-bg: #fbf1d6;
+
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  --shadow-xs: 0 1px 2px rgba(15, 15, 10, 0.05);
+  --shadow-sm: 0 2px 8px rgba(15, 15, 10, 0.06);
+  --shadow-md: 0 10px 28px rgba(15, 15, 10, 0.08);
+  --shadow-lg: 0 24px 60px rgba(15, 15, 10, 0.12);
+  --shadow-gold: 0 10px 24px rgba(228, 173, 37, 0.28);
+
+  --font-sans: var(--font-hanken), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-serif: var(--font-lora), Georgia, serif;
+
+  --ease-out-fta: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-fg-2);
+  background: var(--color-surface-2);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+h1, h2, h3, h4 {
+  color: var(--color-fg-1);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+/* Focus ring: gold, per brand */
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 1px;
+}
+
+/* FullCalendar restyle to FTA tokens (loaded globally; calendar page only renders it) */
+.fc {
+  --fc-border-color: var(--color-line);
+  --fc-today-bg-color: var(--color-gold-tint);
+  --fc-button-bg-color: var(--color-surface);
+  --fc-button-border-color: var(--color-line);
+  --fc-button-text-color: var(--color-fg-1);
+  --fc-button-active-bg-color: var(--color-ink);
+  --fc-button-active-border-color: var(--color-ink);
+  --fc-button-hover-bg-color: var(--color-surface-3);
+  --fc-button-hover-border-color: var(--color-line);
+  --fc-event-border-color: transparent;
+  --fc-page-bg-color: var(--color-surface);
+  font-size: 13px;
+}
+.fc .fc-button { border-radius: 10px; font-weight: 600; text-transform: capitalize; }
+.fc .fc-toolbar-title { font-size: 18px; font-weight: 700; color: var(--color-fg-1); letter-spacing: -0.02em; }
+.fc .fc-event { border-radius: 6px; padding: 1px 4px; font-weight: 600; cursor: pointer; }
+.fc .fc-daygrid-day-number, .fc .fc-col-header-cell-cushion { color: var(--color-fg-2); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
