@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import { ResetForm } from "./reset-form";
 
 export const metadata = { title: "Set password" };
+// Render at request time — prerendering would require Supabase env vars at build.
+export const dynamic = "force-dynamic";
 
 export default function ResetPage() {
   return (

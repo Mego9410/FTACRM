@@ -3,6 +3,8 @@ import { Suspense } from "react";
 import { SignInForm } from "./sign-in-form";
 
 export const metadata = { title: "Sign in" };
+// Render at request time — prerendering would require Supabase env vars at build.
+export const dynamic = "force-dynamic";
 
 export default function SignInPage() {
   return (
