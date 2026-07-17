@@ -1,0 +1,24 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{width:700px;background:var(--surface);font-family:var(--font-sans);padding:28px;color:var(--fg-1)}
+  .row{display:flex;gap:12px;align-items:center}
+  .col{display:flex;flex-direction:column}
+  .grid{display:grid;gap:14px}
+  .lbl{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--fg-3)}
+  .sw{border-radius:14px;height:84px;display:flex;align-items:flex-end;padding:10px;border:1px solid rgba(0,0,0,.05)}
+  .name{font-size:12.5px;font-weight:700;margin-top:8px;color:var(--fg-1)}
+  .hex{font-size:11.5px;color:var(--fg-3);font-family:ui-monospace,monospace}
+  .grid{grid-template-columns:repeat(5,1fr)}
+</style></head><body>
+<div class="col" style="gap:14px">
+  <div class="lbl">Brand gold</div>
+  <div class="grid">
+    <div><div class="sw" style="background:var(--gold-tint);color:rgba(0,0,0,.25)"></div><div class="name">Gold tint</div><div class="hex">#FBF1D6</div></div>
+    <div><div class="sw" style="background:var(--gold-tint-2);color:rgba(0,0,0,.25)"></div><div class="name">Gold wash</div><div class="hex">#F6E7BE</div></div>
+    <div><div class="sw" style="background:var(--gold);color:#fff"></div><div class="name">Gold ●</div><div class="hex">#E4AD25</div></div>
+    <div><div class="sw" style="background:var(--gold-hover);color:#fff"></div><div class="name">Gold hover</div><div class="hex">#CE9A1B</div></div>
+    <div><div class="sw" style="background:var(--gold-deep);color:#fff"></div><div class="name">Gold deep</div><div class="hex">#B4862A</div></div>
+  </div>
+</div></body></html>

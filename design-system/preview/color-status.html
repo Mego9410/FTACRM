@@ -1,0 +1,23 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{width:700px;background:var(--surface);font-family:var(--font-sans);padding:28px;color:var(--fg-1)}
+  .row{display:flex;gap:12px;align-items:center}
+  .col{display:flex;flex-direction:column}
+  .grid{display:grid;gap:14px}
+  .lbl{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--fg-3)}
+  .sw{border-radius:14px;height:84px;display:flex;align-items:flex-end;padding:10px;border:1px solid rgba(0,0,0,.05)}
+  .name{font-size:12.5px;font-weight:700;margin-top:8px;color:var(--fg-1)}
+  .hex{font-size:11.5px;color:var(--fg-3);font-family:ui-monospace,monospace}
+  .grid{grid-template-columns:repeat(4,1fr)}
+</style></head><body>
+<div class="col" style="gap:14px">
+  <div class="lbl">Functional status</div>
+  <div class="grid">
+    <div><div class="sw" style="background:var(--available);color:#fff"></div><div class="name">Available</div><div class="hex">#2DD443</div></div>
+    <div><div class="sw" style="background:var(--badge-nhs-fg);color:#fff"></div><div class="name">NHS</div><div class="hex">#2F77BE</div></div>
+    <div><div class="sw" style="background:var(--badge-mixed-fg);color:#fff"></div><div class="name">Mixed</div><div class="hex">#A23B9E</div></div>
+    <div><div class="sw" style="background:var(--badge-private-fg);color:#fff"></div><div class="name">Private</div><div class="hex">#1F9D4D</div></div>
+  </div>
+</div></body></html>
