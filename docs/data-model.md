@@ -251,6 +251,24 @@ Trigger updates `contacts.last_contacted_at` / `deals.last_activity_at`.
 `storage_path`, `file_name`, `mime_type`, `size_bytes`, `category_id fk lookup_values`,
 `contact_id/practice_id/deal_id` (nullable links), `uploaded_by`. Private bucket, signed URLs.
 
+### `call_recordings` (phase 8b — see `features/11-telephony.md`)
+| column | type | notes |
+|---|---|---|
+| journal_entry_id | uuid fk journal_entries unique | 1:1 with the call's journal entry |
+| provider_call_id | text unique | 3CX call id — idempotency key for webhook/poll dedupe |
+| external_number | text | E.164; kept for unmatched-call queue + re-matching |
+| extension | text | 3CX extension → resolved to `profiles` via admin mapping |
+| duration_seconds | int | |
+| recording_storage_path | text nullable | `call-recordings` bucket (private, signed URLs) |
+| transcript | text nullable | diarised (Agent/Caller) |
+| transcript_status | text | `pending` \| `fetched` \| `transcribed` \| `failed` \| `none` |
+| retrieved_at, transcribed_at | timestamptz nullable | |
+
+Kept separate from `journal_entries` so the timeline table stays lean (same idea as
+`documents`). Recording playback gated by `role_permissions` (`telephony.play_recordings`);
+recordings/transcripts included in the GDPR erasure routine. Unmatched calls (no contact
+link on the journal entry) purge their recordings after a transient window.
+
 ### `checklist_templates` / `checklist_template_items`
 Template: `name`, `applies_to` (`contact` | `practice` | `deal` | `valuation`), `is_active`.
 Items: `label`, `sort_order`, `is_required`.
@@ -417,6 +435,7 @@ contacts 1─1 buyer_criteria ──< buyer_search_areas
 practices ──< valuations / viewings / offers / practice_media / enquiries
 offers 1─1 deals >── deal_stage_events >── deal_stages
 contacts/practices/deals ──< journal_entries / documents / tasks / checklist_instances / audit_log
+journal_entries 1─1 call_recordings   (entry_type='call', via 3CX)
 campaigns ──< campaign_recipients ──< email_events
 profiles 1─1 graph_connections ──< email_messages
 calendar_events ──< calendar_event_attendees

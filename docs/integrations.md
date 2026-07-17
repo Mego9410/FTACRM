@@ -7,7 +7,8 @@ the account-level steps; everything else is code.
 
 1. Create project in **eu-west-2 (London)** — UK data residency.
 2. Enable extensions: `postgis`, `pg_trgm`, `pgcrypto`, `unaccent`, `citext`.
-3. Buckets (private): `documents`, `practice-media`, `campaign-assets`.
+3. Buckets (private): `documents`, `practice-media`, `campaign-assets`, `call-recordings`
+   (phase 8b).
 4. Auth: email provider on; disable public signups (invite-only).
 5. Link repo via Supabase CLI; migrations deploy from CI only.
 
@@ -49,6 +50,31 @@ the account-level steps; everything else is code.
 2. Models via env so upgrades are config: `AI_MODEL_REASONING=claude-sonnet-5`,
    `AI_MODEL_FAST=claude-haiku-4-5-20251001`.
 
+## 3CX (phase 8b — AI call capture)
+
+FTA's phone system is 3CX-hosted cloud, so it can reach the public webhook URL directly.
+
+1. Admin Console → Integrations → API: create an API client (client credentials) →
+   `THREECX_API_CLIENT_ID` / `THREECX_API_CLIENT_SECRET`; note the instance FQDN →
+   `THREECX_FQDN`. Used server-side to poll call history and fetch recording files (XAPI).
+2. Configure the server-side CRM integration (call journaling) to POST call-end events to
+   `https://<prod>/api/webhooks/3cx` with a shared-secret header → `THREECX_WEBHOOK_SECRET`.
+   The poll cron is the safety net, so webhook gaps are tolerated.
+3. Enable call recording for the relevant extensions/queues, and set the recording
+   notification announcement ("calls may be recorded…") — **required for UK compliance
+   before the integration goes live**.
+4. Map staff extensions to CRM profiles in Control Centre after first sync.
+5. Confirm recording retention on the 3CX side is at least the CRM's fetch window; the CRM
+   keeps its own copy in Storage, so 3CX-side retention can stay short.
+
+## Deepgram (phase 8b — call transcription)
+
+1. Create an API key → `DEEPGRAM_API_KEY`. Confirm the **EU-hosted endpoint** at setup
+   (UK GDPR data residency) → `DEEPGRAM_API_URL`. If EU residency can't be confirmed,
+   swap to Azure AI Speech (UK South) — the client is wrapped in `lib/transcription/` so
+   only that module changes.
+2. Pre-recorded audio API, `en-GB`, diarisation on. Set a monthly budget alert.
+
 ## Geocoding / postcode lookup
 
 - `postcodes.io` (free, UK, no key) for postcode → lat/lng + address candidates. Wrap in
@@ -83,6 +109,16 @@ MS_CLIENT_SECRET=
 ANTHROPIC_API_KEY=
 AI_MODEL_REASONING=claude-sonnet-5
 AI_MODEL_FAST=claude-haiku-4-5-20251001
+
+# 3CX (phase 8b)
+THREECX_FQDN=
+THREECX_API_CLIENT_ID=
+THREECX_API_CLIENT_SECRET=
+THREECX_WEBHOOK_SECRET=
+
+# Deepgram (phase 8b)
+DEEPGRAM_API_KEY=
+DEEPGRAM_API_URL=              # EU-hosted endpoint, confirmed at setup
 ```
 
 ## Deliverability checklist (before first big campaign)
