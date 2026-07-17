@@ -17,6 +17,19 @@ the spec for whichever phase you're working on in `docs/features/`.
   Context only; where it conflicts with the plan, the plan wins. Do not rebuild vestigial
   real-estate features (Rooms, EPC, Council Tax, portals).
 
+## Tooling available
+
+- **Supabase MCP server** is configured in `.mcp.json` (project scope), pointed at the
+  project's Supabase instance. Use it for schema inspection, running migrations, and
+  querying — prefer it over hand-written `psql`/REST calls where it covers the task. Run
+  `claude /mcp` once per environment to authenticate before first use.
+- **Supabase Agent Skills** are installed under `.agents/skills/` (symlinked into
+  `.claude/skills/`): `supabase` (general Supabase usage) and
+  `supabase-postgres-best-practices` (schema/query/RLS/locking/connection-pooling
+  reference). Consult `supabase-postgres-best-practices` before writing migrations in
+  `supabase/migrations/` — the data model in `docs/data-model.md` should follow its
+  indexing, RLS, and constraint guidance.
+
 ## Working rules
 
 - Work phase by phase in PLAN.md order; meet each phase's acceptance criteria (checklists
