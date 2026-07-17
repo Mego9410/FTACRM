@@ -26,6 +26,7 @@ numbered feature specs in `docs/features/` phase by phase.
 | `docs/features/07-calendar.md` | Shared team calendar + two-way Outlook sync, tasks, notifications |
 | `docs/features/08-reporting.md` | KPI dashboard, activity feed, saved lists / smart views |
 | `docs/features/09-ai-features.md` | Anthropic API features: summarisation, drafting, NL search, deal-risk flags |
+| `docs/features/11-telephony.md` | AI call capture: 3CX integration, transcription, proposed tasks, draft follow-ups |
 | `docs/features/10-migration.md` | iamproperty data migration: export mapping, import tooling, validation |
 | `docs/integrations.md` | Setup for Supabase, Vercel, Resend, Microsoft Graph, Anthropic — env vars & DNS |
 | `docs/design.md` | Applying the FTA design system inside the app UI |
@@ -61,6 +62,9 @@ sales, progression, and admin.
   Microsoft 365 mailbox sync so email lands on the record automatically.
 - **AI throughout** (Anthropic API) — call summarisation, record catch-ups, drafting, natural
   language search, stalled-deal detection. Always human-in-the-loop.
+- **Phone system integration** — the old system had no telephony at all (calls were typed up
+  by hand). 3CX calls auto-log to the journal, recordings are transcribed, and AI proposes
+  follow-up tasks and draft emails for human approval. See `docs/features/11-telephony.md`.
 - **Fast** — the old system crawled under 420 live deals and thousands of contacts. Target
   sub-second interactions on lists of 10,000+ rows.
 
@@ -185,6 +189,17 @@ email classification, meeting prep briefs.
 
 **Done when:** each shipped AI feature is opt-in-visible, clearly labelled, editable before any
 send, and degrades gracefully when the API is unavailable.
+
+### Phase 8b — AI call capture / 3CX (`docs/features/11-telephony.md`)
+Builds on Phases 1, 6, and 8. 3CX cloud integration: calls auto-log to the contact journal
+(webhook + safety-net poll), recordings stored and transcribed (Deepgram, EU), AI analysis
+proposes follow-up tasks with due dates and a draft follow-up email — all reviewed and
+approved by a human before anything is created or sent. Unmatched-call queue, extension →
+staff mapping, recording playback permissions, UK call-recording compliance.
+
+**Done when:** an external call appears on the right contact's journal with a transcript and
+AI summary; suggested tasks and the draft follow-up require explicit user acceptance; every
+failure mode (no recording, transcription or AI outage) still leaves a cleanly logged call.
 
 ### Phase 9 — Migration & go-live (`docs/features/10-migration.md`)
 Import tooling for iamproperty exports (contacts, practices, offers, deals, journals),
