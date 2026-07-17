@@ -43,11 +43,12 @@ the update script):
    A profile row is auto-created by the `on_auth_user_created` trigger (default role
    `agent`); the update promotes it to `admin`. Then sign in at http://localhost:3000/sign-in.
 5. **Run the app**: `pnpm dev` → http://localhost:3000.
-6. **(Optional) Demo data**: `supabase/demo-data.sql` adds dummy practices, buyers, sellers,
-   solicitors, offers, deals across progression stages, and correspondence for exploring the
-   flow. Load it AFTER the admin user exists (it attributes ownership/authorship to the first
-   profile) and it is idempotent:
-   `docker exec -i supabase_db_workspace psql -U postgres -d postgres < supabase/demo-data.sql`.
+6. **(Optional) Demo data**: `supabase/seed_demo.sql` adds 100 buyers, 100 sellers, 50
+   practices (with linked sellers and interested buyers), offers, deals across the
+   progression stages, and ~470 pieces of correspondence for exploring the flow. Load it
+   AFTER the admin user exists (it attributes ownership/authorship to the first profile) and
+   it is idempotent (replaces only `DEMO-…`-tagged rows):
+   `docker exec -i supabase_db_workspace psql -U postgres -d postgres < supabase/seed_demo.sql`.
    It is not auto-seeded (so it stays out of fresh resets / hosted); rerun it after a
    `supabase db reset`.
 
