@@ -17,6 +17,12 @@ the account-level steps; everything else is code.
 2. Add env vars (below) for Production + Preview.
 3. `vercel.json` cron entries per `docs/architecture.md`; set `CRON_SECRET`.
 
+> **Free (Hobby) plan note:** Hobby allows max 2 cron jobs, each **once per day** with
+> loose timing. `vercel.json` is currently configured within those limits (both jobs
+> daily). Before go-live with real email sending, upgrade to Pro and restore the
+> campaign dispatcher to `* * * * *` so queued campaigns drain within minutes rather
+> than once a day. The stalled-deal scan is fine daily on any plan.
+
 ## Resend
 
 1. Add + verify sending domain — use a **subdomain**, e.g. `mail.ft-associates.com`

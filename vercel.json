@@ -1,6 +1,6 @@
 {
   "crons": [
     { "path": "/api/cron/stalled-deals", "schedule": "0 7 * * *" },
-    { "path": "/api/cron/campaign-dispatch", "schedule": "* * * * *" }
+    { "path": "/api/cron/campaign-dispatch", "schedule": "30 7 * * *" }
   ]
 }
