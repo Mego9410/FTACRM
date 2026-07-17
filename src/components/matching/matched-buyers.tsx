@@ -1,11 +1,8 @@
-import { EmptyState } from "@/components/ui/primitives";
+import { getMatchingBuyers } from "@/lib/matching/queries";
+import { MatchedBuyersClient } from "./matched-buyers-client";
 
-/** Placeholder until the matching engine phase lands. */
-export async function MatchedBuyers({ practiceId: _practiceId }: { practiceId: string }) {
-  return (
-    <EmptyState
-      title="Matching arrives shortly"
-      body="Ranked buyer matches for this practice will appear here."
-    />
-  );
+/** Ranked buyer matches for a practice, with bulk actions on selections. */
+export async function MatchedBuyers({ practiceId }: { practiceId: string }) {
+  const rows = await getMatchingBuyers(practiceId);
+  return <MatchedBuyersClient practiceId={practiceId} rows={rows} />;
 }
