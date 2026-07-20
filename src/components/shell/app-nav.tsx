@@ -12,6 +12,8 @@ import {
   ListTodo,
   LogOut,
   Menu as MenuIcon,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   Settings,
   User,
@@ -50,14 +52,35 @@ function Wordmark({ size = 30 }: { size?: number }) {
   );
 }
 
-export function AppNav({ profile }: { profile: SessionProfile }) {
+export function AppNav({ profile, children }: { profile: SessionProfile; children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [collapsed, setCollapsed] = React.useState(false);
+
+  React.useEffect(() => {
+    try {
+      setCollapsed(window.localStorage.getItem("aspen-sidebar-collapsed") === "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   React.useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
+
+  function toggleCollapsed() {
+    setCollapsed((v) => {
+      const next = !v;
+      try {
+        window.localStorage.setItem("aspen-sidebar-collapsed", next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
 
   async function signOut() {
     await createClient().auth.signOut();
@@ -67,7 +90,7 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
-  const NavLinks = ({ onNavigate }: { onNavigate?: () => void }) => (
+  const NavLinks = ({ onNavigate, mini = false }: { onNavigate?: () => void; mini?: boolean }) => (
     <>
       {NAV.map((item) => {
         const active = isActive(item.href);
@@ -77,33 +100,74 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
             key={item.href}
             href={item.href}
             onClick={onNavigate}
+            title={mini ? item.label : undefined}
+            aria-label={mini ? item.label : undefined}
             className={cn(
-              "flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-semibold transition-colors",
-              active ? "bg-gold-tint text-gold-deep" : "text-fg-2 hover:bg-surface-2 hover:text-fg-1",
+              "group relative flex items-center rounded-[10px] text-sm font-semibold transition-colors",
+              mini ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5",
+              active ? "bg-gold-tint text-gold-deep shadow-xs" : "text-fg-2 hover:bg-surface-2 hover:text-fg-1",
             )}
           >
-            <Icon size={18} className="shrink-0" />
-            {item.label}
+            {active && !mini ? (
+              <span className="absolute left-1 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-gold" />
+            ) : null}
+            <Icon size={18} className={cn("shrink-0", active ? "text-gold-deep" : "text-fg-3 group-hover:text-fg-1")} />
+            {!mini ? <span className="truncate">{item.label}</span> : null}
           </Link>
         );
       })}
     </>
   );
 
+  const railWidth = collapsed ? "lg:w-[70px]" : "lg:w-60";
+  const contentPad = collapsed ? "lg:pl-[70px]" : "lg:pl-60";
+
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-line bg-surface lg:flex">
-        <Link href="/dashboard" className="flex h-14 shrink-0 items-center border-b border-line px-5">
-          <Wordmark />
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-line bg-surface transition-[width] duration-200 lg:flex",
+          railWidth,
+        )}
+      >
+        <Link
+          href="/dashboard"
+          className={cn("flex h-14 shrink-0 items-center border-b border-line", collapsed ? "justify-center px-0" : "px-5")}
+        >
+          {collapsed ? (
+            <Image src="/brand/logo.png" alt="Aspen" width={32} height={32} className="rounded-[8px]" />
+          ) : (
+            <Wordmark />
+          )}
         </Link>
+
         <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
-          <NavLinks />
+          {!collapsed ? (
+            <p className="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-fg-4">Menu</p>
+          ) : null}
+          <NavLinks mini={collapsed} />
         </nav>
+
+        <div className="border-t border-line p-3">
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            title={collapsed ? "Expand menu" : "Collapse menu"}
+            aria-label={collapsed ? "Expand menu" : "Collapse menu"}
+            className={cn(
+              "flex w-full items-center rounded-[10px] py-2.5 text-sm font-semibold text-fg-3 transition-colors hover:bg-surface-2 hover:text-fg-1",
+              collapsed ? "justify-center px-0" : "gap-3 px-3",
+            )}
+          >
+            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+            {!collapsed ? "Collapse" : null}
+          </button>
+        </div>
       </aside>
 
       {/* Top bar — search + right-hand icons only */}
-      <header className="sticky top-0 z-30 border-b border-line bg-surface lg:pl-60">
+      <header className={cn("sticky top-0 z-30 border-b border-line bg-surface transition-[padding] duration-200", contentPad)}>
         <div className="mx-auto flex h-14 w-full max-w-[1400px] items-center gap-2 px-3 sm:gap-3 sm:px-6">
           <button
             type="button"
@@ -177,6 +241,11 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
           </div>
         </div>
       </header>
+
+      {/* Main content — reflows with the sidebar width */}
+      <main className={cn("transition-[padding] duration-200", contentPad)}>
+        <div className="mx-auto w-full max-w-[1400px] overflow-x-clip px-4 py-6 sm:px-6">{children}</div>
+      </main>
 
       {/* Mobile drawer */}
       {mobileOpen ? (
