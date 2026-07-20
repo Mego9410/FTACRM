@@ -3,45 +3,62 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { Pencil } from "lucide-react";
 import type { LookupValue } from "@/lib/lookups";
-import { Badge, Button, Card, EmptyState, Field, Input, Select, Textarea } from "@/components/ui/primitives";
+import { Avatar, Badge, Button, Card, EmptyState, Field, Input, Select, Textarea } from "@/components/ui/primitives";
 import { SortSelect, useClientSort } from "@/components/ui/sortable";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
 import { cn, formatDateTime } from "@/lib/utils";
 import { saveTask, setTaskStatus } from "./actions";
+import type { LinkColumn, LinkType } from "./link-search";
+import { LINK_ICON, TaskLinkPicker, type TaskLink } from "./task-link-picker";
 
-type Task = {
+export type TaskRow = {
   id: string;
   title: string;
   details: string | null;
   due_at: string | null;
   status: string;
   assignee_id: string | null;
+  created_by: string | null;
   category_id: string | null;
-  linked: string | null;
-  linkHref: string | null;
+  link: { type: LinkType; column: LinkColumn; id: string; title: string; href: string } | null;
+  assigneeName: string | null;
+  assigneeColor: string | null;
+  creatorName: string | null;
 };
+
+type TeamMember = { id: string; full_name: string; calendar_color: string | null };
+
+function toLocalInputValue(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 export function TasksClient({
   me,
-  canSeeTeam,
-  assignee,
+  view,
   openNew,
   tasks,
   team,
   categories,
 }: {
   me: string;
-  canSeeTeam: boolean;
-  assignee: string;
+  view: string;
   openNew: boolean;
-  tasks: Task[];
-  team: { id: string; full_name: string }[];
+  tasks: TaskRow[];
+  team: TeamMember[];
   categories: LookupValue[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [creating, setCreating] = React.useState(openNew);
+  const [dialog, setDialog] = React.useState<{ mode: "new" | "edit"; task: TaskRow | null } | null>(
+    openNew ? { mode: "new", task: null } : null,
+  );
+  const [link, setLink] = React.useState<TaskLink | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
 
@@ -50,6 +67,7 @@ export function TasksClient({
     {
       due_at: (t) => t.due_at,
       title: (t) => t.title,
+      assignee: (t) => t.assigneeName,
       category: (t) => (t.category_id ? categories.find((c) => c.id === t.category_id)?.value ?? "" : ""),
     },
     { key: "due_at", dir: "asc" },
@@ -57,9 +75,20 @@ export function TasksClient({
 
   const now = new Date();
   const open = sorted.filter((t) => t.status === "open");
-  const done = sorted.filter((t) => t.status === "done").slice(0, 20);
+  const done = sorted.filter((t) => t.status === "done").slice(0, 30);
   const overdue = open.filter((t) => t.due_at && new Date(t.due_at) < now);
   const upcoming = open.filter((t) => !t.due_at || new Date(t.due_at) >= now);
+
+  function openNewDialog() {
+    setLink(null);
+    setError(null);
+    setDialog({ mode: "new", task: null });
+  }
+  function openEditDialog(task: TaskRow) {
+    setLink(task.link ? { type: task.link.type, column: task.link.column, id: task.link.id, title: task.link.title } : null);
+    setError(null);
+    setDialog({ mode: "edit", task });
+  }
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -67,21 +96,30 @@ export function TasksClient({
     setError(null);
     const f = new FormData(e.currentTarget);
     const due = String(f.get("due_at") ?? "");
+    const links = { contact_id: null as string | null, practice_id: null as string | null, deal_id: null as string | null };
+    if (link) links[link.column] = link.id;
     const res = await saveTask({
+      id: dialog?.task?.id,
       title: String(f.get("title")),
       details: String(f.get("details") ?? "") || null,
       due_at: due ? new Date(due).toISOString() : null,
       assignee_id: String(f.get("assignee_id") ?? "") || null,
       category_id: String(f.get("category_id") ?? "") || null,
+      ...links,
     });
     setBusy(false);
     if (!res.ok) return setError(res.error);
-    setCreating(false);
+    setDialog(null);
     router.refresh();
   }
 
-  function TaskRow({ t }: { t: Task }) {
+  const viewLabel = (v: string) =>
+    v === "mine" ? "My tasks" : v === "by-me" ? "Assigned by me" : v === "all" ? "Everyone's tasks" : team.find((t) => t.id === v)?.full_name ?? "Tasks";
+
+  function TaskRowItem({ t }: { t: TaskRow }) {
     const isOverdue = t.status === "open" && t.due_at && new Date(t.due_at) < now;
+    const showAssignee = t.assignee_id !== me && t.assigneeName;
+    const fromSomeoneElse = t.assignee_id === me && t.created_by && t.created_by !== me && t.creatorName;
     return (
       <li className="flex items-center gap-3 px-4 py-2.5">
         <input
@@ -91,76 +129,103 @@ export function TasksClient({
             await setTaskStatus({ id: t.id, status: e.target.checked ? "done" : "open" });
             router.refresh();
           }}
-          className="h-4 w-4 accent-[#E4AD25]"
+          className="h-4 w-4 shrink-0 accent-[#E4AD25]"
           aria-label={`Complete ${t.title}`}
         />
         <div className="min-w-0 flex-1">
-          <p className={cn("text-sm font-semibold", t.status === "done" ? "text-fg-3 line-through" : "text-fg-1")}>
+          <p className={cn("truncate text-sm font-semibold", t.status === "done" ? "text-fg-3 line-through" : "text-fg-1")}>
             {t.title}
           </p>
-          <p className="text-xs text-fg-3">
-            {[
-              t.due_at ? formatDateTime(t.due_at) : null,
-              t.category_id ? categories.find((c) => c.id === t.category_id)?.value : null,
-              t.details,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-fg-3">
+            {t.due_at ? <span className={cn(isOverdue && "font-semibold text-danger")}>{formatDateTime(t.due_at)}</span> : null}
+            {t.category_id ? (
+              <Badge tone="neutral" className="capitalize">
+                {categories.find((c) => c.id === t.category_id)?.value}
+              </Badge>
+            ) : null}
+            {t.link ? (
+              <Link
+                href={t.link.href}
+                className="inline-flex items-center gap-1 rounded-sm bg-gold-tint px-1.5 py-0.5 font-semibold text-gold-deep hover:underline"
+              >
+                {LINK_ICON[t.link.type]}
+                <span className="max-w-40 truncate">{t.link.title}</span>
+              </Link>
+            ) : null}
+            {fromSomeoneElse ? <span className="text-fg-4">from {t.creatorName}</span> : null}
+          </div>
         </div>
-        {t.linked && t.linkHref ? (
-          <Link href={t.linkHref} className="max-w-40 truncate text-xs font-semibold text-gold-deep hover:underline">
-            {t.linked}
-          </Link>
+        {showAssignee ? (
+          <span className="hidden items-center gap-1.5 sm:flex" title={`Assigned to ${t.assigneeName}`}>
+            <Avatar name={t.assigneeName!} size={22} color={t.assigneeColor ?? undefined} />
+            <span className="max-w-28 truncate text-xs font-semibold text-fg-2">{t.assigneeName}</span>
+          </span>
         ) : null}
         {isOverdue ? <Badge tone="danger">Overdue</Badge> : null}
+        <button
+          type="button"
+          onClick={() => openEditDialog(t)}
+          className="shrink-0 rounded p-1 text-fg-4 hover:bg-surface-2 hover:text-fg-1"
+          aria-label={`Edit ${t.title}`}
+        >
+          <Pencil size={15} />
+        </button>
       </li>
     );
   }
 
+  const dialogTask = dialog?.task ?? null;
+
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        {canSeeTeam ? (
-          <Select
-            value={assignee}
-            onChange={(e) => router.push(`${pathname}?assignee=${e.target.value}`)}
-            className="w-52"
-            aria-label="Whose tasks"
-          >
+        <Select
+          value={view}
+          onChange={(e) => router.push(`${pathname}?view=${e.target.value}`)}
+          className="w-56"
+          aria-label="Whose tasks"
+        >
+          <option value="mine">My tasks</option>
+          <option value="by-me">Assigned by me</option>
+          <option value="all">Everyone&apos;s tasks</option>
+          <optgroup label="A person's tasks">
             {team.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.id === me ? `${t.full_name} (me)` : t.full_name}
               </option>
             ))}
-          </Select>
-        ) : (
-          <div />
-        )}
+          </optgroup>
+        </Select>
         <div className="flex items-center gap-2">
           <SortSelect
             options={[
               { key: "due_at", label: "Due date" },
               { key: "title", label: "Title" },
+              { key: "assignee", label: "Assignee" },
               { key: "category", label: "Category" },
             ]}
             sortKey={key}
             dir={dir}
             onChange={set}
           />
-          <Button size="sm" onClick={() => setCreating(true)}>New task</Button>
+          <Button size="sm" onClick={openNewDialog}>New task</Button>
         </div>
       </div>
 
       {open.length === 0 && done.length === 0 ? (
-        <EmptyState title="No tasks" body="A clean slate. Add a task to keep a follow-up from slipping." />
+        <EmptyState
+          title={`No tasks in “${viewLabel(view)}”`}
+          body="Add a task to keep a follow-up from slipping — you can assign it to anyone and tag it to a practice, buyer, seller or deal."
+        />
       ) : (
         <div className="space-y-5">
           {overdue.length > 0 ? (
             <Card className="border-danger/30">
               <p className="border-b border-line px-4 py-2.5 text-sm font-bold text-danger">Overdue ({overdue.length})</p>
               <ul className="divide-y divide-line">
-                {overdue.map((t) => <TaskRow key={t.id} t={t} />)}
+                {overdue.map((t) => (
+                  <TaskRowItem key={t.id} t={t} />
+                ))}
               </ul>
             </Card>
           ) : null}
@@ -170,7 +235,9 @@ export function TasksClient({
               <p className="px-4 py-5 text-sm text-fg-3">Nothing due — nicely on top of things.</p>
             ) : (
               <ul className="divide-y divide-line">
-                {upcoming.map((t) => <TaskRow key={t.id} t={t} />)}
+                {upcoming.map((t) => (
+                  <TaskRowItem key={t.id} t={t} />
+                ))}
               </ul>
             )}
           </Card>
@@ -178,45 +245,58 @@ export function TasksClient({
             <Card>
               <p className="border-b border-line px-4 py-2.5 text-sm font-bold text-fg-3">Recently done</p>
               <ul className="divide-y divide-line">
-                {done.map((t) => <TaskRow key={t.id} t={t} />)}
+                {done.map((t) => (
+                  <TaskRowItem key={t.id} t={t} />
+                ))}
               </ul>
             </Card>
           ) : null}
         </div>
       )}
 
-      <Dialog open={creating} onClose={() => setCreating(false)} title="New task">
-        <form onSubmit={submit} className="space-y-4">
+      <Dialog open={!!dialog} onClose={() => setDialog(null)} title={dialog?.mode === "edit" ? "Edit task" : "New task"}>
+        <form key={dialogTask?.id ?? "new"} onSubmit={submit} className="space-y-4">
           <Field label="Task" htmlFor="tk_title">
-            <Input id="tk_title" name="title" required autoFocus />
+            <Input id="tk_title" name="title" defaultValue={dialogTask?.title ?? ""} required autoFocus />
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Due" htmlFor="tk_due">
-              <Input id="tk_due" name="due_at" type="datetime-local" />
+              <Input id="tk_due" name="due_at" type="datetime-local" defaultValue={toLocalInputValue(dialogTask?.due_at ?? null)} />
             </Field>
             <Field label="Category" htmlFor="tk_cat">
-              <Select id="tk_cat" name="category_id" defaultValue="">
+              <Select id="tk_cat" name="category_id" defaultValue={dialogTask?.category_id ?? ""}>
                 <option value="">None</option>
                 {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.value}</option>
+                  <option key={c.id} value={c.id}>
+                    {c.value}
+                  </option>
                 ))}
               </Select>
             </Field>
           </div>
           <Field label="Assign to" htmlFor="tk_assignee">
-            <Select id="tk_assignee" name="assignee_id" defaultValue={me}>
+            <Select id="tk_assignee" name="assignee_id" defaultValue={dialogTask?.assignee_id ?? me}>
               {team.map((t) => (
-                <option key={t.id} value={t.id}>{t.id === me ? `${t.full_name} (me)` : t.full_name}</option>
+                <option key={t.id} value={t.id}>
+                  {t.id === me ? `${t.full_name} (me)` : t.full_name}
+                </option>
               ))}
             </Select>
           </Field>
+          <Field label="Link to a practice, buyer, seller or deal" htmlFor="tk_link">
+            <TaskLinkPicker value={link} onChange={setLink} />
+          </Field>
           <Field label="Details" htmlFor="tk_details">
-            <Textarea id="tk_details" name="details" rows={2} />
+            <Textarea id="tk_details" name="details" rows={2} defaultValue={dialogTask?.details ?? ""} />
           </Field>
           {error ? <p className="text-sm font-medium text-danger">{error}</p> : null}
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setCreating(false)}>Cancel</Button>
-            <Button type="submit" disabled={busy}>{busy ? "Creating…" : "Create task"}</Button>
+            <Button type="button" variant="ghost" onClick={() => setDialog(null)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={busy}>
+              {busy ? "Saving…" : dialog?.mode === "edit" ? "Save changes" : "Create task"}
+            </Button>
           </DialogFooter>
         </form>
       </Dialog>

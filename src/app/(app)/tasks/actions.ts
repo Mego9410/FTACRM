@@ -27,8 +27,20 @@ export async function saveTask(input: unknown): Promise<ActionResult> {
   const supabase = await createClient();
 
   if (id) {
+    const { data: existing } = await supabase.from("tasks").select("assignee_id").eq("id", id).single();
     const { error } = await supabase.from("tasks").update(fields).eq("id", id);
     if (error) return fail(error.message);
+    const newAssignee = fields.assignee_id;
+    if (newAssignee && newAssignee !== me.id && newAssignee !== existing?.assignee_id) {
+      const admin = createAdminClient();
+      await admin.from("notifications").insert({
+        profile_id: newAssignee,
+        kind: "task_assigned",
+        title: "Task assigned to you",
+        body: fields.title,
+        link_url: "/tasks",
+      });
+    }
   } else {
     const assignee = fields.assignee_id ?? me.id;
     const { error } = await supabase
