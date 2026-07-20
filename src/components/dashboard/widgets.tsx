@@ -111,7 +111,13 @@ export function TodayWidget({ data }: { data: DashboardData }) {
                 className="absolute -left-[5px] top-1.5 h-2.5 w-2.5 rounded-full ring-2 ring-surface"
                 style={{ backgroundColor: e.color }}
               />
-              <div className={cn("rounded-sm border border-line bg-surface px-3 py-2", past && "opacity-55")}>
+              <Link
+                href={e.practiceId ? `/practices/${e.practiceId}` : "/calendar"}
+                className={cn(
+                  "block rounded-sm border border-line bg-surface px-3 py-2 transition-shadow hover:shadow-sm",
+                  past && "opacity-55",
+                )}
+              >
                 <div className="flex items-center justify-between gap-2">
                   <p className="truncate text-sm font-semibold text-fg-1">{e.title}</p>
                   <span className="shrink-0 text-xs font-semibold text-fg-3">
@@ -119,7 +125,7 @@ export function TodayWidget({ data }: { data: DashboardData }) {
                   </span>
                 </div>
                 {e.location ? <p className="truncate text-xs text-fg-3">{e.location}</p> : null}
-              </div>
+              </Link>
             </li>
           );
         })}
@@ -170,9 +176,14 @@ export function TasksWidget({ data }: { data: DashboardData }) {
                   <CheckCircle2 size={17} />
                 </button>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-fg-1">{t.title}</p>
+                  <Link
+                    href={t.href ?? "/tasks"}
+                    className="block truncate text-sm font-semibold text-fg-1 hover:text-gold-deep hover:underline"
+                  >
+                    {t.title}
+                  </Link>
                   {t.linked ? (
-                    <Link href={t.href ?? "#"} className="truncate text-xs text-gold-deep hover:underline">
+                    <Link href={t.href ?? "/tasks"} className="truncate text-xs text-gold-deep hover:underline">
                       {t.linked}
                     </Link>
                   ) : null}

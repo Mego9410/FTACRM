@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Hanken_Grotesk, Lora } from "next/font/google";
+import NextTopLoader from "nextjs-toploader";
 import "@/styles/globals.css";
 
 const hanken = Hanken_Grotesk({
@@ -27,7 +28,17 @@ export const viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en-GB" className={`${hanken.variable} ${lora.variable}`}>
-      <body>{children}</body>
+      <body>
+        <NextTopLoader
+          color="#E4AD25"
+          height={3}
+          showSpinner={false}
+          shadow="0 0 8px #E4AD25, 0 0 4px #E4AD25"
+          crawlSpeed={160}
+          speed={280}
+        />
+        {children}
+      </body>
     </html>
   );
 }
