@@ -1,209 +1,73 @@
-import Link from "next/link";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardHeader, EmptyState, Badge } from "@/components/ui/primitives";
-import { Button } from "@/components/ui/primitives";
-import { SuggestionsWidget } from "@/components/ai/suggestions-widget";
-import { formatDateTime, formatGBP, relativeTime } from "@/lib/utils";
+import { getDashboardData } from "@/lib/dashboard";
+import { contactName } from "@/lib/contact-helpers";
+import { DashboardGrid } from "@/components/dashboard/dashboard-grid";
+import type { AiWidgetRow } from "@/components/dashboard/ai-widget";
 
-export const metadata = { title: "Dashboard" };
+export const metadata = { title: "My day" };
 
 export default async function DashboardPage() {
   const profile = await requireProfile();
   const supabase = await createClient();
 
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay = new Date();
-  endOfDay.setHours(23, 59, 59, 999);
-
-  const [eventsRes, tasksRes, stalledRes, expiringRes, activityRes] = await Promise.all([
+  const [data, { data: layoutRow }, { data: suggestions }] = await Promise.all([
+    getDashboardData(profile.id),
+    supabase.from("profiles").select("dashboard_layout").eq("id", profile.id).maybeSingle(),
     supabase
-      .from("calendar_events")
-      .select("id, title, starts_at, ends_at, location, organiser_id, calendar_event_attendees(profile_id)")
-      .gte("starts_at", startOfDay.toISOString())
-      .lte("starts_at", endOfDay.toISOString())
-      .neq("status", "cancelled")
-      .order("starts_at")
-      .limit(20),
-    supabase
-      .from("tasks")
-      .select("id, title, due_at, status, contact_id, practice_id, deal_id")
-      .eq("assignee_id", profile.id)
-      .eq("status", "open")
-      .order("due_at", { ascending: true, nullsFirst: false })
-      .limit(8),
-    supabase
-      .from("deals")
-      .select("id, ref, agreed_price, last_activity_at, practices!deals_practice_id_fkey(display_title)")
-      .eq("status", "in_progress")
-      .eq("owner_id", profile.id)
-      .lt("last_activity_at", new Date(Date.now() - 14 * 86_400_000).toISOString())
-      .order("last_activity_at")
-      .limit(5),
-    supabase
-      .from("practices")
-      .select("id, display_title, contract_expiry")
-      .in("status", ["available", "under_offer", "sold_stc"])
-      .not("contract_expiry", "is", null)
-      .lte("contract_expiry", new Date(Date.now() + 60 * 86_400_000).toISOString().slice(0, 10))
-      .order("contract_expiry")
-      .limit(5),
-    supabase
-      .from("journal_entries")
-      .select("id, entry_type, subject, body, occurred_at, author_id, contact_id, practice_id, deal_id, profiles!journal_entries_author_id_fkey(full_name)")
-      .order("occurred_at", { ascending: false })
-      .limit(8),
+      .from("ai_suggestions")
+      .select(
+        `id, kind, payload, created_at, contact_id, practice_id, deal_id,
+         contacts!ai_suggestions_contact_id_fkey(first_name, last_name, company_name),
+         practices!ai_suggestions_practice_id_fkey(display_title)`,
+      )
+      .eq("status", "proposed")
+      .or(`for_profile_id.eq.${profile.id},for_profile_id.is.null`)
+      .order("created_at", { ascending: false })
+      .limit(10),
   ]);
 
-  const myEvents = (eventsRes.data ?? []).filter(
-    (e) =>
-      e.organiser_id === profile.id ||
-      (e.calendar_event_attendees as { profile_id: string | null }[]).some(
-        (a) => a.profile_id === profile.id,
-      ),
-  );
+  const ai: AiWidgetRow[] = (suggestions ?? []).map((s) => {
+    const contact = s.contacts as unknown as { first_name: string | null; last_name: string | null; company_name: string | null } | null;
+    const practice = s.practices as unknown as { display_title: string } | null;
+    const p = s.payload as { title?: string; subject?: string; buyers?: unknown[] };
+    const title =
+      s.kind === "email_draft"
+        ? `Draft follow-up: ${p.subject ?? "email"}`
+        : s.kind === "outreach"
+          ? `${(p.buyers as unknown[] | undefined)?.length ?? 0} matched buyers ready to contact`
+          : (p.title ?? "Suggestion");
+    return {
+      id: s.id,
+      kind: s.kind as AiWidgetRow["kind"],
+      title,
+      context: contact ? contactName(contact) : (practice?.display_title ?? null),
+      href: s.contact_id
+        ? `/contacts/${s.contact_id}/journal`
+        : s.practice_id
+          ? `/practices/${s.practice_id}/matched`
+          : s.deal_id
+            ? `/deals/${s.deal_id}`
+            : "/dashboard",
+      createdAt: s.created_at,
+    };
+  });
+
   const firstName = profile.full_name.split(" ")[0];
+  const hour = new Date().getHours();
 
   return (
     <div>
-      <div className="mb-6">
+      <div className="mb-5">
         <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-gold-deep">
           {new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date())}
         </p>
         <h1 className="text-[24px] font-extrabold tracking-tight text-fg-1 sm:text-[28px]">
-          Good {new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"},{" "}
+          Good {hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening"},{" "}
           <span className="text-gold-deep">{firstName}</span>
         </h1>
       </div>
-
-      <div className="mb-5">
-        <SuggestionsWidget profileId={profile.id} />
-      </div>
-
-      {(stalledRes.data?.length ?? 0) > 0 || (expiringRes.data?.length ?? 0) > 0 ? (
-        <Card className="mb-5 border-warn/40 bg-warn-bg/60">
-          <div className="px-5 py-3.5">
-            <p className="mb-2 text-sm font-bold text-fg-1">Needs attention</p>
-            <ul className="space-y-1.5 text-sm">
-              {(stalledRes.data ?? []).map((d) => {
-                const practice = d.practices as unknown as { display_title: string } | null;
-                return (
-                  <li key={d.id}>
-                    <Link href={`/deals/${d.id}`} className="font-semibold text-gold-deep hover:underline">
-                      {practice?.display_title ?? d.ref}
-                    </Link>{" "}
-                    — no deal activity since {relativeTime(d.last_activity_at)}
-                  </li>
-                );
-              })}
-              {(expiringRes.data ?? []).map((p) => (
-                <li key={p.id}>
-                  <Link href={`/practices/${p.id}`} className="font-semibold text-gold-deep hover:underline">
-                    {p.display_title}
-                  </Link>{" "}
-                  — agency contract expires {p.contract_expiry}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Card>
-      ) : null}
-
-      <div className="grid gap-5 lg:grid-cols-3">
-        <Card>
-          <CardHeader
-            title="Today's events"
-            action={
-              <Link href="/calendar">
-                <Button variant="ghost" size="sm">View calendar</Button>
-              </Link>
-            }
-          />
-          <div className="p-4">
-            {myEvents.length === 0 ? (
-              <EmptyState title="No events today" body="Enjoy the clear diary, or add something." className="border-0 py-8" />
-            ) : (
-              <ul className="space-y-2.5">
-                {myEvents.map((e) => (
-                  <li key={e.id} className="rounded-sm border border-line px-3 py-2">
-                    <p className="text-sm font-semibold text-fg-1">{e.title}</p>
-                    <p className="text-xs text-fg-3">
-                      {new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" }).format(new Date(e.starts_at))}
-                      {" – "}
-                      {new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" }).format(new Date(e.ends_at))}
-                      {e.location ? ` · ${e.location}` : ""}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </Card>
-
-        <Card>
-          <CardHeader
-            title="My tasks"
-            action={
-              <Link href="/tasks">
-                <Button variant="ghost" size="sm">All tasks</Button>
-              </Link>
-            }
-          />
-          <div className="p-4">
-            {(tasksRes.data ?? []).length === 0 ? (
-              <EmptyState title="No open tasks" body="Tasks assigned to you appear here." className="border-0 py-8" />
-            ) : (
-              <ul className="space-y-2.5">
-                {(tasksRes.data ?? []).map((t) => {
-                  const overdue = t.due_at && new Date(t.due_at) < new Date();
-                  return (
-                    <li key={t.id} className="flex items-center justify-between gap-2 rounded-sm border border-line px-3 py-2">
-                      <p className="min-w-0 truncate text-sm font-semibold text-fg-1">{t.title}</p>
-                      {t.due_at ? (
-                        <Badge tone={overdue ? "danger" : "neutral"}>{formatDateTime(t.due_at)}</Badge>
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        </Card>
-
-        <Card>
-          <CardHeader title="Recent activity" />
-          <div className="p-4">
-            {(activityRes.data ?? []).length === 0 ? (
-              <EmptyState title="No activity yet" body="Calls, notes and updates across the firm show here." className="border-0 py-8" />
-            ) : (
-              <ul className="space-y-2.5">
-                {(activityRes.data ?? []).map((j) => {
-                  const author = j.profiles as unknown as { full_name: string } | null;
-                  const href = j.contact_id
-                    ? `/contacts/${j.contact_id}`
-                    : j.practice_id
-                      ? `/practices/${j.practice_id}`
-                      : j.deal_id
-                        ? `/deals/${j.deal_id}`
-                        : "#";
-                  return (
-                    <li key={j.id} className="text-sm">
-                      <Link href={href} className="hover:underline">
-                        <span className="font-semibold text-fg-1">{author?.full_name ?? "System"}</span>{" "}
-                        <span className="text-fg-3">
-                          {j.entry_type} · {relativeTime(j.occurred_at)}
-                        </span>
-                        <span className="block truncate text-fg-2">{j.subject ?? j.body ?? ""}</span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        </Card>
-      </div>
+      <DashboardGrid data={data} ai={ai} initialConfig={layoutRow?.dashboard_layout ?? null} />
     </div>
   );
 }

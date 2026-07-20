@@ -22,6 +22,9 @@ production build:
   list, public unsubscribe, dispatch pipeline (**no email provider linked** — see below)
 - **Calendar & tasks** — shared team calendar with per-person overlays, tasks, notifications
 - **Reporting** — period-vs-period KPIs, pipeline snapshot, activity feed, smart lists
+- **My Day** — a customisable widget dashboard: drag to rearrange, resize each module,
+  add/remove modules (key numbers, today's schedule, tasks, AI assistant, pipeline, recent
+  activity, needs-attention), layout saved per person (migration `0005`)
 
 ### AI layer (built, activates with credentials)
 
