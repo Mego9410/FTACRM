@@ -111,7 +111,7 @@ export function printReport(title: string, subtitle: string, columns: ReportColu
     <h1>${esc(title)}</h1>
     <div class="sub">${esc(subtitle)}</div>
     <table><thead><tr>${head}</tr></thead><tbody>${rowsHtml}</tbody></table>
-    <div class="foot">${rows.length} rows · Vantage — Frank Taylor &amp; Associates</div>
+    <div class="foot">${rows.length} rows · Aspen — Frank Taylor &amp; Associates</div>
     <script>window.onload=function(){window.print();}</script>
   </body></html>`);
   w.document.close();

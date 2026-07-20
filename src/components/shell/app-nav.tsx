@@ -41,7 +41,7 @@ function Wordmark({ size = 30 }: { size?: number }) {
       <Image src="/brand/logo.png" alt="" width={size} height={size} className="shrink-0 rounded-[8px]" />
       <span className="flex min-w-0 flex-col leading-none">
         <span className="truncate text-[15px] font-extrabold tracking-tight text-fg-1">
-          Vantage<span className="text-gold-deep">.</span>
+          Aspen<span className="text-gold-deep">.</span>
         </span>
         <span className="mt-0.5 truncate text-[9px] font-bold uppercase tracking-[0.16em] text-fg-4">
           Frank Taylor &amp; Associates
@@ -128,7 +128,7 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
           </button>
 
           <Link href="/dashboard" className="flex shrink-0 items-center lg:hidden">
-            <Image src="/brand/logo.png" alt="Vantage" width={28} height={28} className="rounded-[7px]" />
+            <Image src="/brand/logo.png" alt="Aspen" width={28} height={28} className="rounded-[7px]" />
           </Link>
 
           <button

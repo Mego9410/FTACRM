@@ -16,8 +16,8 @@ const lora = Lora({
 });
 
 export const metadata: Metadata = {
-  title: { default: "Vantage", template: "%s · Vantage" },
-  description: "Vantage — Frank Taylor & Associates practice sales CRM",
+  title: { default: "Aspen", template: "%s · Aspen" },
+  description: "Aspen — Frank Taylor & Associates practice sales CRM",
 };
 
 export const viewport = {
