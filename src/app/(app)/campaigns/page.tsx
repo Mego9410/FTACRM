@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/shell/page-header";
 import { LinkTabs } from "@/components/ui/tabs";
 import { Badge, Button, Card, EmptyState } from "@/components/ui/primitives";
 import { formatDateTime } from "@/lib/utils";
+import { resolveSort, applySort, type SortOptions } from "@/lib/sort";
+import { SortHeader } from "@/components/ui/sortable";
 
 export const metadata = { title: "Campaigns" };
 
@@ -16,15 +18,31 @@ const STATUS_TONES: Record<string, "neutral" | "gold" | "green" | "danger"> = {
   cancelled: "danger",
 };
 
-export default async function CampaignsPage() {
+const SORT_OPTIONS: SortOptions = {
+  campaign: { column: "name" },
+  status: { column: "status" },
+  recipients: { column: "recipient_count", nullsFirst: false },
+  opens: { column: "open_count", nullsFirst: false },
+  clicks: { column: "click_count", nullsFirst: false },
+  created: { column: "created_at" },
+};
+
+export default async function CampaignsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sort?: string; dir?: string }>;
+}) {
+  const params = await searchParams;
+  const sort = resolveSort(params, SORT_OPTIONS, { key: "created", dir: "desc" });
   const supabase = await createClient();
-  const { data: campaigns } = await supabase
-    .from("campaigns")
-    .select(
-      "id, name, status, subject, recipient_count, sent_count, open_count, click_count, created_at, started_at, profiles!campaigns_created_by_fkey(full_name)",
-    )
-    .order("created_at", { ascending: false })
-    .limit(100);
+  const { data: campaigns } = await applySort(
+    supabase
+      .from("campaigns")
+      .select(
+        "id, name, status, subject, recipient_count, sent_count, open_count, click_count, created_at, started_at, profiles!campaigns_created_by_fkey(full_name)",
+      ),
+    sort,
+  ).limit(100);
 
   const sendingEnabled = emailSendingEnabled();
 
@@ -72,12 +90,12 @@ export default async function CampaignsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left text-xs font-bold uppercase tracking-wide text-fg-3">
-                <th className="px-5 py-2.5">Campaign</th>
-                <th className="px-3 py-2.5">Status</th>
-                <th className="px-3 py-2.5">Recipients</th>
-                <th className="px-3 py-2.5">Opens</th>
-                <th className="px-3 py-2.5">Clicks</th>
-                <th className="px-3 py-2.5">Created</th>
+                <SortHeader label="Campaign" sortKey="campaign" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/campaigns" className="px-5" />
+                <SortHeader label="Status" sortKey="status" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/campaigns" />
+                <SortHeader label="Recipients" sortKey="recipients" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/campaigns" />
+                <SortHeader label="Opens" sortKey="opens" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/campaigns" />
+                <SortHeader label="Clicks" sortKey="clicks" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/campaigns" />
+                <SortHeader label="Created" sortKey="created" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/campaigns" />
               </tr>
             </thead>
             <tbody>

@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, EmptyState, Field, Input, Select, Textarea } from "@/components/ui/primitives";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
+import { SortSelect, useClientSort } from "@/components/ui/sortable";
 import { formatDateTime, formatGBP } from "@/lib/utils";
 import { saveValuation } from "../activity-actions";
 
@@ -34,6 +35,16 @@ export function ValuationsClient({
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const current = editing === "new" ? null : editing;
+
+  const { sorted, key, dir, set } = useClientSort(
+    valuations,
+    {
+      appointment_at: (v) => v.appointment_at,
+      outcome: (v) => v.outcome,
+      fee: (v) => v.fee_percent,
+    },
+    { key: "appointment_at", dir: "desc" },
+  );
 
   const num = (v: FormDataEntryValue | null) => {
     const s = String(v ?? "").replace(/[,£\s]/g, "");
@@ -75,7 +86,19 @@ export function ValuationsClient({
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
+        {valuations.length > 0 ? (
+          <SortSelect
+            options={[
+              { key: "appointment_at", label: "Appointment" },
+              { key: "outcome", label: "Outcome" },
+              { key: "fee", label: "Fee" },
+            ]}
+            sortKey={key}
+            dir={dir}
+            onChange={set}
+          />
+        ) : null}
         <Button size="sm" onClick={() => setEditing("new")}>Add valuation</Button>
       </div>
 
@@ -83,7 +106,7 @@ export function ValuationsClient({
         <EmptyState title="No valuations yet" body="Record the valuation appointment and outcome — booked appointments appear on the calendar." />
       ) : (
         <div className="space-y-3">
-          {valuations.map((v) => (
+          {sorted.map((v) => (
             <Card key={v.id} className="flex flex-wrap items-center gap-4 px-5 py-3.5">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { LookupValue } from "@/lib/lookups";
 import { Badge, Button, Card, EmptyState, Field, Input, Select, Textarea } from "@/components/ui/primitives";
+import { SortSelect, useClientSort } from "@/components/ui/sortable";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
 import { cn, formatDateTime } from "@/lib/utils";
 import { saveTask, setTaskStatus } from "./actions";
@@ -44,9 +45,19 @@ export function TasksClient({
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
 
+  const { sorted, key, dir, set } = useClientSort(
+    tasks,
+    {
+      due_at: (t) => t.due_at,
+      title: (t) => t.title,
+      category: (t) => (t.category_id ? categories.find((c) => c.id === t.category_id)?.value ?? "" : ""),
+    },
+    { key: "due_at", dir: "asc" },
+  );
+
   const now = new Date();
-  const open = tasks.filter((t) => t.status === "open");
-  const done = tasks.filter((t) => t.status === "done").slice(0, 20);
+  const open = sorted.filter((t) => t.status === "open");
+  const done = sorted.filter((t) => t.status === "done").slice(0, 20);
   const overdue = open.filter((t) => t.due_at && new Date(t.due_at) < now);
   const upcoming = open.filter((t) => !t.due_at || new Date(t.due_at) >= now);
 
@@ -126,7 +137,19 @@ export function TasksClient({
         ) : (
           <div />
         )}
-        <Button size="sm" onClick={() => setCreating(true)}>New task</Button>
+        <div className="flex items-center gap-2">
+          <SortSelect
+            options={[
+              { key: "due_at", label: "Due date" },
+              { key: "title", label: "Title" },
+              { key: "category", label: "Category" },
+            ]}
+            sortKey={key}
+            dir={dir}
+            onChange={set}
+          />
+          <Button size="sm" onClick={() => setCreating(true)}>New task</Button>
+        </div>
       </div>
 
       {open.length === 0 && done.length === 0 ? (

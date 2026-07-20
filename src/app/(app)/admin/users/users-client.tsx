@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Avatar, Badge, Button, Card, CardHeader, Field, Input, Select } from "@/components/ui/primitives";
+import { SortTh, useClientSort } from "@/components/ui/sortable";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
 import { inviteUser, updateUser } from "./actions";
 
@@ -19,6 +20,16 @@ type Branch = { id: string; name: string };
 
 export function UsersClient({ users, branches }: { users: UserRow[]; branches: Branch[] }) {
   const router = useRouter();
+  const { sorted, toggle, stateFor } = useClientSort(
+    users,
+    {
+      name: (u) => u.full_name,
+      role: (u) => u.role,
+      branch: (u) => branches.find((b) => b.id === u.branch_id)?.name ?? "",
+      status: (u) => u.is_active,
+    },
+    { key: "name", dir: "asc" },
+  );
   const [inviteOpen, setInviteOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<UserRow | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -71,15 +82,15 @@ export function UsersClient({ users, branches }: { users: UserRow[]; branches: B
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-line text-left text-xs font-bold uppercase tracking-wide text-fg-3">
-            <th className="px-5 py-2.5">Name</th>
-            <th className="px-3 py-2.5">Role</th>
-            <th className="px-3 py-2.5">Branch</th>
-            <th className="px-3 py-2.5">Status</th>
+            <SortTh label="Name" sortKey="name" state={stateFor("name")} onSort={toggle} className="px-5" />
+            <SortTh label="Role" sortKey="role" state={stateFor("role")} onSort={toggle} />
+            <SortTh label="Branch" sortKey="branch" state={stateFor("branch")} onSort={toggle} />
+            <SortTh label="Status" sortKey="status" state={stateFor("status")} onSort={toggle} />
             <th className="px-3 py-2.5" />
           </tr>
         </thead>
         <tbody>
-          {users.map((u) => (
+          {sorted.map((u) => (
             <tr key={u.id} className="border-b border-line last:border-0 hover:bg-surface-2/60">
               <td className="px-5 py-2.5">
                 <span className="flex items-center gap-2.5">

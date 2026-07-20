@@ -6,11 +6,21 @@ import { LinkTabs } from "@/components/ui/tabs";
 import { Badge, Button, Card, EmptyState, LookupPill } from "@/components/ui/primitives";
 import { PRACTICE_STATUS_LABELS, PRACTICE_STATUS_TONES } from "@/lib/contact-helpers";
 import { formatGBP } from "@/lib/utils";
+import { resolveSort, applySort, type SortOptions } from "@/lib/sort";
 import { PracticeFilters } from "./practice-filters";
 
 export const metadata = { title: "Practices" };
 
 const PAGE_SIZE = 24;
+
+const SORT_OPTIONS: SortOptions = {
+  recent: { column: "created_at" },
+  title: { column: "display_title" },
+  price: { column: "asking_price", nullsFirst: false },
+  town: { column: "town", nullsFirst: false },
+  surgeries: { column: "surgeries", nullsFirst: false },
+  status: { column: "status" },
+};
 
 type Search = {
   status?: string;
@@ -20,6 +30,8 @@ type Search = {
   min?: string;
   max?: string;
   page?: string;
+  sort?: string;
+  dir?: string;
 };
 
 export default async function PracticesPage({ searchParams }: { searchParams: Promise<Search> }) {
@@ -67,9 +79,11 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
     );
   }
 
-  const { data: practices, count } = await query
-    .order("created_at", { ascending: false })
-    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+  const sort = resolveSort(params, SORT_OPTIONS, { key: "recent", dir: "desc" });
+  const { data: practices, count } = await applySort(query, sort).range(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE - 1,
+  );
 
   const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
   const qs = (extra: Record<string, string | undefined>) => {

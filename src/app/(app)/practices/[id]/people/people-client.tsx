@@ -7,6 +7,7 @@ import { Star, X } from "lucide-react";
 import { Avatar, Badge, Button, Card, CardHeader, EmptyState, Field, Select } from "@/components/ui/primitives";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
 import { ContactPicker, type PickedContact } from "@/components/record/contact-picker";
+import { SortSelect, useClientSort } from "@/components/ui/sortable";
 import { PRACTICE_ROLE_LABELS } from "@/lib/contact-helpers";
 import { addPracticeContact, removePracticeContact, setPrimarySeller } from "../../actions";
 
@@ -39,6 +40,16 @@ export function PeopleClient({ practiceId, people }: { practiceId: string; peopl
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
 
+  const { sorted, key, dir, set } = useClientSort(
+    people,
+    {
+      name: (p) => p.name,
+      role: (p) => PRACTICE_ROLE_LABELS[p.role] ?? p.role,
+      primary: (p) => !p.is_primary, // primary first when ascending
+    },
+    { key: "name", dir: "asc" },
+  );
+
   async function submit() {
     if (!picked) return setError("Search for a contact first.");
     setBusy(true);
@@ -57,12 +68,24 @@ export function PeopleClient({ practiceId, people }: { practiceId: string; peopl
 
   return (
     <div className="space-y-5">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {people.length > 0 ? (
+          <SortSelect
+            options={[
+              { key: "name", label: "Name" },
+              { key: "role", label: "Role" },
+              { key: "primary", label: "Primary first" },
+            ]}
+            sortKey={key}
+            dir={dir}
+            onChange={set}
+          />
+        ) : null}
         <Button size="sm" onClick={() => setOpen(true)}>Add person</Button>
       </div>
 
       {SECTIONS.map((section) => {
-        const rows = people.filter((p) => section.roles.includes(p.role));
+        const rows = sorted.filter((p) => section.roles.includes(p.role));
         return (
           <Card key={section.title}>
             <CardHeader title={`${section.title} (${rows.length})`} />

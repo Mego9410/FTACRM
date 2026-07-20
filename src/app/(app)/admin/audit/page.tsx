@@ -3,29 +3,47 @@ import { Card, CardHeader } from "@/components/ui/primitives";
 import { formatDateTime } from "@/lib/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/primitives";
+import { resolveSort, applySort, type SortOptions } from "@/lib/sort";
+import { SortHeader } from "@/components/ui/sortable";
 
 export const metadata = { title: "Audit" };
 
 const PAGE_SIZE = 50;
 
+const SORT_OPTIONS: SortOptions = {
+  when: { column: "changed_at" },
+  record: { column: "table_name" },
+  field: { column: "field", nullsFirst: false },
+};
+
+type Search = { page?: string; table?: string; user?: string; sort?: string; dir?: string };
+
 export default async function AuditPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; table?: string; user?: string }>;
+  searchParams: Promise<Search>;
 }) {
   const params = await searchParams;
   const page = Math.max(1, Number(params.page) || 1);
+  const sort = resolveSort(params, SORT_OPTIONS, { key: "when", dir: "desc" });
   const supabase = await createClient();
 
   let query = supabase
     .from("audit_log")
-    .select("id, table_name, record_id, field, old_value, new_value, changed_at, profiles!audit_log_changed_by_fkey(full_name)", { count: "exact" })
-    .order("changed_at", { ascending: false })
-    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+    .select("id, table_name, record_id, field, old_value, new_value, changed_at, profiles!audit_log_changed_by_fkey(full_name)", { count: "exact" });
   if (params.table) query = query.eq("table_name", params.table);
+  query = applySort(query, sort).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
   const { data, count } = await query;
   const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
+
+  const qs = (extra: Record<string, string | undefined>) => {
+    const merged = { ...params, ...extra };
+    const sp = new URLSearchParams();
+    for (const [k, v] of Object.entries(merged)) if (v) sp.set(k, v);
+    const s = sp.toString();
+    return s ? `?${s}` : "";
+  };
 
   return (
     <Card>
@@ -34,10 +52,10 @@ export default async function AuditPage({
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-line text-left text-xs font-bold uppercase tracking-wide text-fg-3">
-            <th className="px-5 py-2.5">When</th>
+            <SortHeader label="When" sortKey="when" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/admin/audit" className="px-5" />
             <th className="px-3 py-2.5">User</th>
-            <th className="px-3 py-2.5">Record</th>
-            <th className="px-3 py-2.5">Field</th>
+            <SortHeader label="Record" sortKey="record" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/admin/audit" />
+            <SortHeader label="Field" sortKey="field" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/admin/audit" />
             <th className="px-3 py-2.5">Change</th>
           </tr>
         </thead>
@@ -66,10 +84,10 @@ export default async function AuditPage({
           <p className="text-xs text-fg-3">Page {page} of {totalPages}</p>
           <div className="flex gap-2">
             {page > 1 ? (
-              <Link href={`/admin/audit?page=${page - 1}`}><Button variant="outline" size="sm">Previous</Button></Link>
+              <Link href={`/admin/audit${qs({ page: String(page - 1) })}`}><Button variant="outline" size="sm">Previous</Button></Link>
             ) : null}
             {page < totalPages ? (
-              <Link href={`/admin/audit?page=${page + 1}`}><Button variant="outline" size="sm">Next</Button></Link>
+              <Link href={`/admin/audit${qs({ page: String(page + 1) })}`}><Button variant="outline" size="sm">Next</Button></Link>
             ) : null}
           </div>
         </div>

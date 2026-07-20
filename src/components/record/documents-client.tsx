@@ -6,6 +6,7 @@ import { Download, FileText, Trash2, Upload } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import type { LookupValue } from "@/lib/lookups";
 import { Badge, Button, EmptyState, Select } from "@/components/ui/primitives";
+import { SortSelect, useClientSort } from "@/components/ui/sortable";
 import { deleteDocument, getDocumentUrl, uploadDocument } from "@/lib/actions/documents";
 
 type Doc = {
@@ -40,6 +41,16 @@ export function DocumentsClient({
   const [categoryId, setCategoryId] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const { sorted, key, dir, set } = useClientSort(
+    documents,
+    {
+      file_name: (d) => d.file_name,
+      size_bytes: (d) => d.size_bytes,
+      created_at: (d) => d.created_at,
+      category: (d) => (d.category_id ? categories.find((c) => c.id === d.category_id)?.value ?? "" : ""),
+    },
+    { key: "created_at", dir: "desc" },
+  );
 
   async function onFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -78,13 +89,27 @@ export function DocumentsClient({
           ))}
         </Select>
         {error ? <p className="text-sm font-medium text-danger">{error}</p> : null}
+        {documents.length > 0 ? (
+          <SortSelect
+            className="ml-auto"
+            options={[
+              { key: "file_name", label: "Name" },
+              { key: "size_bytes", label: "Size" },
+              { key: "created_at", label: "Uploaded" },
+              { key: "category", label: "Category" },
+            ]}
+            sortKey={key}
+            dir={dir}
+            onChange={set}
+          />
+        ) : null}
       </div>
 
       {documents.length === 0 ? (
         <EmptyState title="No documents" body="Contracts, accounts, ID checks and correspondence live here." />
       ) : (
         <ul className="divide-y divide-line rounded-lg border border-line bg-surface">
-          {documents.map((d) => (
+          {sorted.map((d) => (
             <li key={d.id} className="flex items-center gap-3 px-4 py-2.5">
               <FileText size={18} className="shrink-0 text-fg-3" />
               <div className="min-w-0 flex-1">

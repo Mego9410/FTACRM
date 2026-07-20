@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, CardHeader, EmptyState, Field, Input, Select, Textarea } from "@/components/ui/primitives";
+import { SortSelect, useClientSort } from "@/components/ui/sortable";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
 import { saveTemplate } from "../actions";
 
@@ -21,6 +22,16 @@ export function TemplatesClient({ templates }: { templates: Template[] }) {
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const current = editing === "new" ? null : editing;
+  const { sorted, key, dir, set } = useClientSort(
+    templates,
+    {
+      name: (t) => t.name,
+      subject: (t) => t.subject,
+      record_context: (t) => t.record_context,
+      is_active: (t) => t.is_active,
+    },
+    { key: "name", dir: "asc" },
+  );
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -45,13 +56,30 @@ export function TemplatesClient({ templates }: { templates: Template[] }) {
     <Card>
       <CardHeader
         title={`Templates (${templates.length})`}
-        action={<Button size="sm" onClick={() => setEditing("new")}>Add template</Button>}
+        action={
+          <div className="flex items-center gap-2">
+            {templates.length > 0 ? (
+              <SortSelect
+                options={[
+                  { key: "name", label: "Name" },
+                  { key: "subject", label: "Subject" },
+                  { key: "record_context", label: "Context" },
+                  { key: "is_active", label: "Active" },
+                ]}
+                sortKey={key}
+                dir={dir}
+                onChange={set}
+              />
+            ) : null}
+            <Button size="sm" onClick={() => setEditing("new")}>Add template</Button>
+          </div>
+        }
       />
       {templates.length === 0 ? (
         <EmptyState className="m-4" title="No templates yet" body="Save the emails you send repeatedly — new instruction alerts, price reductions, re-engagement." />
       ) : (
         <ul className="divide-y divide-line">
-          {templates.map((t) => (
+          {sorted.map((t) => (
             <li key={t.id} className="flex items-center justify-between gap-3 px-5 py-3">
               <div className="min-w-0">
                 <p className="font-semibold text-fg-1">{t.name}</p>

@@ -3,17 +3,30 @@ import { PageHeader } from "@/components/shell/page-header";
 import { LinkTabs } from "@/components/ui/tabs";
 import { Badge, Card, CardHeader, EmptyState } from "@/components/ui/primitives";
 import { formatDateTime } from "@/lib/utils";
+import { resolveSort, applySort, type SortOptions } from "@/lib/sort";
+import { SortHeader } from "@/components/ui/sortable";
 import { AddSuppressionForm } from "./add-suppression";
 
 export const metadata = { title: "Suppressions" };
 
-export default async function SuppressionsPage() {
+const SORT_OPTIONS: SortOptions = {
+  email: { column: "email" },
+  reason: { column: "reason", nullsFirst: false },
+  added: { column: "created_at" },
+};
+
+export default async function SuppressionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sort?: string; dir?: string }>;
+}) {
+  const params = await searchParams;
+  const sort = resolveSort(params, SORT_OPTIONS, { key: "added", dir: "desc" });
   const supabase = await createClient();
-  const { data: suppressions, count } = await supabase
-    .from("suppressions")
-    .select("id, email, reason, created_at", { count: "exact" })
-    .order("created_at", { ascending: false })
-    .limit(200);
+  const { data: suppressions, count } = await applySort(
+    supabase.from("suppressions").select("id, email, reason, created_at", { count: "exact" }),
+    sort,
+  ).limit(200);
 
   return (
     <div>
@@ -38,9 +51,9 @@ export default async function SuppressionsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left text-xs font-bold uppercase tracking-wide text-fg-3">
-                <th className="px-5 py-2.5">Email</th>
-                <th className="px-3 py-2.5">Reason</th>
-                <th className="px-3 py-2.5">Added</th>
+                <SortHeader label="Email" sortKey="email" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/campaigns/suppressions" className="px-5" />
+                <SortHeader label="Reason" sortKey="reason" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/campaigns/suppressions" />
+                <SortHeader label="Added" sortKey="added" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/campaigns/suppressions" />
               </tr>
             </thead>
             <tbody>

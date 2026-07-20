@@ -7,6 +7,7 @@ import { X } from "lucide-react";
 import { Badge, Button, Card, EmptyState, Field, Input, Select, Textarea } from "@/components/ui/primitives";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
 import { ContactPicker, type PickedContact } from "@/components/record/contact-picker";
+import { SortSelect, useClientSort } from "@/components/ui/sortable";
 import { cn, formatDate, formatGBP } from "@/lib/utils";
 import { acceptOffer, addOffer, updateOfferStatus } from "../activity-actions";
 
@@ -37,11 +38,22 @@ export function OffersClient({ practiceId, offers }: { practiceId: string; offer
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
 
+  const { sorted, key, dir, set } = useClientSort(
+    offers,
+    {
+      amount: (o) => o.amount,
+      offer_date: (o) => o.offer_date,
+      status: (o) => o.status,
+      buyer: (o) => o.buyerName,
+    },
+    { key: "offer_date", dir: "desc" },
+  );
+
   const counts = offers.reduce<Record<string, number>>((acc, o) => {
     acc[o.status] = (acc[o.status] ?? 0) + 1;
     return acc;
   }, {});
-  const visible = filter === "all" ? offers : offers.filter((o) => o.status === filter);
+  const visible = filter === "all" ? sorted : sorted.filter((o) => o.status === filter);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -87,7 +99,20 @@ export function OffersClient({ practiceId, offers }: { practiceId: string; offer
             </button>
           ))}
         </div>
-        <Button size="sm" onClick={() => setOpen(true)}>Add offer</Button>
+        <div className="flex items-center gap-2">
+          <SortSelect
+            options={[
+              { key: "offer_date", label: "Offer date" },
+              { key: "amount", label: "Amount" },
+              { key: "status", label: "Status" },
+              { key: "buyer", label: "Buyer" },
+            ]}
+            sortKey={key}
+            dir={dir}
+            onChange={set}
+          />
+          <Button size="sm" onClick={() => setOpen(true)}>Add offer</Button>
+        </div>
       </div>
 
       {visible.length === 0 ? (

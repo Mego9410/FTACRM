@@ -53,6 +53,18 @@ export function PracticeFilters({ owners }: { owners: { id: string; full_name: s
         onBlur={(e) => apply({ max: e.target.value.replace(/\D/g, "") })}
         aria-label="Maximum price"
       />
+      <Select value={params.get("sort") ?? "recent"} onChange={(e) => apply({ sort: e.target.value })} className="w-44" aria-label="Sort practices">
+        <option value="recent">Date added</option>
+        <option value="title">Title</option>
+        <option value="price">Price</option>
+        <option value="town">Town</option>
+        <option value="surgeries">Surgeries</option>
+        <option value="status">Status</option>
+      </Select>
+      <Select value={params.get("dir") ?? "desc"} onChange={(e) => apply({ dir: e.target.value })} className="w-36" aria-label="Sort direction">
+        <option value="desc">Descending</option>
+        <option value="asc">Ascending</option>
+      </Select>
       {params.size > 0 ? (
         <Button variant="ghost" size="sm" onClick={() => router.push(pathname)}>Clear</Button>
       ) : null}

@@ -7,6 +7,7 @@ import { X } from "lucide-react";
 import { Badge, Button, Card, EmptyState, Field, Input, Select, Textarea } from "@/components/ui/primitives";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
 import { ContactPicker, type PickedContact } from "@/components/record/contact-picker";
+import { SortSelect, useClientSort } from "@/components/ui/sortable";
 import { formatDateTime } from "@/lib/utils";
 import { saveViewing } from "../activity-actions";
 
@@ -35,6 +36,16 @@ export function ViewingsClient({ practiceId, viewings }: { practiceId: string; v
   const [picked, setPicked] = React.useState<PickedContact | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
+
+  const { sorted, key, dir, set } = useClientSort(
+    viewings,
+    {
+      scheduled_at: (v) => v.scheduled_at,
+      status: (v) => v.status,
+      buyer: (v) => v.buyerName,
+    },
+    { key: "scheduled_at", dir: "desc" },
+  );
 
   const overdueFeedback = (v: Viewing) =>
     v.status === "completed" && !v.feedback;
@@ -88,7 +99,19 @@ export function ViewingsClient({ practiceId, viewings }: { practiceId: string; v
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
+        {viewings.length > 0 ? (
+          <SortSelect
+            options={[
+              { key: "scheduled_at", label: "Date" },
+              { key: "status", label: "Status" },
+              { key: "buyer", label: "Buyer" },
+            ]}
+            sortKey={key}
+            dir={dir}
+            onChange={set}
+          />
+        ) : null}
         <Button size="sm" onClick={() => setOpen(true)}>Book viewing</Button>
       </div>
 
@@ -96,7 +119,7 @@ export function ViewingsClient({ practiceId, viewings }: { practiceId: string; v
         <EmptyState title="No viewings yet" body="Book a viewing to introduce a buyer — it goes straight onto the calendar." />
       ) : (
         <div className="space-y-3">
-          {viewings.map((v) => (
+          {sorted.map((v) => (
             <Card key={v.id} className="flex flex-wrap items-center gap-4 px-5 py-3.5">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">

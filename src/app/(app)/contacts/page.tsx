@@ -5,11 +5,22 @@ import { LinkTabs } from "@/components/ui/tabs";
 import { Avatar, Badge, Button, Card, EmptyState } from "@/components/ui/primitives";
 import { contactName } from "@/lib/contact-helpers";
 import { relativeTime } from "@/lib/utils";
+import { resolveSort, applySort, type SortOptions } from "@/lib/sort";
+import { SortHeader } from "@/components/ui/sortable";
 import { ContactFilters } from "./contact-filters";
 
 export const metadata = { title: "Contacts" };
 
 const PAGE_SIZE = 50;
+
+const SORT_OPTIONS: SortOptions = {
+  name: [{ column: "last_name" }, { column: "first_name" }],
+  contact: { column: "email", nullsFirst: false },
+  temp: { column: "temperature", nullsFirst: false },
+  owner: { column: "owner_id", nullsFirst: false },
+  last_contacted: { column: "last_contacted_at", nullsFirst: false },
+  recent: { column: "created_at" },
+};
 
 type Search = {
   role?: string;
@@ -19,6 +30,8 @@ type Search = {
   stale?: string;
   page?: string;
   archived?: string;
+  sort?: string;
+  dir?: string;
 };
 
 export default async function ContactsPage({ searchParams }: { searchParams: Promise<Search> }) {
@@ -65,9 +78,11 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
     );
   }
 
-  const { data: contacts, count } = await query
-    .order("created_at", { ascending: false })
-    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+  const sort = resolveSort(params, SORT_OPTIONS, { key: "recent", dir: "desc" });
+  const { data: contacts, count } = await applySort(query, sort).range(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE - 1,
+  );
 
   const qs = (extra: Record<string, string | undefined>) => {
     const merged = { ...params, ...extra };
@@ -119,12 +134,12 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left text-xs font-bold uppercase tracking-wide text-fg-3">
-                <th className="px-4 py-2.5">Name</th>
+                <SortHeader label="Name" sortKey="name" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/contacts" className="px-4" />
                 <th className="px-3 py-2.5">Roles</th>
-                <th className="px-3 py-2.5">Contact</th>
-                <th className="px-3 py-2.5">Temp</th>
-                <th className="px-3 py-2.5">Owner</th>
-                <th className="px-3 py-2.5">Last contacted</th>
+                <SortHeader label="Contact" sortKey="contact" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/contacts" />
+                <SortHeader label="Temp" sortKey="temp" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/contacts" />
+                <SortHeader label="Owner" sortKey="owner" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/contacts" />
+                <SortHeader label="Last contacted" sortKey="last_contacted" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/contacts" />
               </tr>
             </thead>
             <tbody>
