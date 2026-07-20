@@ -85,7 +85,7 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
           <Image src="/brand/logo.png" alt="" width={30} height={30} className="shrink-0 rounded-[8px]" />
           <span className="hidden min-w-0 flex-col leading-none sm:flex">
             <span className="truncate text-[15px] font-extrabold tracking-tight text-fg-1">
-              FTA <span className="text-gold-deep">CRM</span>
+              Vantage<span className="text-gold-deep">.</span>
             </span>
             <span className="mt-0.5 truncate text-[9px] font-bold uppercase tracking-[0.16em] text-fg-4">
               Frank Taylor &amp; Associates

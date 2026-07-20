@@ -16,7 +16,7 @@ export default function SignInPage() {
             <Image src="/brand/logo.png" alt="" width={64} height={64} className="rounded-md shadow-sm" />
             <div>
               <h1 className="text-2xl font-extrabold tracking-tight text-fg-1">
-                FTA <span className="text-gold-deep">CRM</span>
+                Vantage<span className="text-gold-deep">.</span>
               </h1>
               <p className="mt-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-fg-4">
                 Frank Taylor &amp; Associates
