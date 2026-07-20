@@ -26,6 +26,7 @@ export function AiWidget({ rows }: { rows: AiWidgetRow[] }) {
       <div className="flex h-full items-center justify-center p-6">
         <EmptyState
           className="border-0 bg-transparent"
+          icon={<Sparkles size={20} />}
           title="No AI suggestions"
           body="Captured calls and new instructions surface actions here."
         />

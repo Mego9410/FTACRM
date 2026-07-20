@@ -233,15 +233,22 @@ export function EmptyState({
   title,
   body,
   action,
+  icon,
   className,
 }: {
   title: string;
   body?: string;
   action?: React.ReactNode;
+  icon?: React.ReactNode;
   className?: string;
 }) {
   return (
     <div className={cn("flex min-w-0 max-w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-line bg-surface px-6 py-12 text-center", className)}>
+      {icon ? (
+        <span className="mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-gold-tint/60 text-gold-deep">
+          {icon}
+        </span>
+      ) : null}
       <p className="text-[15px] font-bold text-fg-1">{title}</p>
       {body ? <p className="max-w-sm text-sm text-fg-3">{body}</p> : null}
       {action ? <div className="mt-2">{action}</div> : null}

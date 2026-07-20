@@ -2,7 +2,21 @@
 
 import * as React from "react";
 import { Responsive, WidthProvider, type Layout, type Layouts } from "react-grid-layout";
-import { GripVertical, LayoutGrid, Plus, RotateCcw, X } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  CalendarClock,
+  GripVertical,
+  LayoutGrid,
+  ListTodo,
+  Plus,
+  RotateCcw,
+  Sparkles,
+  TrendingUp,
+  Wallet,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import type { DashboardData } from "@/lib/dashboard";
@@ -26,18 +40,20 @@ type WidgetDef = {
   title: string;
   minW: number;
   minH: number;
+  accent: string;
+  icon: LucideIcon;
   lg: { w: number; h: number };
   render: (ctx: { data: DashboardData; ai: AiWidgetRow[] }) => React.ReactNode;
 };
 
 const REGISTRY: Record<WidgetId, WidgetDef> = {
-  stats: { title: "Key numbers", minW: 4, minH: 3, lg: { w: 12, h: 3 }, render: ({ data }) => <StatsWidget data={data} /> },
-  today: { title: "Today's schedule", minW: 3, minH: 3, lg: { w: 4, h: 5 }, render: ({ data }) => <TodayWidget data={data} /> },
-  tasks: { title: "My tasks", minW: 3, minH: 3, lg: { w: 4, h: 5 }, render: ({ data }) => <TasksWidget data={data} /> },
-  ai: { title: "AI assistant", minW: 3, minH: 3, lg: { w: 4, h: 5 }, render: ({ ai }) => <AiWidget rows={ai} /> },
-  pipeline: { title: "My pipeline", minW: 3, minH: 3, lg: { w: 6, h: 5 }, render: ({ data }) => <PipelineWidget data={data} /> },
-  activity: { title: "Recent activity", minW: 3, minH: 3, lg: { w: 3, h: 5 }, render: ({ data }) => <ActivityWidget data={data} /> },
-  attention: { title: "Needs attention", minW: 3, minH: 3, lg: { w: 3, h: 5 }, render: ({ data }) => <AttentionWidget data={data} /> },
+  stats: { title: "Key numbers", minW: 4, minH: 3, accent: "#B4862A", icon: TrendingUp, lg: { w: 12, h: 3 }, render: ({ data }) => <StatsWidget data={data} /> },
+  today: { title: "Today's schedule", minW: 3, minH: 3, accent: "#2F77BE", icon: CalendarClock, lg: { w: 4, h: 5 }, render: ({ data }) => <TodayWidget data={data} /> },
+  tasks: { title: "My tasks", minW: 3, minH: 3, accent: "#1F9D4D", icon: ListTodo, lg: { w: 4, h: 5 }, render: ({ data }) => <TasksWidget data={data} /> },
+  ai: { title: "AI assistant", minW: 3, minH: 3, accent: "#A23B9E", icon: Sparkles, lg: { w: 4, h: 5 }, render: ({ ai }) => <AiWidget rows={ai} /> },
+  pipeline: { title: "My pipeline", minW: 3, minH: 3, accent: "#0E7490", icon: Wallet, lg: { w: 6, h: 5 }, render: ({ data }) => <PipelineWidget data={data} /> },
+  activity: { title: "Recent activity", minW: 3, minH: 3, accent: "#5E5E5A", icon: Activity, lg: { w: 3, h: 5 }, render: ({ data }) => <ActivityWidget data={data} /> },
+  attention: { title: "Needs attention", minW: 3, minH: 3, accent: "#C4382D", icon: AlertTriangle, lg: { w: 3, h: 5 }, render: ({ data }) => <AttentionWidget data={data} /> },
 };
 
 const ORDER: WidgetId[] = ["stats", "today", "tasks", "ai", "pipeline", "activity", "attention"];
@@ -238,15 +254,30 @@ export function DashboardGrid({
           {config.widgets.map((id) => {
             const def = REGISTRY[id];
             if (!def) return null;
+            const Icon = def.icon;
             return (
-              <div key={id} className="overflow-hidden rounded-lg border border-line bg-surface shadow-xs">
-                <div className={cn("flex items-center justify-between border-b border-line px-4 py-2.5", editing && "bg-surface-2")}>
-                  <div className="flex min-w-0 items-center gap-1.5">
+              <div
+                key={id}
+                className="overflow-hidden rounded-lg border border-t-2 border-line bg-surface shadow-xs"
+                style={{ borderTopColor: def.accent }}
+              >
+                <div
+                  className={cn("flex items-center justify-between border-b border-line px-3.5 py-2.5", editing && "bg-surface-2")}
+                  style={editing ? undefined : { background: `linear-gradient(90deg, ${def.accent}12, transparent 65%)` }}
+                >
+                  <div className="flex min-w-0 items-center gap-2">
                     {editing ? (
                       <span className="widget-drag cursor-grab text-fg-4 hover:text-fg-2 active:cursor-grabbing">
                         <GripVertical size={15} />
                       </span>
-                    ) : null}
+                    ) : (
+                      <span
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
+                        style={{ backgroundColor: `${def.accent}1f`, color: def.accent }}
+                      >
+                        <Icon size={14} />
+                      </span>
+                    )}
                     <h3 className="truncate text-[13px] font-bold text-fg-1">{def.title}</h3>
                   </div>
                   {editing ? (
@@ -260,7 +291,7 @@ export function DashboardGrid({
                     </button>
                   ) : null}
                 </div>
-                <div className="h-[calc(100%-42px)]">{def.render({ data, ai })}</div>
+                <div className="h-[calc(100%-47px)]">{def.render({ data, ai })}</div>
               </div>
             );
           })}

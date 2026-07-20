@@ -55,17 +55,28 @@ export default async function DashboardPage() {
 
   const firstName = profile.full_name.split(" ")[0];
   const hour = new Date().getHours();
+  const openTasks = data.stats.openTasks;
+  const eventsToday = data.todayEvents.length;
+  const summary = [
+    `${openTasks} open ${openTasks === 1 ? "task" : "tasks"}`,
+    `${eventsToday} ${eventsToday === 1 ? "event" : "events"} today`,
+  ].join("  ·  ");
 
   return (
     <div>
-      <div className="mb-5">
-        <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-gold-deep">
-          {new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date())}
-        </p>
-        <h1 className="text-[24px] font-extrabold tracking-tight text-fg-1 sm:text-[28px]">
-          Good {hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening"},{" "}
-          <span className="text-gold-deep">{firstName}</span>
-        </h1>
+      <div className="relative mb-6 overflow-hidden rounded-xl border border-line bg-gradient-to-br from-gold-tint/70 via-surface to-surface px-6 py-6 shadow-xs sm:px-8 sm:py-7">
+        <div aria-hidden className="pointer-events-none absolute -right-10 -top-12 h-44 w-44 rounded-full bg-gold/15 blur-2xl" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-16 right-24 h-36 w-36 rounded-full bg-nhs-fg/10 blur-2xl" />
+        <div className="relative">
+          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-gold-deep">
+            {new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date())}
+          </p>
+          <h1 className="text-[24px] font-extrabold tracking-tight text-fg-1 sm:text-[30px]">
+            Good {hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening"},{" "}
+            <span className="text-gold-deep">{firstName}</span>
+          </h1>
+          <p className="mt-1.5 text-sm font-semibold text-fg-2">{summary}</p>
+        </div>
       </div>
       <DashboardGrid data={data} ai={ai} initialConfig={layoutRow?.dashboard_layout ?? null} />
     </div>

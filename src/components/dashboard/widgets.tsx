@@ -4,11 +4,13 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  Activity,
   Building2,
   CalendarClock,
   CheckCircle2,
   Clock,
   ListTodo,
+  ShieldCheck,
   Sparkles,
   TrendingUp,
   UsersRound,
@@ -68,11 +70,15 @@ export function StatsWidget({ data }: { data: DashboardData }) {
           <Link
             key={t.label}
             href={t.href}
-            className="flex min-w-[158px] flex-1 items-center gap-3 rounded-md border border-line bg-surface px-4 py-3.5 transition-shadow hover:shadow-sm"
+            className="group flex min-w-[158px] flex-1 items-center gap-3 rounded-md border bg-surface px-4 py-3.5 transition-all hover:-translate-y-0.5 hover:shadow-sm"
+            style={{ borderColor: `${t.color}33` }}
           >
-            <div className="relative flex items-center justify-center">
+            <div
+              className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
+              style={{ backgroundColor: `${t.color}14` }}
+            >
               <Ring value={t.ring[0]!} max={t.ring[1]!} color={t.color} />
-              <Icon size={15} className="absolute" style={{ color: t.color }} />
+              <Icon size={14} className="absolute" style={{ color: t.color }} />
             </div>
             <div className="min-w-0">
               <p className="text-[22px] font-extrabold leading-none text-fg-1">{t.value}</p>
@@ -93,7 +99,7 @@ export function TodayWidget({ data }: { data: DashboardData }) {
   if (events.length === 0) {
     return (
       <div className="flex h-full items-center justify-center p-6">
-        <EmptyState className="border-0 bg-transparent" title="No events today" body="Your day is clear." />
+        <EmptyState className="border-0 bg-transparent" icon={<CalendarClock size={20} />} title="No events today" body="Your day is clear." />
       </div>
     );
   }
@@ -148,7 +154,7 @@ export function TasksWidget({ data }: { data: DashboardData }) {
   if (groups.length === 0) {
     return (
       <div className="flex h-full items-center justify-center p-6">
-        <EmptyState className="border-0 bg-transparent" title="No open tasks" body="You're all caught up." />
+        <EmptyState className="border-0 bg-transparent" icon={<CheckCircle2 size={20} />} title="No open tasks" body="You're all caught up." />
       </div>
     );
   }
@@ -208,7 +214,7 @@ export function AttentionWidget({ data }: { data: DashboardData }) {
   if (data.attention.length === 0) {
     return (
       <div className="flex h-full items-center justify-center p-6">
-        <EmptyState className="border-0 bg-transparent" title="Nothing flagged" body="No stalled deals or expiring contracts." />
+        <EmptyState className="border-0 bg-transparent" icon={<ShieldCheck size={20} />} title="Nothing flagged" body="No stalled deals or expiring contracts." />
       </div>
     );
   }
@@ -236,7 +242,7 @@ export function PipelineWidget({ data }: { data: DashboardData }) {
   if (data.pipeline.length === 0) {
     return (
       <div className="flex h-full items-center justify-center p-6">
-        <EmptyState className="border-0 bg-transparent" title="No deals in progress" body="Deals you own appear here." />
+        <EmptyState className="border-0 bg-transparent" icon={<Wallet size={20} />} title="No deals in progress" body="Deals you own appear here." />
       </div>
     );
   }
@@ -279,7 +285,7 @@ export function ActivityWidget({ data }: { data: DashboardData }) {
   if (data.activity.length === 0) {
     return (
       <div className="flex h-full items-center justify-center p-6">
-        <EmptyState className="border-0 bg-transparent" title="No activity yet" body="Calls, notes and updates show here." />
+        <EmptyState className="border-0 bg-transparent" icon={<Activity size={20} />} title="No activity yet" body="Calls, notes and updates show here." />
       </div>
     );
   }
