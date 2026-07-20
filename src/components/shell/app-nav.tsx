@@ -10,6 +10,7 @@ import {
   ChartNoAxesColumn,
   Handshake,
   LayoutDashboard,
+  ListTodo,
   LogOut,
   Mail,
   Menu as MenuIcon,
@@ -31,6 +32,7 @@ import { NotificationsBell } from "@/components/shell/notifications-bell";
 
 const NAV = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "My tasks", href: "/tasks", icon: ListTodo },
   { label: "Contacts", href: "/contacts", icon: UsersRound },
   { label: "Practices", href: "/practices", icon: Building2 },
   { label: "Deals", href: "/deals", icon: Handshake },
