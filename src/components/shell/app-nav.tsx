@@ -13,7 +13,6 @@ import {
   LogOut,
   Menu as MenuIcon,
   Plus,
-  Search,
   Settings,
   User,
   UsersRound,
@@ -24,7 +23,7 @@ import type { SessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/ui/primitives";
 import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
-import { GlobalSearch } from "@/components/shell/global-search";
+import { InlineSearch } from "@/components/shell/inline-search";
 import { NotificationsBell } from "@/components/shell/notifications-bell";
 
 const NAV = [
@@ -54,19 +53,7 @@ function Wordmark({ size = 30 }: { size?: number }) {
 export function AppNav({ profile }: { profile: SessionProfile }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [searchOpen, setSearchOpen] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setSearchOpen((v) => !v);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   React.useEffect(() => {
     setMobileOpen(false);
@@ -131,18 +118,7 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
             <Image src="/brand/logo.png" alt="Aspen" width={28} height={28} className="rounded-[7px]" />
           </Link>
 
-          <button
-            type="button"
-            onClick={() => setSearchOpen(true)}
-            className="group flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-lg border border-line bg-surface-2 px-3.5 text-left transition-colors hover:border-gold/60 hover:bg-surface sm:mx-1 lg:max-w-lg"
-            aria-label="Search (Ctrl+K)"
-          >
-            <Search size={17} className="shrink-0 text-fg-3 transition-colors group-hover:text-gold-deep" />
-            <span className="flex-1 truncate text-sm text-fg-3">Find anything…</span>
-            <kbd className="hidden shrink-0 rounded border border-line bg-surface px-1.5 py-0.5 text-[11px] font-semibold text-fg-4 sm:inline">
-              ⌘K
-            </kbd>
-          </button>
+          <InlineSearch hotkey className="min-w-0 flex-1 sm:mx-1 lg:max-w-lg" />
 
           <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
             <Link
@@ -238,8 +214,6 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
           </aside>
         </div>
       ) : null}
-
-      <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   );
 }
