@@ -26,7 +26,7 @@ export function SidebarPanels({ data }: { data: SidebarData }) {
   const now = new Date();
 
   return (
-    <div className="mt-3 space-y-4 border-t border-line pt-3">
+    <div className="space-y-4 border-t border-line pt-3">
       {/* Mini task list */}
       <div>
         <div className="mb-1 flex items-center justify-between px-1">

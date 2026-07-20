@@ -192,7 +192,11 @@ export function AppNav({
             ) : null}
             <NavLinks mini={collapsed} />
           </div>
-          {!collapsed && sidebar ? <SidebarPanels data={sidebar} /> : null}
+          {!collapsed && sidebar ? (
+            <div className="mt-auto pt-4">
+              <SidebarPanels data={sidebar} />
+            </div>
+          ) : null}
         </nav>
       </aside>
 
