@@ -117,11 +117,13 @@ select:focus-visible {
   font-size: 13px;
 }
 .fc .fc-button { border-radius: 10px; font-weight: 600; text-transform: capitalize; }
-/* Selected view (day/week/month) is dark — keep its label readable (white). */
-.fc .fc-button-primary.fc-button-active,
-.fc .fc-button-primary.fc-button-active:hover,
+/* Selected view (day/week/month) is dark — keep its label readable (white).
+   FullCalendar's own active-button rule has equal specificity, so force it. */
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled).fc-button-active:hover,
+.fc .fc-button-primary:not(:disabled).fc-button-active:focus,
 .fc .fc-button-primary:not(:disabled):active {
-  color: #fff;
+  color: #fff !important;
 }
 .fc .fc-toolbar-title { font-size: 18px; font-weight: 700; color: var(--color-fg-1); letter-spacing: -0.02em; }
 .fc .fc-event { border-radius: 6px; padding: 1px 4px; font-weight: 600; cursor: pointer; }
