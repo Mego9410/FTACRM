@@ -24,7 +24,9 @@
 
 -- ── Cleanup of previous demo load (order matters for FKs) ────────────────
 delete from public.call_recordings where provider_call_id like 'DEMO-%';
-delete from public.tasks where assignee_id in (
+delete from public.tasks where created_by in (
+  select id from public.profiles where email like '%@demo.ft-associates.com')
+  or assignee_id in (
   select id from public.profiles where email like '%@demo.ft-associates.com');
 delete from public.calendar_events where organiser_id in (
   select id from public.profiles where email like '%@demo.ft-associates.com');
@@ -577,74 +579,98 @@ begin
     end if;
   end;
 
-  -- ── 9. General tasks across the team ──────────────────────────────────
-  insert into public.tasks (title, details, due_at, assignee_id, created_by, status, contact_id, practice_id)
-  select
-    (array['Call re valuation follow-up','Chase outstanding NDA','Send comparable evidence',
-           'Confirm viewing feedback','Update buyer criteria after call','Prepare marketing summary'])[1 + (g % 6)],
-    null,
-    now() + ((g % 9) - 3 || ' days')::interval,
-    staff[1 + (g % 10)], staff[1 + ((g + 3) % 10)],
-    case when g % 4 = 0 then 'done' else 'open' end,
-    c.id, null
-  from generate_series(1, 20) g
-  join lateral (
-    select id from public.contacts where legacy_ref like 'DEMO-%'
-    order by md5('task' || g::text || legacy_ref) limit 1
-  ) c on true;
-
-  -- ── 10. Two weeks of team calendar ────────────────────────────────────
+  -- ── 9 + 10. Tasks and calendar for EVERY active person ────────────────
+  -- Loops over all active profiles — the 10 demo staff AND any real users
+  -- (e.g. the signed-in admin) — so everyone's My Day, task list and
+  -- calendar overlay show a realistic spread: overdue / due-today /
+  -- upcoming tasks, and diary events including at least two today.
+  -- Demo rows stay separable: tasks are created_by demo staff and events are
+  -- organised by demo staff, which is exactly what the cleanup at the top
+  -- deletes — anything a real user creates themselves is never touched.
   declare
-    ev_id uuid; ev_type_id uuid; ev_owner uuid; ev_start timestamptz;
+    person record;
+    creator uuid;
+    ev_id uuid; ev_type_id uuid; ev_start timestamptz;
     p_id uuid; p_title text; att uuid;
+    c_id uuid; c_name text;
+    pi int := 0;
+    j int;
+    -- per-person event plan: day offset, start hour, minutes, kind
+    ev_day  int[]  := array[-4, -2, 0,  0,  1,  3,  6];
+    ev_hour int[]  := array[ 9, 14, 10, 14, 11,  9, 15];
+    ev_min  int[]  := array[ 0, 30,  0, 30,  0, 30,  0];
+    -- kinds: 1 valuation, 2 viewing, 3+ meetings
+    ev_kind int[]  := array[ 3,  1,  2,  3,  3,  1,  3];
+    meeting_titles text[] := array['Pipeline review','Buyer pool triage','1:1 catch-up',
+                                   'Completion planning','Marketing planning','Team stand-up'];
+    task_day  int[] := array[-2, 0, 1, 3, 6];
+    task_titles text[] := array['Chase outstanding NDA','Call re valuation follow-up',
+                                'Send comparable evidence','Confirm viewing feedback',
+                                'Prepare marketing summary','Update buyer criteria after call'];
   begin
-    for i in 1..48 loop
-      ev_owner := staff[1 + (i % 10)];
-      -- spread over -6 .. +9 days, working hours
-      ev_start := date_trunc('day', now()) + (((i * 5) % 16) - 6 || ' days')::interval
-                  + (9 + (i % 8) || ' hours')::interval + (case when i % 2 = 0 then 30 else 0 end || ' minutes')::interval;
+    for person in
+      select id, full_name from public.profiles where is_active order by created_at limit 40
+    loop
+      pi := pi + 1;
+      creator := staff[1 + (pi % 10)];
 
-      if i % 4 in (0, 1) then
-        -- valuation or viewing linked to a practice
-        select id, display_title into p_id, p_title from public.practices
-        where legacy_ref like 'DEMO-PRACTICE-%' order by md5('ev' || i::text || legacy_ref) limit 1;
-        select lv.id into ev_type_id from public.lookup_values lv
-          join public.lookup_types lt on lt.id = lv.lookup_type_id
-          where lt.key = 'event_type' and lv.system_key = (case when i % 4 = 0 then 'valuation' else 'viewing' end);
-        insert into public.calendar_events (title, event_type_id, starts_at, ends_at, organiser_id, practice_id, status, sync_state, created_by)
-        values ((case when i % 4 = 0 then 'Valuation — ' else 'Viewing — ' end) || p_title,
-                ev_type_id, ev_start, ev_start + interval '1 hour', ev_owner, p_id, 'confirmed', 'local', ev_owner)
-        returning id into ev_id;
-        insert into public.calendar_event_attendees (event_id, profile_id) values (ev_id, ev_owner);
-      else
-        select lv.id into ev_type_id from public.lookup_values lv
-          join public.lookup_types lt on lt.id = lv.lookup_type_id
-          where lt.key = 'event_type' and lv.system_key = (case when i % 7 = 0 then 'holiday' else 'meeting' end);
-        insert into public.calendar_events (title, event_type_id, starts_at, ends_at, organiser_id, status, sync_state, created_by, all_day)
-        values ((array['Pipeline review','Buyer pool triage','Marketing planning','1:1 catch-up',
-                       'Completion planning','Team stand-up','Annual leave'])[1 + (i % 7)],
-                ev_type_id, ev_start,
-                ev_start + (case when i % 7 = 0 then interval '8 hours' else interval '45 minutes' end),
-                ev_owner, 'confirmed', 'local', ev_owner, (i % 7 = 0))
-        returning id into ev_id;
-        insert into public.calendar_event_attendees (event_id, profile_id) values (ev_id, ev_owner);
-        -- meetings get 1-2 extra attendees
-        if i % 7 <> 0 then
-          att := staff[1 + ((i + 4) % 10)];
-          if att <> ev_owner then
+      -- 5 tasks: overdue, due today, then upcoming; one already done
+      for j in 1..5 loop
+        select id, first_name || ' ' || last_name into c_id, c_name
+        from public.contacts where legacy_ref like 'DEMO-%'
+        order by md5('ptask' || pi::text || j::text || legacy_ref) limit 1;
+        insert into public.tasks (title, details, due_at, assignee_id, created_by, status, contact_id, completed_at, created_at)
+        values (
+          task_titles[1 + ((pi + j) % 6)] || case when j % 2 = 0 then ' — ' || c_name else '' end,
+          null,
+          date_trunc('day', now()) + (task_day[j] || ' days')::interval + interval '17 hours',
+          person.id, creator,
+          case when j = 4 then 'done' else 'open' end,
+          c_id,
+          case when j = 4 then now() - interval '1 day' else null end,
+          now() - interval '5 days');
+      end loop;
+
+      -- 7 diary events, two of them today
+      for j in 1..7 loop
+        ev_start := date_trunc('day', now()) + (ev_day[j] || ' days')::interval
+                    + (ev_hour[j] || ' hours')::interval + (ev_min[j] || ' minutes')::interval;
+
+        if ev_kind[j] in (1, 2) then
+          select id, display_title into p_id, p_title from public.practices
+          where legacy_ref like 'DEMO-PRACTICE-%'
+          order by md5('pev' || pi::text || j::text || legacy_ref) limit 1;
+          select lv.id into ev_type_id from public.lookup_values lv
+            join public.lookup_types lt on lt.id = lv.lookup_type_id
+            where lt.key = 'event_type' and lv.system_key = (case when ev_kind[j] = 1 then 'valuation' else 'viewing' end);
+          insert into public.calendar_events (title, event_type_id, starts_at, ends_at, organiser_id, practice_id, status, sync_state, created_by)
+          values ((case when ev_kind[j] = 1 then 'Valuation — ' else 'Viewing — ' end) || p_title,
+                  ev_type_id, ev_start, ev_start + interval '1 hour', creator, p_id, 'confirmed', 'local', creator)
+          returning id into ev_id;
+        else
+          select lv.id into ev_type_id from public.lookup_values lv
+            join public.lookup_types lt on lt.id = lv.lookup_type_id
+            where lt.key = 'event_type' and lv.system_key = 'meeting';
+          insert into public.calendar_events (title, event_type_id, starts_at, ends_at, organiser_id, status, sync_state, created_by)
+          values (meeting_titles[1 + ((pi + j) % 6)],
+                  ev_type_id, ev_start, ev_start + interval '45 minutes', creator, 'confirmed', 'local', creator)
+          returning id into ev_id;
+        end if;
+
+        -- the person is always on the invite; organiser too; meetings gain a third
+        insert into public.calendar_event_attendees (event_id, profile_id) values (ev_id, person.id);
+        if creator <> person.id then
+          insert into public.calendar_event_attendees (event_id, profile_id) values (ev_id, creator);
+        end if;
+        if ev_kind[j] >= 3 and j % 3 = 0 then
+          att := staff[1 + ((pi + j + 4) % 10)];
+          if att <> person.id and att <> creator then
             insert into public.calendar_event_attendees (event_id, profile_id) values (ev_id, att);
           end if;
-          if i % 3 = 0 then
-            att := staff[1 + ((i + 7) % 10)];
-            if att <> ev_owner then
-              insert into public.calendar_event_attendees (event_id, profile_id) values (ev_id, att)
-              on conflict do nothing;
-            end if;
-          end if;
         end if;
-      end if;
+      end loop;
     end loop;
   end;
 
-  raise notice 'demo data loaded: 10 staff, 200 contacts, 50 practices, calls, tasks, calendar';
+  raise notice 'demo data loaded: staff, contacts, practices, calls, and per-person tasks + calendar';
 end $$;
