@@ -128,7 +128,7 @@ export default async function ReportingPage({ searchParams }: { searchParams: Pr
 
   return (
     <div>
-      <PageHeader title="Reporting" subtitle={`Comparing ${label}`} />
+      <PageHeader eyebrow="Management information" title="Reporting" subtitle={`Comparing ${label}`} />
       <LinkTabs
         className="mb-4"
         tabs={[

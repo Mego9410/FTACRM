@@ -85,7 +85,7 @@ export default async function DealLayout({
         </p>
       </div>
       {stageStates.length ? (
-        <div className="mb-5 rounded-lg border border-line bg-surface-1 px-5 pb-4 pt-3.5">
+        <div className="mb-5 overflow-x-auto rounded-lg border border-line bg-surface px-5 pb-4 pt-3.5">
           <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-fg-4">Sales progression</p>
           <StageTracker stages={stageStates} size="lg" dealStatus={deal.status} />
         </div>

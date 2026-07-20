@@ -31,7 +31,7 @@ export default async function CampaignsPage() {
   return (
     <div>
       <PageHeader
-        title="Campaigns"
+        eyebrow="Communications" title="Campaigns"
         subtitle="Bulk email to segmented buyer and seller audiences"
         actions={
           <Link href="/campaigns/new">
@@ -68,6 +68,7 @@ export default async function CampaignsPage() {
         />
       ) : (
         <Card>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left text-xs font-bold uppercase tracking-wide text-fg-3">
@@ -105,6 +106,7 @@ export default async function CampaignsPage() {
               })}
             </tbody>
           </table>
+</div>
         </Card>
       )}
     </div>

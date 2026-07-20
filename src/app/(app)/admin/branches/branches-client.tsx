@@ -50,6 +50,7 @@ export function BranchesClient({ branches }: { branches: Branch[] }) {
       {branches.length === 0 ? (
         <EmptyState className="m-4" title="No branches yet" body="Add your first branch — users and records can then be assigned to it." />
       ) : (
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-line text-left text-xs font-bold uppercase tracking-wide text-fg-3">
@@ -76,6 +77,7 @@ export function BranchesClient({ branches }: { branches: Branch[] }) {
             ))}
           </tbody>
         </table>
+</div>
       )}
 
       <Dialog open={!!editing} onClose={() => setEditing(null)} title={current ? `Edit ${current.name}` : "Add branch"}>

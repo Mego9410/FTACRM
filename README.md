@@ -23,12 +23,23 @@ production build:
 - **Calendar & tasks** — shared team calendar with per-person overlays, tasks, notifications
 - **Reporting** — period-vs-period KPIs, pipeline snapshot, activity feed, smart lists
 
+### AI layer (built, activates with credentials)
+
+- **AI call capture** (`docs/features/11-telephony.md`) — the 3CX webhook logs calls to the
+  right contact's journal (author resolved from extension), recordings transcribe via
+  Deepgram, and AI analysis writes the summary and proposes tasks + a draft follow-up for
+  human approval. Set `THREECX_WEBHOOK_SECRET`, `DEEPGRAM_API_KEY`, `ANTHROPIC_API_KEY`.
+- **AI-first go-to-market** — the moment a practice goes to available, the buyer pool is
+  ranked against it, the top targets are flagged for outreach with scores and reasons, and
+  the owner is notified. Works with no AI key (deterministic matching engine).
+- The demo seed includes analysed calls, transcripts, and pending suggestions so the whole
+  flow is visible before any provider is connected.
+
 ### Deliberately not linked in this build (by request)
 
 - **Resend / email sending** — campaigns can be drafted, segmented, previewed and queued;
   dispatch is disabled behind an `EmailProvider` interface (`src/lib/email/provider.ts`).
   Linking Resend later = implement the adapter + set `RESEND_API_KEY`. No other changes.
-- **AI features** (PLAN phase 8) — not built, per scope.
 - **Microsoft 365 sync** — OAuth connect + encrypted token storage is implemented but
   dormant until Azure credentials are configured; mail/calendar delta sync is the
   documented next step (`docs/features/06-communications.md`).

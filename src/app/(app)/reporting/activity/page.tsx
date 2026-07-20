@@ -48,7 +48,7 @@ export default async function ActivityFeedPage({ searchParams }: { searchParams:
 
   return (
     <div>
-      <PageHeader title="Reporting" subtitle="Everything the firm has logged, newest first" />
+      <PageHeader eyebrow="Management information" title="Reporting" subtitle="Everything the firm has logged, newest first" />
       <LinkTabs
         className="mb-4"
         tabs={[

@@ -38,7 +38,7 @@ export default async function MatchingPage({
   return (
     <div>
       <PageHeader
-        title="Matching"
+        eyebrow="Intelligence" title="Matching"
         subtitle="Pick a practice to find its buyers, or a buyer to find their practices"
       />
       <MatchPicker current={subject} />

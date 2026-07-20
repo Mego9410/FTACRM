@@ -99,6 +99,16 @@ h1, h2, h3, h4 {
 .fc .fc-event { border-radius: 6px; padding: 1px 4px; font-weight: 600; cursor: pointer; }
 .fc .fc-daygrid-day-number, .fc .fc-col-header-cell-cushion { color: var(--color-fg-2); }
 
+/* Calendar on small screens: let the toolbar wrap instead of overflowing */
+@media (max-width: 640px) {
+  .fc .fc-toolbar.fc-header-toolbar { flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .fc .fc-toolbar-title { font-size: 15px; }
+  .fc .fc-button { padding: 4px 8px; font-size: 12px; }
+}
+
+/* Native dialogs: keep inside the viewport with breathing room on phones */
+dialog { max-width: min(var(--dialog-max, 32rem), calc(100vw - 2rem)); }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }

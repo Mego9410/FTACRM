@@ -82,7 +82,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
   return (
     <div>
       <PageHeader
-        title="Contacts"
+        eyebrow="Relationships" title="Contacts"
         subtitle="Buyers, sellers, solicitors and everyone in between"
         actions={
           <Link href="/contacts/new">

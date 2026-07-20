@@ -32,6 +32,7 @@ export function PermissionsClient({
       <div className="px-5 py-3 text-sm text-fg-3">
         Administrators hold every permission. Tick what managers and agents may do.
       </div>
+      <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-line text-left text-xs font-bold uppercase tracking-wide text-fg-3">
@@ -63,6 +64,7 @@ export function PermissionsClient({
           ))}
         </tbody>
       </table>
+</div>
     </Card>
   );
 }

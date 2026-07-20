@@ -68,12 +68,13 @@ export default async function DashboardPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-[26px] font-extrabold tracking-tight text-fg-1">
-          Good {new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"}, {firstName}
-        </h1>
-        <p className="mt-0.5 text-sm text-fg-3">
+        <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-gold-deep">
           {new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date())}
         </p>
+        <h1 className="text-[24px] font-extrabold tracking-tight text-fg-1 sm:text-[28px]">
+          Good {new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"},{" "}
+          <span className="font-serif font-semibold italic text-gold-deep">{firstName}</span>
+        </h1>
       </div>
 
       <div className="mb-5">

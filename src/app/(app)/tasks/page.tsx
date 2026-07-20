@@ -33,7 +33,7 @@ export default async function TasksPage({
 
   return (
     <div>
-      <PageHeader title="Tasks" subtitle="Follow-ups, chases and to-dos" />
+      <PageHeader eyebrow="Follow-ups" title="Tasks" subtitle="Follow-ups, chases and to-dos" />
       <TasksClient
         me={me.id}
         canSeeTeam={me.role !== "agent"}

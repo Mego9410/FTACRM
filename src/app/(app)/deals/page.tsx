@@ -70,7 +70,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
 
   return (
     <div>
-      <PageHeader title="Deals" subtitle="Sales progression — every transaction from accepted offer to completion" />
+      <PageHeader eyebrow="Sales progression" title="Deals" subtitle="Every transaction from accepted offer to completion" />
 
       <LinkTabs
         className="mb-4"
@@ -130,10 +130,12 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
                         .join(" · ")}
                     </p>
                   </div>
-                  <div className="w-56 shrink-0">
+                  {owner ? (
+                    <Avatar name={owner.full_name} size={28} color={owner.calendar_color} className="order-2 sm:order-3" />
+                  ) : null}
+                  <div className="order-3 w-full sm:order-2 sm:w-56 sm:shrink-0">
                     <StageTracker stages={stageStates} dealStatus={d.status} />
                   </div>
-                  {owner ? <Avatar name={owner.full_name} size={28} color={owner.calendar_color} /> : null}
                 </Card>
               </Link>
             );

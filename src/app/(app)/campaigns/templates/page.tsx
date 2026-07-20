@@ -15,7 +15,7 @@ export default async function TemplatesPage() {
 
   return (
     <div>
-      <PageHeader title="Campaigns" subtitle="Reusable campaign templates with merge tags" />
+      <PageHeader eyebrow="Communications" title="Campaigns" subtitle="Reusable campaign templates with merge tags" />
       <LinkTabs
         className="mb-4"
         tabs={[

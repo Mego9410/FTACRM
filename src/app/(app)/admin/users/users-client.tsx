@@ -67,6 +67,7 @@ export function UsersClient({ users, branches }: { users: UserRow[]; branches: B
         title={`Users (${users.length})`}
         action={<Button size="sm" onClick={() => setInviteOpen(true)}>Invite user</Button>}
       />
+      <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-line text-left text-xs font-bold uppercase tracking-wide text-fg-3">
@@ -101,6 +102,7 @@ export function UsersClient({ users, branches }: { users: UserRow[]; branches: B
           ))}
         </tbody>
       </table>
+</div>
 
       <Dialog open={inviteOpen} onClose={() => setInviteOpen(false)} title="Invite user">
         <form onSubmit={submitInvite} className="space-y-4">

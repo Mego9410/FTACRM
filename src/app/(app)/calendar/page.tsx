@@ -20,7 +20,7 @@ export default async function CalendarPage() {
 
   return (
     <div>
-      <PageHeader title="Calendar" subtitle="The whole team's diary — overlay whoever you need" />
+      <PageHeader eyebrow="Team diary" title="Calendar" subtitle="The whole team's diary — overlay whoever you need" />
       <CalendarClient me={me.id} team={team ?? []} eventTypes={eventTypes} />
     </div>
   );

@@ -42,9 +42,9 @@ export function Dialog({
       }}
       className={cn(
         "m-auto w-full rounded-lg border border-line bg-surface p-0 text-fg-2 shadow-lg backdrop:bg-ink/40",
-        wide ? "max-w-3xl" : "max-w-lg",
         className,
       )}
+      style={{ "--dialog-max": wide ? "48rem" : "32rem" } as React.CSSProperties}
     >
       <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
         <h3 className="text-[15px] font-bold text-fg-1">{title}</h3>

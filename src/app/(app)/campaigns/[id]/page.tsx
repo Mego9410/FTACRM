@@ -89,6 +89,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
             </p>
           ) : (
             <div className="max-h-[480px] overflow-y-auto">
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-surface">
                   <tr className="border-b border-line text-left text-xs font-bold uppercase tracking-wide text-fg-3">
@@ -142,6 +143,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
                   })}
                 </tbody>
               </table>
+</div>
             </div>
           )}
         </Card>

@@ -16,7 +16,7 @@ type Notification = {
   created_at: string;
 };
 
-export function NotificationsBell({ profileId }: { profileId: string }) {
+export function NotificationsBell({ profileId, dark }: { profileId: string; dark?: boolean }) {
   const [items, setItems] = React.useState<Notification[]>([]);
   const supabase = React.useMemo(() => createClient(), []);
 
@@ -57,7 +57,14 @@ export function NotificationsBell({ profileId }: { profileId: string }) {
   return (
     <Menu
       trigger={
-        <span className="relative inline-flex rounded-[10px] p-2 text-fg-2 hover:bg-surface-2 hover:text-fg-1" title="Notifications">
+        <span
+          className={
+            dark
+              ? "relative inline-flex rounded-[10px] p-2 text-white/80 hover:bg-white/10 hover:text-white"
+              : "relative inline-flex rounded-[10px] p-2 text-fg-2 hover:bg-surface-2 hover:text-fg-1"
+          }
+          title="Notifications"
+        >
           <Bell size={18} />
           {unread > 0 ? (
             <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1 text-[10px] font-bold text-ink">

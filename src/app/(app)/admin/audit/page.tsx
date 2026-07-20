@@ -30,6 +30,7 @@ export default async function AuditPage({
   return (
     <Card>
       <CardHeader title={`Audit log (${count ?? 0} entries)`} />
+      <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-line text-left text-xs font-bold uppercase tracking-wide text-fg-3">
@@ -59,6 +60,7 @@ export default async function AuditPage({
           })}
         </tbody>
       </table>
+</div>
       {totalPages > 1 ? (
         <div className="flex items-center justify-between px-5 py-3">
           <p className="text-xs text-fg-3">Page {page} of {totalPages}</p>

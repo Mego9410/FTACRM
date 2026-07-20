@@ -18,7 +18,7 @@ export default async function SuppressionsPage() {
   return (
     <div>
       <PageHeader
-        title="Campaigns"
+        eyebrow="Communications" title="Campaigns"
         subtitle="Addresses that must never receive bulk email — unsubscribes, bounces, complaints and manual blocks"
       />
       <LinkTabs
@@ -34,6 +34,7 @@ export default async function SuppressionsPage() {
         {(suppressions ?? []).length === 0 ? (
           <EmptyState className="m-4" title="No suppressed addresses" body="Unsubscribes and hard bounces land here automatically once sending is linked." />
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left text-xs font-bold uppercase tracking-wide text-fg-3">
@@ -56,6 +57,7 @@ export default async function SuppressionsPage() {
               ))}
             </tbody>
           </table>
+</div>
         )}
       </Card>
     </div>

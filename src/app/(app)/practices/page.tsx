@@ -82,7 +82,7 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
   return (
     <div>
       <PageHeader
-        title="Practices"
+        eyebrow="Instructions" title="Practices"
         subtitle="Every practice from first valuation to completion"
         actions={
           <Link href="/practices/new">
