@@ -1,9 +1,19 @@
+import Link from "next/link";
+import { Building2, CalendarPlus, ListTodo, UserPlus } from "lucide-react";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getDashboardData } from "@/lib/dashboard";
 import { contactName } from "@/lib/contact-helpers";
 import { DashboardGrid } from "@/components/dashboard/dashboard-grid";
+import { DashboardSearch } from "./dashboard-search";
 import type { AiWidgetRow } from "@/components/dashboard/ai-widget";
+
+const QUICK_ACTIONS = [
+  { label: "New contact", href: "/contacts/new", icon: UserPlus },
+  { label: "New practice", href: "/practices/new", icon: Building2 },
+  { label: "New task", href: "/tasks?new=1", icon: ListTodo },
+  { label: "New event", href: "/calendar?new=1", icon: CalendarPlus },
+] as const;
 
 export const metadata = { title: "My day" };
 
@@ -76,6 +86,26 @@ export default async function DashboardPage() {
             <span className="text-gold-deep">{firstName}</span>
           </h1>
           <p className="mt-1.5 text-sm font-semibold text-fg-2">{summary}</p>
+
+          <div className="mt-5 max-w-2xl">
+            <DashboardSearch />
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {QUICK_ACTIONS.map((a) => {
+              const Icon = a.icon;
+              return (
+                <Link
+                  key={a.href}
+                  href={a.href}
+                  className="inline-flex items-center gap-2 rounded-lg border border-line bg-surface/80 px-3.5 py-2 text-[13px] font-semibold text-fg-1 shadow-xs backdrop-blur transition-colors hover:border-gold/60 hover:bg-surface"
+                >
+                  <Icon size={15} className="text-gold-deep" />
+                  {a.label}
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </div>
       <DashboardGrid data={data} ai={ai} initialConfig={layoutRow?.dashboard_layout ?? null} />
