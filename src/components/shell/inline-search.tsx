@@ -112,13 +112,13 @@ export function InlineSearch({
     <div ref={rootRef} className={cn("relative", className)}>
       <div
         className={cn(
-          "group flex items-center gap-2.5 border border-line transition-colors focus-within:border-gold/70 focus-within:bg-surface hover:border-gold/60",
+          "group flex items-center gap-2.5 border border-line transition-colors focus-within:border-fg-4 focus-within:bg-surface hover:border-fg-4/80",
           isHero
             ? "rounded-xl bg-surface/80 px-4 shadow-xs backdrop-blur"
             : "h-10 rounded-lg bg-surface-2 px-3.5",
         )}
       >
-        <Search size={isHero ? 18 : 17} className="shrink-0 text-fg-3 transition-colors group-focus-within:text-gold-deep" />
+        <Search size={isHero ? 18 : 17} className="shrink-0 text-fg-3 transition-colors group-focus-within:text-fg-2" />
         <input
           ref={inputRef}
           value={q}

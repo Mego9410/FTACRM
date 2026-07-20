@@ -27,6 +27,8 @@ import { Avatar } from "@/components/ui/primitives";
 import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
 import { InlineSearch } from "@/components/shell/inline-search";
 import { NotificationsBell } from "@/components/shell/notifications-bell";
+import { SidebarPanels } from "@/components/shell/sidebar-panels";
+import type { SidebarData } from "@/lib/sidebar";
 
 const NAV = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -52,7 +54,15 @@ function Wordmark({ size = 30 }: { size?: number }) {
   );
 }
 
-export function AppNav({ profile, children }: { profile: SessionProfile; children: React.ReactNode }) {
+export function AppNav({
+  profile,
+  sidebar,
+  children,
+}: {
+  profile: SessionProfile;
+  sidebar: SidebarData | null;
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = React.useState(false);
@@ -175,11 +185,14 @@ export function AppNav({ profile, children }: { profile: SessionProfile; childre
           </div>
         ) : null}
 
-        <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
-          {!collapsed ? (
-            <p className="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-fg-4">Menu</p>
-          ) : null}
-          <NavLinks mini={collapsed} />
+        <nav className="flex flex-1 flex-col overflow-y-auto p-3">
+          <div className="flex flex-col gap-0.5">
+            {!collapsed ? (
+              <p className="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-fg-4">Menu</p>
+            ) : null}
+            <NavLinks mini={collapsed} />
+          </div>
+          {!collapsed && sidebar ? <SidebarPanels data={sidebar} /> : null}
         </nav>
       </aside>
 

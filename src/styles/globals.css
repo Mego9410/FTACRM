@@ -87,10 +87,18 @@ h1, h2, h3, h4 {
   text-wrap: balance;
 }
 
-/* Focus ring: gold, per brand */
+/* Focus ring: gold, per brand — for buttons, links and the like. */
 :focus-visible {
   outline: 2px solid var(--color-gold);
   outline-offset: 1px;
+}
+
+/* Form fields signal focus with their own border colour, so skip the outline
+   box on them (avoids a hard gold box around inputs like the search bar). */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
 }
 
 /* FullCalendar restyle to FTA tokens (loaded globally; calendar page only renders it) */
