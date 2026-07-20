@@ -167,7 +167,7 @@ export function LookupPill({ color, children }: { color?: string | null; childre
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("rounded-lg border border-line bg-surface shadow-xs", className)}
+      className={cn("min-w-0 max-w-full rounded-lg border border-line bg-surface shadow-xs", className)}
       {...props}
     />
   );
@@ -241,7 +241,7 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-line bg-surface px-6 py-12 text-center", className)}>
+    <div className={cn("flex min-w-0 max-w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-line bg-surface px-6 py-12 text-center", className)}>
       <p className="text-[15px] font-bold text-fg-1">{title}</p>
       {body ? <p className="max-w-sm text-sm text-fg-3">{body}</p> : null}
       {action ? <div className="mt-2">{action}</div> : null}

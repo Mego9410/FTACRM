@@ -73,7 +73,7 @@ export default async function DashboardPage() {
         </p>
         <h1 className="text-[24px] font-extrabold tracking-tight text-fg-1 sm:text-[28px]">
           Good {new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"},{" "}
-          <span className="font-serif font-semibold italic text-gold-deep">{firstName}</span>
+          <span className="text-gold-deep">{firstName}</span>
         </h1>
       </div>
 

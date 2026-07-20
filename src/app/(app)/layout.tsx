@@ -8,7 +8,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-surface-2">
       <AppNav profile={profile} />
-      <main className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6">{children}</main>
+      <main className="mx-auto w-full max-w-[1400px] overflow-x-clip px-4 py-6 sm:px-6">{children}</main>
     </div>
   );
 }

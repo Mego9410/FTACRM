@@ -57,7 +57,6 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Close the mobile sheet on navigation.
   React.useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
@@ -71,27 +70,25 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <header className="sticky top-0 z-40 bg-ink text-white shadow-md">
-      {/* Gold hairline — the brand's signature accent */}
-      <div className="h-0.5 bg-gold" />
-      <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-2 px-3 sm:gap-4 sm:px-6">
+    <header className="sticky top-0 z-40 border-b border-line bg-surface">
+      <div className="mx-auto flex h-14 w-full max-w-[1400px] items-center gap-1.5 px-3 sm:gap-3 sm:px-6">
         <button
           type="button"
           onClick={() => setMobileOpen((v) => !v)}
-          className="rounded-[10px] p-2 text-white/80 hover:bg-white/10 hover:text-white lg:hidden"
+          className="rounded-[10px] p-2 text-fg-2 hover:bg-surface-2 hover:text-fg-1 lg:hidden"
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
         >
           {mobileOpen ? <X size={20} /> : <MenuIcon size={20} />}
         </button>
 
-        <Link href="/dashboard" className="flex shrink-0 items-center gap-2.5">
-          <Image src="/brand/logo.png" alt="" width={30} height={30} className="rounded-[8px]" />
-          <span className="hidden flex-col leading-none min-[420px]:flex">
-            <span className="font-serif text-[15px] font-semibold tracking-tight text-gold">
-              Frank Taylor <span className="text-white/90">&amp;</span> Associates
+        <Link href="/dashboard" className="flex min-w-0 shrink items-center gap-2.5">
+          <Image src="/brand/logo.png" alt="" width={30} height={30} className="shrink-0 rounded-[8px]" />
+          <span className="hidden min-w-0 flex-col leading-none sm:flex">
+            <span className="truncate text-[15px] font-extrabold tracking-tight text-fg-1">
+              FTA <span className="text-gold-deep">CRM</span>
             </span>
-            <span className="mt-0.5 text-[9.5px] font-bold uppercase tracking-[0.22em] text-white/50">
-              Practice sales CRM
+            <span className="mt-0.5 truncate text-[9px] font-bold uppercase tracking-[0.16em] text-fg-4">
+              Frank Taylor &amp; Associates
             </span>
           </span>
         </Link>
@@ -105,7 +102,7 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
                 href={item.href}
                 className={cn(
                   "relative whitespace-nowrap px-3 py-[17px] text-[13.5px] font-semibold transition-colors",
-                  active ? "text-gold" : "text-white/70 hover:text-white",
+                  active ? "text-fg-1" : "text-fg-3 hover:text-fg-1",
                 )}
               >
                 {item.label}
@@ -121,7 +118,7 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
-            className="rounded-[10px] p-2 text-white/80 hover:bg-white/10 hover:text-white"
+            className="rounded-[10px] p-2 text-fg-2 hover:bg-surface-2 hover:text-fg-1"
             aria-label="Search (Ctrl+K)"
             title="Search (Ctrl+K)"
           >
@@ -131,7 +128,7 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
           <div className="hidden sm:block">
             <Menu
               trigger={
-                <span className="inline-flex rounded-[10px] p-2 text-white/80 hover:bg-white/10 hover:text-white" title="Quick add">
+                <span className="inline-flex rounded-[10px] p-2 text-fg-2 hover:bg-surface-2 hover:text-fg-1" title="Quick add">
                   <Plus size={18} />
                 </span>
               }
@@ -143,11 +140,11 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
             </Menu>
           </div>
 
-          <NotificationsBell profileId={profile.id} dark />
+          <NotificationsBell profileId={profile.id} />
 
           <Menu
             trigger={
-              <span className="ml-1 inline-flex cursor-pointer items-center rounded-full ring-2 ring-white/20 transition hover:ring-gold/70">
+              <span className="ml-1 inline-flex cursor-pointer items-center rounded-full ring-2 ring-line transition hover:ring-gold">
                 <Avatar name={profile.full_name} size={30} color={profile.calendar_color} />
               </span>
             }
@@ -174,7 +171,7 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
 
       {/* Mobile sheet */}
       {mobileOpen ? (
-        <nav className="border-t border-white/10 bg-ink-pure px-3 pb-4 pt-2 lg:hidden">
+        <nav className="border-t border-line bg-surface px-3 pb-4 pt-2 shadow-md lg:hidden">
           <ul className="grid grid-cols-2 gap-1">
             {NAV.map((item) => {
               const active = isActive(item.href);
@@ -185,7 +182,7 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
                     href={item.href}
                     className={cn(
                       "flex items-center gap-2.5 rounded-sm px-3.5 py-3 text-sm font-semibold",
-                      active ? "bg-gold text-ink" : "text-white/80 hover:bg-white/10 hover:text-white",
+                      active ? "bg-gold-tint text-gold-deep" : "text-fg-2 hover:bg-surface-2 hover:text-fg-1",
                     )}
                   >
                     <Icon size={17} /> {item.label}
@@ -194,14 +191,14 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
               );
             })}
           </ul>
-          <div className="mt-3 flex gap-1.5 border-t border-white/10 pt-3">
-            <Link href="/contacts/new" className="flex-1 rounded-sm bg-white/10 px-3 py-2.5 text-center text-[13px] font-semibold text-white hover:bg-white/15">
+          <div className="mt-3 flex gap-1.5 border-t border-line pt-3">
+            <Link href="/contacts/new" className="flex-1 rounded-sm border border-line px-3 py-2.5 text-center text-[13px] font-semibold text-fg-1 hover:bg-surface-2">
               New contact
             </Link>
-            <Link href="/practices/new" className="flex-1 rounded-sm bg-white/10 px-3 py-2.5 text-center text-[13px] font-semibold text-white hover:bg-white/15">
+            <Link href="/practices/new" className="flex-1 rounded-sm border border-line px-3 py-2.5 text-center text-[13px] font-semibold text-fg-1 hover:bg-surface-2">
               New practice
             </Link>
-            <Link href="/tasks?new=1" className="flex-1 rounded-sm bg-white/10 px-3 py-2.5 text-center text-[13px] font-semibold text-white hover:bg-white/15">
+            <Link href="/tasks?new=1" className="flex-1 rounded-sm border border-line px-3 py-2.5 text-center text-[13px] font-semibold text-fg-1 hover:bg-surface-2">
               New task
             </Link>
           </div>

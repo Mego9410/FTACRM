@@ -56,6 +56,14 @@
   --ease-out-fta: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+html,
+body {
+  /* Nothing may push the page wider than the viewport — wide content must
+     scroll inside its own container (tables, trackers, transcripts). */
+  overflow-x: clip;
+  max-width: 100%;
+}
+
 body {
   font-family: var(--font-sans);
   color: var(--color-fg-2);

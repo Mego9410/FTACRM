@@ -19,6 +19,11 @@ export const metadata: Metadata = {
   description: "Frank Taylor & Associates — practice sales CRM",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en-GB" className={`${hanken.variable} ${lora.variable}`}>
