@@ -1,0 +1,495 @@
+import { createClient } from "@/lib/supabase/server";
+import { getLookupIndex } from "@/lib/lookups";
+import type { Period } from "@/lib/reporting";
+
+export type ReportColumn = {
+  key: string;
+  label: string;
+  type?: "text" | "number" | "money" | "date" | "datetime";
+};
+export type ReportResult = { columns: ReportColumn[]; rows: Record<string, string | number | null>[] };
+export type ReportFilters = { owner?: string; branch?: string };
+export type ReportDef = {
+  key: string;
+  label: string;
+  description: string;
+  /** true if this report is bounded by the selected period; false = live snapshot ignoring period */
+  periodic: boolean;
+  run: (period: Period, filters: ReportFilters) => Promise<ReportResult>;
+};
+
+// ---- helpers -----------------------------------------------------------------
+
+/** Inclusive date-only bounds ("YYYY-MM-DD") for date columns. */
+function dateBounds(period: Period) {
+  return { from: period.from.toISOString().slice(0, 10), to: period.to.toISOString().slice(0, 10) };
+}
+
+/** Full ISO bounds for timestamptz columns. */
+function tsBounds(period: Period) {
+  return { from: period.from.toISOString(), to: period.to.toISOString() };
+}
+
+/** Estimated fee from a practice's fee configuration and a sale price. */
+function estimatedFee(
+  practice: { fee_percent?: number | null; fee_fixed?: number | null } | null | undefined,
+  price: number,
+): number {
+  if (practice?.fee_percent) return (price * Number(practice.fee_percent)) / 100;
+  if (practice?.fee_fixed) return Number(practice.fee_fixed);
+  return 0;
+}
+
+/** Build a contact display name from first/last/company, or null. */
+function contactName(
+  c: { first_name: string | null; last_name: string | null; company_name: string | null } | null | undefined,
+): string | null {
+  if (!c) return null;
+  return [c.first_name, c.last_name].filter(Boolean).join(" ") || c.company_name || null;
+}
+
+type PracticeJoin = {
+  display_title: string | null;
+  town: string | null;
+  branch_id: string | null;
+  fee_percent?: number | null;
+  fee_fixed?: number | null;
+  owner_id?: string | null;
+} | null;
+
+type ProfileJoin = { full_name: string | null } | null;
+type StageJoin = { label: string | null } | null;
+type ContactJoin = {
+  first_name: string | null;
+  last_name: string | null;
+  company_name: string | null;
+} | null;
+
+// ---- reports -----------------------------------------------------------------
+
+const completions: ReportDef = {
+  key: "completions",
+  label: "Completions",
+  description: "Deals that completed within the selected period, with the fee banked.",
+  periodic: true,
+  async run(period, filters) {
+    const supabase = await createClient();
+    const { from, to } = dateBounds(period);
+    let q = supabase
+      .from("deals")
+      .select(
+        "ref, agreed_price, completed_at, created_at, practices!deals_practice_id_fkey(display_title, town, fee_percent, fee_fixed), contacts!deals_buyer_contact_id_fkey(first_name, last_name, company_name), profiles!deals_owner_id_fkey(full_name)",
+      )
+      .eq("status", "completed")
+      .gte("completed_at", from)
+      .lte("completed_at", to);
+    if (filters.owner) q = q.eq("owner_id", filters.owner);
+    const { data } = await q;
+
+    const rows = (data ?? []).map((d) => {
+      const practice = d.practices as unknown as PracticeJoin;
+      const buyer = d.contacts as unknown as ContactJoin;
+      const owner = d.profiles as unknown as ProfileJoin;
+      const price = Number(d.agreed_price ?? 0);
+      const days =
+        d.completed_at && d.created_at
+          ? Math.round((new Date(d.completed_at).getTime() - new Date(d.created_at).getTime()) / 86_400_000)
+          : null;
+      return {
+        ref: d.ref ?? null,
+        practice: practice?.display_title ?? null,
+        town: practice?.town ?? null,
+        buyer: contactName(buyer),
+        agreed_price: d.agreed_price != null ? price : null,
+        fee: estimatedFee(practice, price),
+        completed: d.completed_at ?? null,
+        days_to_complete: days,
+        owner: owner?.full_name ?? null,
+      };
+    });
+
+    return {
+      columns: [
+        { key: "ref", label: "Ref", type: "text" },
+        { key: "practice", label: "Practice", type: "text" },
+        { key: "town", label: "Town", type: "text" },
+        { key: "buyer", label: "Buyer", type: "text" },
+        { key: "agreed_price", label: "Agreed price", type: "money" },
+        { key: "fee", label: "Fee", type: "money" },
+        { key: "completed", label: "Completed", type: "date" },
+        { key: "days_to_complete", label: "Days to complete", type: "number" },
+        { key: "owner", label: "Owner", type: "text" },
+      ],
+      rows,
+    };
+  },
+};
+
+const pipeline: ReportDef = {
+  key: "pipeline",
+  label: "Live pipeline",
+  description: "All in-progress deals as they stand right now (a live snapshot, not period-bound).",
+  periodic: false,
+  async run(_period, filters) {
+    const supabase = await createClient();
+    let q = supabase
+      .from("deals")
+      .select(
+        "ref, agreed_price, target_completion_date, last_activity_at, practices!deals_practice_id_fkey(display_title, fee_percent, fee_fixed), deal_stages!deals_current_stage_id_fkey(label), profiles!deals_owner_id_fkey(full_name)",
+      )
+      .eq("status", "in_progress");
+    if (filters.owner) q = q.eq("owner_id", filters.owner);
+    const { data } = await q;
+
+    const rows = (data ?? []).map((d) => {
+      const practice = d.practices as unknown as PracticeJoin;
+      const stage = d.deal_stages as unknown as StageJoin;
+      const owner = d.profiles as unknown as ProfileJoin;
+      const price = Number(d.agreed_price ?? 0);
+      return {
+        ref: d.ref ?? null,
+        practice: practice?.display_title ?? null,
+        stage: stage?.label ?? null,
+        agreed_price: d.agreed_price != null ? price : null,
+        est_fee: estimatedFee(practice, price),
+        target_completion: d.target_completion_date ?? null,
+        last_activity: d.last_activity_at ?? null,
+        owner: owner?.full_name ?? null,
+      };
+    });
+
+    return {
+      columns: [
+        { key: "ref", label: "Ref", type: "text" },
+        { key: "practice", label: "Practice", type: "text" },
+        { key: "stage", label: "Stage", type: "text" },
+        { key: "agreed_price", label: "Agreed price", type: "money" },
+        { key: "est_fee", label: "Est. fee", type: "money" },
+        { key: "target_completion", label: "Target completion", type: "date" },
+        { key: "last_activity", label: "Last activity", type: "date" },
+        { key: "owner", label: "Owner", type: "text" },
+      ],
+      rows,
+    };
+  },
+};
+
+const instructions: ReportDef = {
+  key: "instructions",
+  label: "Instructions taken",
+  description: "Practices instructed (put on the market) within the selected period.",
+  periodic: true,
+  async run(period, filters) {
+    const supabase = await createClient();
+    const { from, to } = dateBounds(period);
+    const idx = await getLookupIndex();
+    let q = supabase
+      .from("practices")
+      .select(
+        "ref, display_title, town, status, asking_price, funding_type_id, surgeries, fee_percent, instructed_at, profiles!practices_owner_id_fkey(full_name)",
+      )
+      .gte("instructed_at", from)
+      .lte("instructed_at", to);
+    if (filters.owner) q = q.eq("owner_id", filters.owner);
+    if (filters.branch) q = q.eq("branch_id", filters.branch);
+    const { data } = await q;
+
+    const rows = (data ?? []).map((p) => {
+      const owner = p.profiles as unknown as ProfileJoin;
+      return {
+        ref: p.ref ?? null,
+        practice: p.display_title ?? null,
+        town: p.town ?? null,
+        status: p.status ?? null,
+        asking_price: p.asking_price != null ? Number(p.asking_price) : null,
+        funding: p.funding_type_id ? idx.get(p.funding_type_id)?.value ?? null : null,
+        surgeries: p.surgeries != null ? Number(p.surgeries) : null,
+        fee_percent: p.fee_percent != null ? Number(p.fee_percent) : null,
+        owner: owner?.full_name ?? null,
+        instructed: p.instructed_at ?? null,
+      };
+    });
+
+    return {
+      columns: [
+        { key: "ref", label: "Ref", type: "text" },
+        { key: "practice", label: "Practice", type: "text" },
+        { key: "town", label: "Town", type: "text" },
+        { key: "status", label: "Status", type: "text" },
+        { key: "asking_price", label: "Asking price", type: "money" },
+        { key: "funding", label: "Funding", type: "text" },
+        { key: "surgeries", label: "Surgeries", type: "number" },
+        { key: "fee_percent", label: "Fee %", type: "number" },
+        { key: "owner", label: "Owner", type: "text" },
+        { key: "instructed", label: "Instructed", type: "date" },
+      ],
+      rows,
+    };
+  },
+};
+
+const valuations: ReportDef = {
+  key: "valuations",
+  label: "Valuations",
+  description: "Valuation appointments scheduled within the selected period.",
+  periodic: true,
+  async run(period, filters) {
+    const supabase = await createClient();
+    const { from, to } = tsBounds(period);
+    let q = supabase
+      .from("valuations")
+      .select(
+        "appointment_at, suggested_price, price_from, price_to, outcome, created_at, practices!valuations_practice_id_fkey(display_title, branch_id)",
+      )
+      .gte("appointment_at", from)
+      .lte("appointment_at", to);
+    // Valuations have no owner or direct branch column; report is firm-wide.
+    void filters;
+    const { data } = await q;
+
+    const rows = (data ?? [])
+      .map((v) => {
+        const practice = v.practices as unknown as PracticeJoin;
+        return {
+          practice: practice?.display_title ?? null,
+          appointment: v.appointment_at ?? null,
+          suggested_price: v.suggested_price != null ? Number(v.suggested_price) : null,
+          price_from: v.price_from != null ? Number(v.price_from) : null,
+          price_to: v.price_to != null ? Number(v.price_to) : null,
+          outcome: v.outcome ?? null,
+          created: v.created_at ?? null,
+        };
+      });
+
+    return {
+      columns: [
+        { key: "practice", label: "Practice", type: "text" },
+        { key: "appointment", label: "Appointment", type: "datetime" },
+        { key: "suggested_price", label: "Suggested price", type: "money" },
+        { key: "price_from", label: "Price from", type: "money" },
+        { key: "price_to", label: "Price to", type: "money" },
+        { key: "outcome", label: "Outcome", type: "text" },
+        { key: "created", label: "Created", type: "date" },
+      ],
+      rows,
+    };
+  },
+};
+
+const offers: ReportDef = {
+  key: "offers",
+  label: "Offers",
+  description: "Offers received within the selected period.",
+  periodic: true,
+  async run(period, filters) {
+    const supabase = await createClient();
+    const { from, to } = dateBounds(period);
+    // offer_date is a date; fall back to created_at when null. Query both windows.
+    let q = supabase
+      .from("offers")
+      .select(
+        "amount, status, finance_status, offer_date, created_at, practices!offers_practice_id_fkey(display_title, branch_id), contacts!offers_buyer_contact_id_fkey(first_name, last_name, company_name)",
+      )
+      .or(`and(offer_date.gte.${from},offer_date.lte.${to}),and(offer_date.is.null,created_at.gte.${period.from.toISOString()},created_at.lte.${period.to.toISOString()})`);
+    // Offers have no owner or direct branch column; report is firm-wide.
+    void filters;
+    const { data } = await q;
+
+    const rows = (data ?? [])
+      .map((o) => {
+        const practice = o.practices as unknown as PracticeJoin;
+        const buyer = o.contacts as unknown as ContactJoin;
+        return {
+          practice: practice?.display_title ?? null,
+          buyer: contactName(buyer),
+          amount: o.amount != null ? Number(o.amount) : null,
+          status: o.status ?? null,
+          finance: o.finance_status ?? null,
+          offer_date: o.offer_date ?? o.created_at ?? null,
+        };
+      });
+
+    return {
+      columns: [
+        { key: "practice", label: "Practice", type: "text" },
+        { key: "buyer", label: "Buyer", type: "text" },
+        { key: "amount", label: "Amount", type: "money" },
+        { key: "status", label: "Status", type: "text" },
+        { key: "finance", label: "Finance", type: "text" },
+        { key: "offer_date", label: "Offer date", type: "date" },
+      ],
+      rows,
+    };
+  },
+};
+
+const leaderboard: ReportDef = {
+  key: "leaderboard",
+  label: "Agent leaderboard",
+  description: "Per-agent activity and fees banked within the selected period.",
+  periodic: true,
+  async run(period, filters) {
+    const supabase = await createClient();
+    const dates = dateBounds(period);
+    const ts = tsBounds(period);
+
+    // Active profiles (optionally a single owner).
+    let profilesQ = supabase.from("profiles").select("id, full_name").eq("is_active", true);
+    if (filters.owner) profilesQ = profilesQ.eq("id", filters.owner);
+
+    // Instructions: practices instructed in period, attributed to practice.owner_id.
+    let instructionsQ = supabase
+      .from("practices")
+      .select("owner_id")
+      .gte("instructed_at", dates.from)
+      .lte("instructed_at", dates.to);
+    if (filters.owner) instructionsQ = instructionsQ.eq("owner_id", filters.owner);
+    if (filters.branch) instructionsQ = instructionsQ.eq("branch_id", filters.branch);
+
+    // Valuations: no owner; attribute via the practice's owner_id.
+    const valuationsQ = supabase
+      .from("valuations")
+      .select("practices!valuations_practice_id_fkey(owner_id)")
+      .gte("appointment_at", ts.from)
+      .lte("appointment_at", ts.to);
+
+    // Live deals: in-progress snapshot, ignore period.
+    let liveQ = supabase.from("deals").select("owner_id").eq("status", "in_progress");
+    if (filters.owner) liveQ = liveQ.eq("owner_id", filters.owner);
+
+    // Completions in period, with joined practice fee config.
+    let completedQ = supabase
+      .from("deals")
+      .select("owner_id, agreed_price, practices!deals_practice_id_fkey(fee_percent, fee_fixed)")
+      .eq("status", "completed")
+      .gte("completed_at", dates.from)
+      .lte("completed_at", dates.to);
+    if (filters.owner) completedQ = completedQ.eq("owner_id", filters.owner);
+
+    const [profilesRes, instructionsRes, valuationsRes, liveRes, completedRes] = await Promise.all([
+      profilesQ,
+      instructionsQ,
+      valuationsQ,
+      liveQ,
+      completedQ,
+    ]);
+
+    type Agg = {
+      instructions: number;
+      valuations: number;
+      live_deals: number;
+      completions: number;
+      fees_banked: number;
+    };
+    const agg = new Map<string, Agg>();
+    const ensure = (id: string): Agg => {
+      let a = agg.get(id);
+      if (!a) {
+        a = { instructions: 0, valuations: 0, live_deals: 0, completions: 0, fees_banked: 0 };
+        agg.set(id, a);
+      }
+      return a;
+    };
+
+    for (const p of instructionsRes.data ?? []) {
+      if (p.owner_id) ensure(p.owner_id).instructions += 1;
+    }
+    for (const v of valuationsRes.data ?? []) {
+      const practice = v.practices as unknown as { owner_id: string | null } | null;
+      if (practice?.owner_id) ensure(practice.owner_id).valuations += 1;
+    }
+    for (const d of liveRes.data ?? []) {
+      if (d.owner_id) ensure(d.owner_id).live_deals += 1;
+    }
+    for (const d of completedRes.data ?? []) {
+      if (!d.owner_id) continue;
+      const a = ensure(d.owner_id);
+      a.completions += 1;
+      const practice = d.practices as unknown as PracticeJoin;
+      a.fees_banked += estimatedFee(practice, Number(d.agreed_price ?? 0));
+    }
+
+    const rows = (profilesRes.data ?? [])
+      .map((profile) => {
+        const a = agg.get(profile.id);
+        return {
+          agent: profile.full_name ?? null,
+          instructions: a?.instructions ?? 0,
+          valuations: a?.valuations ?? 0,
+          live_deals: a?.live_deals ?? 0,
+          completions: a?.completions ?? 0,
+          fees_banked: a?.fees_banked ?? 0,
+        };
+      })
+      .sort((x, y) => Number(y.fees_banked) - Number(x.fees_banked));
+
+    return {
+      columns: [
+        { key: "agent", label: "Agent", type: "text" },
+        { key: "instructions", label: "Instructions", type: "number" },
+        { key: "valuations", label: "Valuations", type: "number" },
+        { key: "live_deals", label: "Live deals", type: "number" },
+        { key: "completions", label: "Completions", type: "number" },
+        { key: "fees_banked", label: "Fees banked", type: "money" },
+      ],
+      rows,
+    };
+  },
+};
+
+const fallThroughs: ReportDef = {
+  key: "fall_throughs",
+  label: "Fall-throughs",
+  description: "Deals that fell through within the selected period, with the recorded reason.",
+  periodic: true,
+  async run(period, filters) {
+    const supabase = await createClient();
+    const { from, to } = dateBounds(period);
+    const idx = await getLookupIndex();
+    let q = supabase
+      .from("deals")
+      .select(
+        "ref, agreed_price, fall_through_reason_id, fell_through_at, practices!deals_practice_id_fkey(display_title), profiles!deals_owner_id_fkey(full_name)",
+      )
+      .eq("status", "fallen_through")
+      .gte("fell_through_at", from)
+      .lte("fell_through_at", to);
+    if (filters.owner) q = q.eq("owner_id", filters.owner);
+    const { data } = await q;
+
+    const rows = (data ?? []).map((d) => {
+      const practice = d.practices as unknown as PracticeJoin;
+      const owner = d.profiles as unknown as ProfileJoin;
+      return {
+        ref: d.ref ?? null,
+        practice: practice?.display_title ?? null,
+        reason: d.fall_through_reason_id ? idx.get(d.fall_through_reason_id)?.value ?? null : null,
+        agreed_price: d.agreed_price != null ? Number(d.agreed_price) : null,
+        fell_through: d.fell_through_at ?? null,
+        owner: owner?.full_name ?? null,
+      };
+    });
+
+    return {
+      columns: [
+        { key: "ref", label: "Ref", type: "text" },
+        { key: "practice", label: "Practice", type: "text" },
+        { key: "reason", label: "Reason", type: "text" },
+        { key: "agreed_price", label: "Agreed price", type: "money" },
+        { key: "fell_through", label: "Fell through", type: "date" },
+        { key: "owner", label: "Owner", type: "text" },
+      ],
+      rows,
+    };
+  },
+};
+
+export const REPORTS: ReportDef[] = [
+  completions,
+  pipeline,
+  instructions,
+  valuations,
+  offers,
+  leaderboard,
+  fallThroughs,
+];

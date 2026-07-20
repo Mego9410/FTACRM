@@ -37,7 +37,7 @@ const NAV = [
   { label: "Matching", href: "/matching", icon: Sparkles },
   { label: "Campaigns", href: "/campaigns", icon: Mail },
   { label: "Calendar", href: "/calendar", icon: CalendarDays },
-  { label: "Reporting", href: "/reporting", icon: ChartNoAxesColumn },
+  { label: "Reporting", href: "/reporting", icon: ChartNoAxesColumn, managerOnly: true },
 ];
 
 export function AppNav({ profile }: { profile: SessionProfile }) {
@@ -68,6 +68,7 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
   }
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const nav = NAV.filter((item) => !item.managerOnly || profile.role !== "agent");
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-surface">
@@ -94,7 +95,7 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
         </Link>
 
         <nav className="ml-2 hidden min-w-0 flex-1 items-center gap-0.5 lg:flex">
-          {NAV.map((item) => {
+          {nav.map((item) => {
             const active = isActive(item.href);
             return (
               <Link
@@ -173,7 +174,7 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
       {mobileOpen ? (
         <nav className="border-t border-line bg-surface px-3 pb-4 pt-2 shadow-md lg:hidden">
           <ul className="grid grid-cols-2 gap-1">
-            {NAV.map((item) => {
+            {nav.map((item) => {
               const active = isActive(item.href);
               const Icon = item.icon;
               return (

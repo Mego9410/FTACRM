@@ -53,6 +53,7 @@ export default async function ActivityFeedPage({ searchParams }: { searchParams:
         className="mb-4"
         tabs={[
           { label: "Management", href: "/reporting", exact: true },
+          { label: "Reports", href: "/reporting/reports" },
           { label: "Activity feed", href: "/reporting/activity" },
         ]}
       />
