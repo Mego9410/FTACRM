@@ -3,6 +3,7 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardHeader, EmptyState, Badge } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/primitives";
+import { SuggestionsWidget } from "@/components/ai/suggestions-widget";
 import { formatDateTime, formatGBP, relativeTime } from "@/lib/utils";
 
 export const metadata = { title: "Dashboard" };
@@ -73,6 +74,10 @@ export default async function DashboardPage() {
         <p className="mt-0.5 text-sm text-fg-3">
           {new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date())}
         </p>
+      </div>
+
+      <div className="mb-5">
+        <SuggestionsWidget profileId={profile.id} />
       </div>
 
       {(stalledRes.data?.length ?? 0) > 0 || (expiringRes.data?.length ?? 0) > 0 ? (

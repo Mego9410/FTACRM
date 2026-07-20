@@ -7,6 +7,7 @@ import { cn, formatDateTime, relativeTime } from "@/lib/utils";
 import type { LookupValue } from "@/lib/lookups";
 import { Avatar, Badge, Button, EmptyState, Select, Textarea } from "@/components/ui/primitives";
 import { createJournalEntry, deleteJournalEntry, togglePin } from "@/lib/actions/journal";
+import { CallIntel, type CallInfo, type Suggestion } from "./call-intel";
 
 type Entry = {
   id: string;
@@ -19,6 +20,8 @@ type Entry = {
   call_direction: string | null;
   pinned: boolean;
   occurred_at: string;
+  call: CallInfo | null;
+  suggestions: Suggestion[];
 };
 
 const TYPE_ICON: Record<string, React.ReactNode> = {
@@ -168,6 +171,7 @@ export function JournalClient({
                   {e.body ? (
                     <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-fg-2">{e.body}</p>
                   ) : null}
+                  <CallIntel call={e.call} suggestions={e.suggestions} path={path} />
                 </div>
                 {e.entry_type !== "system" ? (
                   <div className="flex shrink-0 gap-0.5">

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { audit, diffChanges } from "@/lib/audit";
 import { geocodePostcode } from "@/lib/geo";
 import { systemJournal } from "@/lib/actions/journal";
@@ -122,8 +123,69 @@ export async function changePracticeStatus(input: unknown): Promise<ActionResult
     { practice_id: id },
     `Status changed from ${PRACTICE_STATUS_LABELS[before.status] ?? before.status} to ${PRACTICE_STATUS_LABELS[status] ?? status} by ${me.full_name}.`,
   );
+
+  // AI-first go-to-market: the moment a practice goes live, rank the buyer
+  // pool against it and flag the best people to contact. Best effort — a
+  // failure here never blocks the status change.
+  if (status === "available") {
+    try {
+      await flagLaunchOutreach(id, me.id);
+    } catch {
+      /* matching flag is advisory */
+    }
+  }
   revalidatePath(`/practices/${id}`);
   return ok();
+}
+
+async function flagLaunchOutreach(practiceId: string, changedBy: string) {
+  const supabase = await createClient();
+  const { getMatchingBuyers } = await import("@/lib/matching/queries");
+  const matches = (await getMatchingBuyers(practiceId)).filter(
+    (m) => !m.excluded && !m.do_not_contact,
+  );
+  if (matches.length === 0) return;
+
+  const { data: practice } = await supabase
+    .from("practices")
+    .select("display_title, owner_id")
+    .eq("id", practiceId)
+    .single();
+  const top = matches.slice(0, 10).map((m) => ({
+    contact_id: m.contact_id,
+    name: m.name,
+    score: m.score,
+    facets: m.facets,
+    temperature: m.temperature,
+  }));
+
+  // Replace any previous pending outreach flag for this practice.
+  await supabase
+    .from("ai_suggestions")
+    .update({ status: "expired" })
+    .eq("practice_id", practiceId)
+    .eq("kind", "outreach")
+    .eq("status", "proposed");
+  await supabase.from("ai_suggestions").insert({
+    kind: "outreach",
+    practice_id: practiceId,
+    for_profile_id: practice?.owner_id ?? changedBy,
+    payload: { title: `${matches.length} matched buyers for launch`, buyers: top, total: matches.length },
+  });
+  await systemJournal(
+    { practice_id: practiceId },
+    `Gone to market: ${matches.length} matching buyers identified automatically — top targets flagged for outreach.`,
+  );
+
+  const notifyId = practice?.owner_id ?? changedBy;
+  const admin = createAdminClient();
+  await admin.from("notifications").insert({
+    profile_id: notifyId,
+    kind: "launch_outreach",
+    title: "Best buyers identified",
+    body: `${practice?.display_title ?? "Practice"} — ${matches.length} matched buyers, top ${top.length} ranked`,
+    link_url: `/practices/${practiceId}/matched`,
+  });
 }
 
 /* ── People (practice_contacts) ─────────────────────────────────────── */

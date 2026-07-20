@@ -327,5 +327,130 @@ begin
   cross join lateral generate_series(1, 3) s(n)
   where p.legacy_ref like 'DEMO-PRACTICE-%';
 
+  -- ── AI call capture demo: transcribed + analysed calls with suggestions ──
+  declare
+    d_contact uuid; d_practice uuid; d_entry uuid; d_call uuid; d_title text; d_name text;
+    i int;
+  begin
+    for i in 1..3 loop
+      select c.id, p.id, p.display_title, c.first_name
+        into d_contact, d_practice, d_title, d_name
+      from public.practice_contacts pc
+      join public.contacts c on c.id = pc.contact_id
+      join public.practices p on p.id = pc.practice_id
+      where pc.role = (case when i = 2 then 'seller' else 'buyer' end)
+        and p.legacy_ref like 'DEMO-PRACTICE-%' and p.status in ('available','under_offer')
+      order by md5(i::text || pc.id::text) limit 1;
+      exit when d_contact is null;
+
+      insert into public.journal_entries (entry_type, body, author_id, contact_id, practice_id, call_direction, occurred_at)
+      values ('call',
+        case i
+          when 2 then 'Connected. ' || d_name || ' is happy with progress but wants weekly updates while the practice is on the market. Agreed to send the latest buyer-interest summary and to review the asking price if nothing firms up within three weeks. They will send the updated staff schedule over by Friday.'
+          else 'Connected. ' || d_name || ' remains keen on ' || d_title || ' and asked for the last three years'' accounts before committing to a viewing. Finance is agreed in principle with their bank. Agreed to send the confidential pack today and pencil a viewing for late next week.'
+        end,
+        owner, d_contact, d_practice, case when i = 2 then 'inbound' else 'outbound' end,
+        now() - (i || ' hours')::interval)
+      returning id into d_entry;
+
+      insert into public.call_recordings
+        (provider_call_id, journal_entry_id, contact_id, practice_id, profile_id, direction,
+         external_number, extension, started_at, duration_secs, transcript, transcript_status,
+         analysis_status, summary, match_status)
+      values ('DEMO-CALL-' || i, d_entry, d_contact, d_practice, owner,
+        case when i = 2 then 'inbound' else 'outbound' end,
+        '+4477009000' || (10 + i), '10' || i, now() - (i || ' hours')::interval, 340 + i * 55,
+        'Agent: Good morning, it''s Frank Taylor & Associates. Am I speaking with ' || d_name || '?' || E'\n' ||
+        'Caller: Yes, speaking. Thanks for calling back.' || E'\n' ||
+        case i
+          when 2 then
+            'Agent: Of course. I wanted to bring you up to date on ' || d_title || '. We''ve had steady interest this week and two buyers have asked follow-up questions.' || E'\n' ||
+            'Caller: That''s good to hear. I''d like a weekly update while we''re on the market, if that''s alright.' || E'\n' ||
+            'Agent: Absolutely, I''ll send a summary every Friday. If nothing firms up in the next three weeks we can review the guide price together.' || E'\n' ||
+            'Caller: Agreed. I''ll send the updated staff schedule over by Friday so the pack is current.' || E'\n' ||
+            'Agent: Perfect. Speak on Friday.'
+          else
+            'Agent: You''d registered interest in ' || d_title || ' — did the summary reach you?' || E'\n' ||
+            'Caller: It did, and it looks like a strong fit. Before I commit to a viewing I''d want the last three years'' accounts.' || E'\n' ||
+            'Agent: Very sensible — I can send the confidential pack across today once your NDA is on file.' || E'\n' ||
+            'Caller: My finance is agreed in principle with the bank, so we could move fairly quickly.' || E'\n' ||
+            'Agent: Good to know. Shall we pencil a viewing for late next week? I''ll confirm the exact time with the seller.' || E'\n' ||
+            'Caller: That works. Send the pack over and let''s do that.'
+        end,
+        'transcribed', 'analysed',
+        case i
+          when 2 then 'Seller catch-up: happy with progress but wants weekly updates while on the market. Agreed a Friday summary email; price review if no firm interest within three weeks. Seller to send the updated staff schedule by Friday.'
+          else 'Buyer remains keen on ' || d_title || '. Wants three years'' accounts before viewing; finance agreed in principle. Agent to send the confidential pack today and pencil a viewing for late next week.'
+        end,
+        'matched')
+      returning id into d_call;
+
+      insert into public.ai_suggestions (kind, payload, call_recording_id, journal_entry_id, contact_id, practice_id, for_profile_id)
+      values
+        ('task',
+         case i
+           when 2 then jsonb_build_object('title', 'Send weekly buyer-interest summary to ' || d_name,
+             'details', 'Committed on the call: summary every Friday while the practice is on the market.',
+             'due_at', (now() + interval '2 days')::text)
+           else jsonb_build_object('title', 'Send confidential pack with 3 years'' accounts to ' || d_name,
+             'details', 'Buyer requested accounts before viewing; NDA to be checked first.',
+             'due_at', (now() + interval '1 day')::text)
+         end,
+         d_call, d_entry, d_contact, d_practice, owner),
+        ('task',
+         case i
+           when 2 then jsonb_build_object('title', 'Diarise price review for ' || d_title,
+             'details', 'Review guide price with the seller if no firm interest within three weeks.',
+             'due_at', (now() + interval '21 days')::text)
+           else jsonb_build_object('title', 'Book viewing at ' || d_title,
+             'details', 'Buyer available late next week; confirm timing with the seller.',
+             'due_at', (now() + interval '4 days')::text)
+         end,
+         d_call, d_entry, d_contact, d_practice, owner);
+
+      if i = 1 then
+        insert into public.ai_suggestions (kind, payload, call_recording_id, journal_entry_id, contact_id, practice_id, for_profile_id)
+        values ('email_draft',
+          jsonb_build_object(
+            'subject', 'Confidential pack — ' || d_title,
+            'body', 'Dear ' || d_name || ',' || E'\n\n' ||
+              'Thank you for your time on the phone today. As promised, please find the confidential pack for ' || d_title ||
+              ' attached, including the last three years'' accounts.' || E'\n\n' ||
+              'Given your finance is agreed in principle, I''d suggest we pencil a viewing for late next week — I''ll confirm a time with the seller and come back to you.' || E'\n\n' ||
+              'Kind regards' || E'\n' || 'Frank Taylor & Associates'),
+          d_call, d_entry, d_contact, d_practice, owner);
+      end if;
+    end loop;
+
+    -- Launch outreach flag on one available practice (the go-to-market banner).
+    select p.id, p.display_title into d_practice, d_title
+    from public.practices p
+    where p.legacy_ref like 'DEMO-PRACTICE-%' and p.status = 'available'
+    order by p.legacy_ref limit 1;
+    if d_practice is not null then
+      insert into public.ai_suggestions (kind, payload, practice_id, for_profile_id)
+      select 'outreach',
+        jsonb_build_object(
+          'title', count(*) || ' matched buyers for launch',
+          'total', count(*),
+          'buyers', jsonb_agg(jsonb_build_object(
+            'contact_id', b.id,
+            'name', b.first_name || ' ' || b.last_name,
+            'score', 70 + (abs(hashtext(b.id::text)) % 28),
+            'temperature', b.temperature,
+            'facets', jsonb_build_array('Price in range', 'Area match')
+          ))),
+        d_practice, owner
+      from (
+        select c.id, c.first_name, c.last_name, c.temperature
+        from public.contacts c
+        where c.legacy_ref like 'DEMO-BUYER-%' and not c.do_not_contact
+        order by md5(d_practice::text || c.id::text) limit 8
+      ) b;
+      insert into public.journal_entries (entry_type, body, practice_id)
+      values ('system', 'Gone to market: matching buyers identified automatically — top targets flagged for outreach.', d_practice);
+    end if;
+  end;
+
   raise notice 'demo data loaded';
 end $$;
