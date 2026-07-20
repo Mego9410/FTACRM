@@ -7,17 +7,14 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   Building2,
   CalendarDays,
-  ChartNoAxesColumn,
   Handshake,
   LayoutDashboard,
   ListTodo,
   LogOut,
-  Mail,
   Menu as MenuIcon,
   Plus,
   Search,
   Settings,
-  Sparkles,
   User,
   UsersRound,
   X,
@@ -36,10 +33,6 @@ const NAV = [
   { label: "Contacts", href: "/contacts", icon: UsersRound },
   { label: "Practices", href: "/practices", icon: Building2 },
   { label: "Deals", href: "/deals", icon: Handshake },
-  { label: "Matching", href: "/matching", icon: Sparkles },
-  { label: "Campaigns", href: "/campaigns", icon: Mail },
-  { label: "Calendar", href: "/calendar", icon: CalendarDays },
-  { label: "Reporting", href: "/reporting", icon: ChartNoAxesColumn, managerOnly: true },
 ];
 
 export function AppNav({ profile }: { profile: SessionProfile }) {
@@ -70,7 +63,6 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
   }
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
-  const nav = NAV.filter((item) => !item.managerOnly || profile.role !== "agent");
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-surface">
@@ -112,6 +104,18 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
           </button>
 
           <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
+            <Link
+              href="/calendar"
+              title="Calendar"
+              aria-label="Calendar"
+              className={cn(
+                "inline-flex rounded-[10px] p-2 hover:bg-surface-2",
+                isActive("/calendar") ? "bg-gold-tint text-gold-deep" : "text-fg-2 hover:text-fg-1",
+              )}
+            >
+              <CalendarDays size={18} />
+            </Link>
+
             <div className="hidden sm:block">
               <Menu
                 trigger={
@@ -158,7 +162,7 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
 
         {/* Nav tabs row */}
         <nav className="-mt-px hidden min-w-0 items-center gap-0.5 overflow-x-auto border-t border-line/60 lg:flex">
-          {nav.map((item) => {
+          {NAV.map((item) => {
             const active = isActive(item.href);
             return (
               <Link
@@ -181,7 +185,7 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
       {mobileOpen ? (
         <nav className="border-t border-line bg-surface px-3 pb-4 pt-2 shadow-md lg:hidden">
           <ul className="grid grid-cols-2 gap-1">
-            {nav.map((item) => {
+            {NAV.map((item) => {
               const active = isActive(item.href);
               const Icon = item.icon;
               return (

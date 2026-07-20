@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 
 const SECTIONS = [
+  { label: "Reporting", href: "/reporting" },
   { label: "Users", href: "/admin/users" },
   { label: "Branches", href: "/admin/branches" },
   { label: "Lookups", href: "/admin/lookups" },
@@ -16,7 +17,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div>
       <div className="mb-5">
         <h1 className="text-[26px] font-extrabold tracking-tight text-fg-1">Control Centre</h1>
-        <p className="mt-0.5 text-sm text-fg-3">Users, configuration and taxonomy — changes apply firm-wide.</p>
+        <p className="mt-0.5 text-sm text-fg-3">Reporting, users, configuration and taxonomy — changes apply firm-wide.</p>
       </div>
       <div className="flex flex-col gap-5 lg:flex-row">
         <nav className="flex shrink-0 flex-row gap-1 overflow-x-auto lg:w-48 lg:flex-col">
