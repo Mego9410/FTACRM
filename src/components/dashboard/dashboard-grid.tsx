@@ -98,10 +98,18 @@ export function DashboardGrid({
 }) {
   const [mounted, setMounted] = React.useState(false);
   const [editing, setEditing] = React.useState(false);
+  const [bp, setBp] = React.useState("lg");
   const [config, setConfig] = React.useState<Config>(() => normalise(initialConfig));
   const saveTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => setMounted(true), []);
+
+  // On mobile the single-column stack is fixed — drag/resize would only
+  // break the layout, so editing is disabled there.
+  const isMobile = bp === "sm";
+  React.useEffect(() => {
+    if (isMobile && editing) setEditing(false);
+  }, [isMobile, editing]);
 
   const persist = React.useCallback((next: Config) => {
     setConfig(next);
@@ -163,7 +171,7 @@ export function DashboardGrid({
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+      <div className={cn("mb-3 flex-wrap items-center justify-end gap-2", isMobile ? "hidden" : "flex")}>
         {editing ? (
           <>
             {available.length > 0 ? (
@@ -213,10 +221,11 @@ export function DashboardGrid({
           rowHeight={58}
           margin={[16, 16]}
           containerPadding={[4, 4]}
-          isDraggable={editing}
-          isResizable={editing}
+          isDraggable={editing && !isMobile}
+          isResizable={editing && !isMobile}
           draggableHandle=".widget-drag"
           onLayoutChange={onLayoutChange}
+          onBreakpointChange={(next) => setBp(next)}
           compactType="vertical"
         >
           {config.widgets.map((id) => {

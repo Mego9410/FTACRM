@@ -61,14 +61,14 @@ export function StatsWidget({ data }: { data: DashboardData }) {
     { label: "Buyer pool", value: s.buyerPool.toLocaleString("en-GB"), sub: "registered", icon: UsersRound, ring: [1, 1], color: "#0E7490", href: "/contacts?role=buyer" },
   ];
   return (
-    <div className="grid h-full grid-cols-2 gap-3 overflow-y-auto p-4 sm:grid-cols-3">
+    <div className="flex h-full items-stretch gap-3 overflow-x-auto p-4">
       {tiles.map((t) => {
         const Icon = t.icon;
         return (
           <Link
             key={t.label}
             href={t.href}
-            className="flex items-center gap-3 rounded-md border border-line bg-surface px-3.5 py-3 transition-shadow hover:shadow-sm"
+            className="flex min-w-[158px] flex-1 items-center gap-3 rounded-md border border-line bg-surface px-3.5 py-3 transition-shadow hover:shadow-sm"
           >
             <div className="relative flex items-center justify-center">
               <Ring value={t.ring[0]!} max={t.ring[1]!} color={t.color} />
