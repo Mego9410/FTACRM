@@ -31,7 +31,7 @@ type WidgetDef = {
 };
 
 const REGISTRY: Record<WidgetId, WidgetDef> = {
-  stats: { title: "Key numbers", minW: 4, minH: 2, lg: { w: 12, h: 2 }, render: ({ data }) => <StatsWidget data={data} /> },
+  stats: { title: "Key numbers", minW: 4, minH: 3, lg: { w: 12, h: 3 }, render: ({ data }) => <StatsWidget data={data} /> },
   today: { title: "Today's schedule", minW: 3, minH: 3, lg: { w: 4, h: 5 }, render: ({ data }) => <TodayWidget data={data} /> },
   tasks: { title: "My tasks", minW: 3, minH: 3, lg: { w: 4, h: 5 }, render: ({ data }) => <TasksWidget data={data} /> },
   ai: { title: "AI assistant", minW: 3, minH: 3, lg: { w: 4, h: 5 }, render: ({ ai }) => <AiWidget rows={ai} /> },
@@ -44,22 +44,22 @@ const ORDER: WidgetId[] = ["stats", "today", "tasks", "ai", "pipeline", "activit
 
 const DEFAULT_LAYOUTS: Layouts = {
   lg: [
-    { i: "stats", x: 0, y: 0, w: 12, h: 2 },
-    { i: "today", x: 0, y: 2, w: 4, h: 5 },
-    { i: "tasks", x: 4, y: 2, w: 4, h: 5 },
-    { i: "ai", x: 8, y: 2, w: 4, h: 5 },
-    { i: "pipeline", x: 0, y: 7, w: 6, h: 5 },
-    { i: "activity", x: 6, y: 7, w: 3, h: 5 },
-    { i: "attention", x: 9, y: 7, w: 3, h: 5 },
+    { i: "stats", x: 0, y: 0, w: 12, h: 3 },
+    { i: "today", x: 0, y: 3, w: 4, h: 5 },
+    { i: "tasks", x: 4, y: 3, w: 4, h: 5 },
+    { i: "ai", x: 8, y: 3, w: 4, h: 5 },
+    { i: "pipeline", x: 0, y: 8, w: 6, h: 5 },
+    { i: "activity", x: 6, y: 8, w: 3, h: 5 },
+    { i: "attention", x: 9, y: 8, w: 3, h: 5 },
   ],
   md: [
-    { i: "stats", x: 0, y: 0, w: 8, h: 2 },
-    { i: "today", x: 0, y: 2, w: 4, h: 5 },
-    { i: "tasks", x: 4, y: 2, w: 4, h: 5 },
-    { i: "ai", x: 0, y: 7, w: 4, h: 5 },
-    { i: "attention", x: 4, y: 7, w: 4, h: 5 },
-    { i: "pipeline", x: 0, y: 12, w: 8, h: 5 },
-    { i: "activity", x: 0, y: 17, w: 8, h: 4 },
+    { i: "stats", x: 0, y: 0, w: 8, h: 3 },
+    { i: "today", x: 0, y: 3, w: 4, h: 5 },
+    { i: "tasks", x: 4, y: 3, w: 4, h: 5 },
+    { i: "ai", x: 0, y: 8, w: 4, h: 5 },
+    { i: "attention", x: 4, y: 8, w: 4, h: 5 },
+    { i: "pipeline", x: 0, y: 13, w: 8, h: 5 },
+    { i: "activity", x: 0, y: 18, w: 8, h: 4 },
   ],
 };
 
@@ -166,7 +166,14 @@ export function DashboardGrid({
   const available = ORDER.filter((id) => !config.widgets.includes(id));
 
   const applyMin = (arr: Layout[]) =>
-    arr.map((l) => ({ ...l, minW: REGISTRY[l.i as WidgetId]?.minW ?? 2, minH: REGISTRY[l.i as WidgetId]?.minH ?? 2 }));
+    arr.map((l) => {
+      const def = REGISTRY[l.i as WidgetId];
+      const minH = def?.minH ?? 2;
+      // Clamp height up to the widget's minimum so older saved layouts
+      // (e.g. a 2-row Key numbers strip) grow to a size that fits their
+      // content instead of squashing it.
+      return { ...l, minW: def?.minW ?? 2, minH, h: Math.max(l.h, minH) };
+    });
   const layouts: Layouts = { lg: applyMin(config.layouts.lg), md: applyMin(config.layouts.md) };
 
   return (

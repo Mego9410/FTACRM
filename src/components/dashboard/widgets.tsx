@@ -68,7 +68,7 @@ export function StatsWidget({ data }: { data: DashboardData }) {
           <Link
             key={t.label}
             href={t.href}
-            className="flex min-w-[158px] flex-1 items-center gap-3 rounded-md border border-line bg-surface px-3.5 py-3 transition-shadow hover:shadow-sm"
+            className="flex min-w-[158px] flex-1 items-center gap-3 rounded-md border border-line bg-surface px-4 py-3.5 transition-shadow hover:shadow-sm"
           >
             <div className="relative flex items-center justify-center">
               <Ring value={t.ring[0]!} max={t.ring[1]!} color={t.color} />
