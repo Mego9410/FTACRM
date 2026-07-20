@@ -56,14 +56,22 @@ export function AppNav({ profile, children }: { profile: SessionProfile; childre
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = React.useState(false);
-  const [collapsed, setCollapsed] = React.useState(false);
+  // Default to collapsed; auto-collapse on smaller laptop widths (< 1280px).
+  const [collapsed, setCollapsed] = React.useState(true);
+  const prefRef = React.useRef(true);
 
   React.useEffect(() => {
+    let stored: string | null = null;
     try {
-      setCollapsed(window.localStorage.getItem("aspen-sidebar-collapsed") === "1");
+      stored = window.localStorage.getItem("aspen-sidebar-collapsed");
     } catch {
       /* ignore */
     }
+    prefRef.current = stored === null ? true : stored === "1";
+    const apply = () => setCollapsed(window.innerWidth < 1280 ? true : prefRef.current);
+    apply();
+    window.addEventListener("resize", apply);
+    return () => window.removeEventListener("resize", apply);
   }, []);
 
   React.useEffect(() => {
@@ -73,6 +81,7 @@ export function AppNav({ profile, children }: { profile: SessionProfile; childre
   function toggleCollapsed() {
     setCollapsed((v) => {
       const next = !v;
+      prefRef.current = next;
       try {
         window.localStorage.setItem("aspen-sidebar-collapsed", next ? "1" : "0");
       } catch {
@@ -131,16 +140,40 @@ export function AppNav({ profile, children }: { profile: SessionProfile; childre
           railWidth,
         )}
       >
-        <Link
-          href="/dashboard"
-          className={cn("flex h-14 shrink-0 items-center border-b border-line", collapsed ? "justify-center px-0" : "px-5")}
-        >
-          {collapsed ? (
-            <Image src="/brand/logo.png" alt="Aspen" width={32} height={32} className="rounded-[8px]" />
-          ) : (
-            <Wordmark />
-          )}
-        </Link>
+        <div className={cn("flex h-14 shrink-0 items-center border-b border-line", collapsed ? "justify-center px-2" : "px-3")}>
+          <Link href="/dashboard" className={cn("flex min-w-0 items-center", collapsed ? "" : "flex-1 pl-1")}>
+            {collapsed ? (
+              <Image src="/brand/logo.png" alt="Aspen" width={30} height={30} className="rounded-[8px]" />
+            ) : (
+              <Wordmark />
+            )}
+          </Link>
+          {!collapsed ? (
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              title="Collapse menu"
+              aria-label="Collapse menu"
+              className="shrink-0 rounded-[8px] p-1.5 text-fg-3 transition-colors hover:bg-surface-2 hover:text-fg-1"
+            >
+              <PanelLeftClose size={18} />
+            </button>
+          ) : null}
+        </div>
+
+        {collapsed ? (
+          <div className="flex justify-center border-b border-line py-2">
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              title="Expand menu"
+              aria-label="Expand menu"
+              className="rounded-[8px] p-2 text-fg-3 transition-colors hover:bg-surface-2 hover:text-fg-1"
+            >
+              <PanelLeftOpen size={18} />
+            </button>
+          </div>
+        ) : null}
 
         <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
           {!collapsed ? (
@@ -148,22 +181,6 @@ export function AppNav({ profile, children }: { profile: SessionProfile; childre
           ) : null}
           <NavLinks mini={collapsed} />
         </nav>
-
-        <div className="border-t border-line p-3">
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            title={collapsed ? "Expand menu" : "Collapse menu"}
-            aria-label={collapsed ? "Expand menu" : "Collapse menu"}
-            className={cn(
-              "flex w-full items-center rounded-[10px] py-2.5 text-sm font-semibold text-fg-3 transition-colors hover:bg-surface-2 hover:text-fg-1",
-              collapsed ? "justify-center px-0" : "gap-3 px-3",
-            )}
-          >
-            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-            {!collapsed ? "Collapse" : null}
-          </button>
-        </div>
       </aside>
 
       {/* Top bar — search + right-hand icons only */}
