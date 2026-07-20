@@ -35,6 +35,22 @@ const NAV = [
   { label: "Deals", href: "/deals", icon: Handshake },
 ];
 
+function Wordmark({ size = 30 }: { size?: number }) {
+  return (
+    <span className="flex min-w-0 items-center gap-2.5">
+      <Image src="/brand/logo.png" alt="" width={size} height={size} className="shrink-0 rounded-[8px]" />
+      <span className="flex min-w-0 flex-col leading-none">
+        <span className="truncate text-[15px] font-extrabold tracking-tight text-fg-1">
+          Vantage<span className="text-gold-deep">.</span>
+        </span>
+        <span className="mt-0.5 truncate text-[9px] font-bold uppercase tracking-[0.16em] text-fg-4">
+          Frank Taylor &amp; Associates
+        </span>
+      </span>
+    </span>
+  );
+}
+
 export function AppNav({ profile }: { profile: SessionProfile }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -64,36 +80,61 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
+  const NavLinks = ({ onNavigate }: { onNavigate?: () => void }) => (
+    <>
+      {NAV.map((item) => {
+        const active = isActive(item.href);
+        const Icon = item.icon;
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className={cn(
+              "flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-semibold transition-colors",
+              active ? "bg-gold-tint text-gold-deep" : "text-fg-2 hover:bg-surface-2 hover:text-fg-1",
+            )}
+          >
+            <Icon size={18} className="shrink-0" />
+            {item.label}
+          </Link>
+        );
+      })}
+    </>
+  );
+
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-surface">
-      <div className="mx-auto w-full max-w-[1400px] px-3 sm:px-6">
-        <div className="flex h-14 items-center gap-2 sm:gap-3">
+    <>
+      {/* Desktop sidebar */}
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-line bg-surface lg:flex">
+        <Link href="/dashboard" className="flex h-14 shrink-0 items-center border-b border-line px-5">
+          <Wordmark />
+        </Link>
+        <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
+          <NavLinks />
+        </nav>
+      </aside>
+
+      {/* Top bar — search + right-hand icons only */}
+      <header className="sticky top-0 z-30 border-b border-line bg-surface lg:pl-60">
+        <div className="mx-auto flex h-14 w-full max-w-[1400px] items-center gap-2 px-3 sm:gap-3 sm:px-6">
           <button
             type="button"
-            onClick={() => setMobileOpen((v) => !v)}
+            onClick={() => setMobileOpen(true)}
             className="shrink-0 rounded-[10px] p-2 text-fg-2 hover:bg-surface-2 hover:text-fg-1 lg:hidden"
-            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            aria-label="Open menu"
           >
-            {mobileOpen ? <X size={20} /> : <MenuIcon size={20} />}
+            <MenuIcon size={20} />
           </button>
 
-          <Link href="/dashboard" className="flex shrink-0 items-center gap-2.5">
-            <Image src="/brand/logo.png" alt="" width={30} height={30} className="shrink-0 rounded-[8px]" />
-            <span className="hidden min-w-0 flex-col leading-none xl:flex">
-              <span className="truncate text-[15px] font-extrabold tracking-tight text-fg-1">
-                Vantage<span className="text-gold-deep">.</span>
-              </span>
-              <span className="mt-0.5 truncate text-[9px] font-bold uppercase tracking-[0.16em] text-fg-4">
-                Frank Taylor &amp; Associates
-              </span>
-            </span>
+          <Link href="/dashboard" className="flex shrink-0 items-center lg:hidden">
+            <Image src="/brand/logo.png" alt="Vantage" width={28} height={28} className="rounded-[7px]" />
           </Link>
 
-          {/* Always-available search — front and centre. Opens the command palette. */}
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
-            className="group flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-lg border border-line bg-surface-2 px-3.5 text-left transition-colors hover:border-gold/60 hover:bg-surface sm:mx-2 lg:max-w-lg"
+            className="group flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-lg border border-line bg-surface-2 px-3.5 text-left transition-colors hover:border-gold/60 hover:bg-surface sm:mx-1 lg:max-w-lg"
             aria-label="Search (Ctrl+K)"
           >
             <Search size={17} className="shrink-0 text-fg-3 transition-colors group-hover:text-gold-deep" />
@@ -103,7 +144,7 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
             </kbd>
           </button>
 
-          <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
+          <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
             <Link
               href="/calendar"
               title="Calendar"
@@ -159,64 +200,46 @@ export function AppNav({ profile }: { profile: SessionProfile }) {
             </Menu>
           </div>
         </div>
+      </header>
 
-        {/* Nav tabs row */}
-        <nav className="-mt-px hidden min-w-0 items-center gap-0.5 overflow-x-auto border-t border-line/60 lg:flex">
-          {NAV.map((item) => {
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "relative whitespace-nowrap px-3 py-2.5 text-[13.5px] font-semibold transition-colors",
-                  active ? "text-fg-1" : "text-fg-3 hover:text-fg-1",
-                )}
-              >
-                {item.label}
-                {active ? <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-t-full bg-gold" /> : null}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-
-      {/* Mobile sheet */}
+      {/* Mobile drawer */}
       {mobileOpen ? (
-        <nav className="border-t border-line bg-surface px-3 pb-4 pt-2 shadow-md lg:hidden">
-          <ul className="grid grid-cols-2 gap-1">
-            {NAV.map((item) => {
-              const active = isActive(item.href);
-              const Icon = item.icon;
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-2.5 rounded-sm px-3.5 py-3 text-sm font-semibold",
-                      active ? "bg-gold-tint text-gold-deep" : "text-fg-2 hover:bg-surface-2 hover:text-fg-1",
-                    )}
-                  >
-                    <Icon size={17} /> {item.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-          <div className="mt-3 flex gap-1.5 border-t border-line pt-3">
-            <Link href="/contacts/new" className="flex-1 rounded-sm border border-line px-3 py-2.5 text-center text-[13px] font-semibold text-fg-1 hover:bg-surface-2">
-              New contact
-            </Link>
-            <Link href="/practices/new" className="flex-1 rounded-sm border border-line px-3 py-2.5 text-center text-[13px] font-semibold text-fg-1 hover:bg-surface-2">
-              New practice
-            </Link>
-            <Link href="/tasks?new=1" className="flex-1 rounded-sm border border-line px-3 py-2.5 text-center text-[13px] font-semibold text-fg-1 hover:bg-surface-2">
-              New task
-            </Link>
-          </div>
-        </nav>
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setMobileOpen(false)} aria-hidden />
+          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[82%] flex-col overflow-y-auto bg-surface shadow-lg">
+            <div className="flex h-14 shrink-0 items-center justify-between border-b border-line px-4">
+              <Wordmark size={28} />
+              <button
+                type="button"
+                onClick={() => setMobileOpen(false)}
+                className="rounded-[10px] p-2 text-fg-2 hover:bg-surface-2 hover:text-fg-1"
+                aria-label="Close menu"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
+              <NavLinks onNavigate={() => setMobileOpen(false)} />
+            </nav>
+            <div className="grid grid-cols-2 gap-1.5 border-t border-line p-3">
+              <Link href="/contacts/new" onClick={() => setMobileOpen(false)} className="rounded-sm border border-line px-3 py-2.5 text-center text-[13px] font-semibold text-fg-1 hover:bg-surface-2">
+                New contact
+              </Link>
+              <Link href="/practices/new" onClick={() => setMobileOpen(false)} className="rounded-sm border border-line px-3 py-2.5 text-center text-[13px] font-semibold text-fg-1 hover:bg-surface-2">
+                New practice
+              </Link>
+              <Link href="/tasks?new=1" onClick={() => setMobileOpen(false)} className="rounded-sm border border-line px-3 py-2.5 text-center text-[13px] font-semibold text-fg-1 hover:bg-surface-2">
+                New task
+              </Link>
+              <Link href="/calendar?new=1" onClick={() => setMobileOpen(false)} className="rounded-sm border border-line px-3 py-2.5 text-center text-[13px] font-semibold text-fg-1 hover:bg-surface-2">
+                New event
+              </Link>
+            </div>
+          </aside>
+        </div>
       ) : null}
+
       <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
-    </header>
+    </>
   );
 }
