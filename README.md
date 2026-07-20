@@ -56,10 +56,14 @@ Next.js 15 (App Router) · TypeScript strict · Tailwind v4 + FTA design tokens 
    apply `supabase/migrations/*.sql` in order, then `supabase/seed.sql`. Create a private
    storage bucket named `documents`. Disable public signups (Auth → providers).
    - **Optional demo data**: paste `supabase/seed_demo.sql` into the Supabase SQL editor and
-     run it to load 100 buyers, 100 sellers, 50 practices (with linked sellers and interested
-     buyers), offers, deals across the progression stages, and ~470 pieces of correspondence.
-     It's safe to re-run (it replaces only `DEMO-…`-tagged rows) and never touches real
-     records. Run it *after* creating your first admin user so activity is attributed to them.
+     run it to load the full-flow dataset: **10 demo staff** (the FTA team, selectable as
+     owners / assignees / calendar overlays but unable to sign in), 100 buyers, 100 sellers,
+     50 practices with linked people, offers and deals across the progression stages, ~500
+     pieces of correspondence, **10 AI-captured calls** with diarised transcripts and
+     summaries on the right journals, pending AI suggestions to review, tasks already
+     approved from calls and assigned across the team, two weeks of team calendar, and a
+     launch-outreach flag. Safe to re-run — it replaces only demo-tagged rows and never
+     touches real records.
 2. **Env**: copy `.env.example` → `.env.local` and fill the Supabase URL + keys.
 3. **First admin**: create a user in Supabase Auth (dashboard → Add user), then
    `update profiles set role = 'admin' where email = 'you@…'`. Sign in and invite the
