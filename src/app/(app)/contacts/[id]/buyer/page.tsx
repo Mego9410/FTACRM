@@ -6,13 +6,12 @@ import { BuyerProfileClient } from "./buyer-profile-client";
 export default async function BuyerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [{ data: contact }, { data: criteria }, { data: areas }, specialisms, structures, fundings, tenures, positions] =
+  const [{ data: contact }, { data: criteria }, { data: areas }, specialisms, fundings, tenures, positions] =
     await Promise.all([
       supabase.from("contacts").select("id, roles").eq("id", id).maybeSingle(),
       supabase.from("buyer_criteria").select("*").eq("contact_id", id).maybeSingle(),
       supabase.from("buyer_search_areas").select("id, label, region, radius_miles").eq("contact_id", id).order("created_at"),
       getLookup("specialism"),
-      getLookup("deal_structure"),
       getLookup("funding_type"),
       getLookup("tenure_type"),
       getLookup("buyer_position"),
@@ -24,7 +23,7 @@ export default async function BuyerProfilePage({ params }: { params: Promise<{ i
       contactId={id}
       criteria={criteria}
       areas={areas ?? []}
-      lookups={{ specialisms, structures, fundings, tenures, positions }}
+      lookups={{ specialisms, fundings, tenures, positions }}
     />
   );
 }

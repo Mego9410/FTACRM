@@ -20,7 +20,6 @@ export type PracticeFormValues = {
   price_prefix: string;
   funding_type_id: string | null;
   tenure_type_id: string | null;
-  deal_structure_ids: string[];
   specialism_ids: string[];
   surgeries: number | null;
   annual_turnover: number | null;
@@ -86,7 +85,6 @@ export function PracticeForm({
   lookups: {
     fundings: LookupValue[];
     tenures: LookupValue[];
-    structures: LookupValue[];
     specialisms: LookupValue[];
   };
   owners: { id: string; full_name: string }[];
@@ -100,7 +98,6 @@ export function PracticeForm({
   // Keep every field in the DOM (so an untouched section still submits its
   // current value) but only reveal the section being edited.
   const hideCls = (k: PracticeSection) => cn(section && section !== k && "hidden");
-  const [structures, setStructures] = React.useState<string[]>(initial?.deal_structure_ids ?? []);
   const [specialisms, setSpecialisms] = React.useState<string[]>(initial?.specialism_ids ?? []);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
@@ -133,7 +130,6 @@ export function PracticeForm({
       price_prefix: String(f.get("price_prefix")) as "guide" | "offers_over" | "fixed" | "poa",
       funding_type_id: String(f.get("funding_type_id") ?? "") || null,
       tenure_type_id: String(f.get("tenure_type_id") ?? "") || null,
-      deal_structure_ids: structures,
       specialism_ids: specialisms,
       surgeries: intOrNull(f.get("surgeries")),
       annual_turnover: num(f.get("annual_turnover")),
@@ -235,10 +231,6 @@ export function PracticeForm({
             <Field label="Lease expiry" htmlFor="pf_lease" hint="Leasehold practices — when the lease runs out">
               <Input id="pf_lease" name="lease_expiry" type="date" defaultValue={initial?.lease_expiry ?? ""} />
             </Field>
-          </div>
-          <div>
-            <p className="mb-1.5 text-[13px] font-semibold text-fg-1">Deal structures the seller will entertain</p>
-            <TogglePills options={lookups.structures} selected={structures} onChange={setStructures} />
           </div>
           <div>
             <p className="mb-1.5 text-[13px] font-semibold text-fg-1">Specialisms</p>

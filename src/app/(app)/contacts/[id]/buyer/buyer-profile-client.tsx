@@ -13,7 +13,6 @@ type Criteria = {
   min_price: number | null;
   max_price: number | null;
   specialism_ids: string[];
-  deal_structure_ids: string[];
   funding_type_ids: string[];
   tenure_type_ids: string[];
   buyer_position_id: string | null;
@@ -76,7 +75,6 @@ export function BuyerProfileClient({
   areas: Area[];
   lookups: {
     specialisms: LookupValue[];
-    structures: LookupValue[];
     fundings: LookupValue[];
     tenures: LookupValue[];
     positions: LookupValue[];
@@ -84,7 +82,6 @@ export function BuyerProfileClient({
 }) {
   const router = useRouter();
   const [specialisms, setSpecialisms] = React.useState<string[]>(criteria?.specialism_ids ?? []);
-  const [structures, setStructures] = React.useState<string[]>(criteria?.deal_structure_ids ?? []);
   const [fundings, setFundings] = React.useState<string[]>(criteria?.funding_type_ids ?? []);
   const [tenures, setTenures] = React.useState<string[]>(criteria?.tenure_type_ids ?? []);
   const [areaMode, setAreaMode] = React.useState<"place" | "region">("place");
@@ -110,7 +107,6 @@ export function BuyerProfileClient({
       min_price: num(f.get("min_price")),
       max_price: num(f.get("max_price")),
       specialism_ids: specialisms,
-      deal_structure_ids: structures,
       funding_type_ids: fundings,
       tenure_type_ids: tenures,
       buyer_position_id: String(f.get("buyer_position_id") ?? "") || null,
@@ -165,7 +161,6 @@ export function BuyerProfileClient({
             </div>
             <ToggleGroup label="Funding" options={lookups.fundings} selected={fundings} onChange={setFundings} hint="Nothing selected = any" />
             <ToggleGroup label="Tenure" options={lookups.tenures} selected={tenures} onChange={setTenures} />
-            <ToggleGroup label="Deal structure" options={lookups.structures} selected={structures} onChange={setStructures} />
             <ToggleGroup label="Specialisms" options={lookups.specialisms} selected={specialisms} onChange={setSpecialisms} />
             <div className="grid grid-cols-2 gap-3">
               <Field label="Minimum surgeries" htmlFor="bc_surgeries">

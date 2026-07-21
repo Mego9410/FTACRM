@@ -50,7 +50,7 @@ export function CampaignComposer({
   practice,
   sendingEnabled,
 }: {
-  lookups: { fundings: LookupValue[]; tenures: LookupValue[]; structures: LookupValue[]; specialisms: LookupValue[] };
+  lookups: { fundings: LookupValue[]; tenures: LookupValue[]; specialisms: LookupValue[] };
   owners: { id: string; full_name: string }[];
   templates: Template[];
   explicitContactIds: string[];
@@ -68,7 +68,6 @@ export function CampaignComposer({
   const [temperature, setTemperature] = React.useState<string[]>([]);
   const [fundings, setFundings] = React.useState<string[]>([]);
   const [tenures, setTenures] = React.useState<string[]>([]);
-  const [structures, setStructures] = React.useState<string[]>([]);
   const [specialisms, setSpecialisms] = React.useState<string[]>([]);
   const [minBudget, setMinBudget] = React.useState("");
   const [notContacted, setNotContacted] = React.useState("");
@@ -88,14 +87,13 @@ export function CampaignComposer({
             temperature: temperature.length ? temperature : undefined,
             funding_type_ids: fundings.length ? fundings : undefined,
             tenure_type_ids: tenures.length ? tenures : undefined,
-            deal_structure_ids: structures.length ? structures : undefined,
             specialism_ids: specialisms.length ? specialisms : undefined,
             min_budget: minBudget ? Number(minBudget.replace(/\D/g, "")) : undefined,
             not_contacted_days: notContacted ? Number(notContacted) : undefined,
             owner_id: ownerId || undefined,
           },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [usingExplicit, temperature, fundings, tenures, structures, specialisms, minBudget, notContacted, ownerId],
+    [usingExplicit, temperature, fundings, tenures, specialisms, minBudget, notContacted, ownerId],
   );
 
   React.useEffect(() => {
@@ -198,10 +196,6 @@ export function CampaignComposer({
                 <div>
                   <p className="mb-1.5 text-[13px] font-semibold text-fg-1">Tenure</p>
                   <TogglePills options={lookups.tenures} selected={tenures} onChange={setTenures} />
-                </div>
-                <div>
-                  <p className="mb-1.5 text-[13px] font-semibold text-fg-1">Deal structure</p>
-                  <TogglePills options={lookups.structures} selected={structures} onChange={setStructures} />
                 </div>
                 <div>
                   <p className="mb-1.5 text-[13px] font-semibold text-fg-1">Specialism</p>

@@ -38,7 +38,6 @@ export function PracticeRecord({
   lookups: {
     fundings: LookupValue[];
     tenures: LookupValue[];
-    structures: LookupValue[];
     specialisms: LookupValue[];
   };
   owners: { id: string; full_name: string }[];
@@ -48,7 +47,6 @@ export function PracticeRecord({
 
   const lookupName = (list: LookupValue[], id: string | null) =>
     list.find((v) => v.id === id)?.value ?? null;
-  const structurePills = lookups.structures.filter((s) => practice.deal_structure_ids.includes(s.id));
   const specialismPills = lookups.specialisms.filter((s) => practice.specialism_ids.includes(s.id));
   const ownerName = owners.find((o) => o.id === practice.owner_id)?.full_name ?? null;
   const branchName = branches.find((b) => b.id === practice.branch_id)?.name ?? null;
@@ -108,14 +106,6 @@ export function PracticeRecord({
             <Row label="EBITDA">{formatGBP(practice.ebitda)}</Row>
             <Row label="NHS contract value">{formatGBP(practice.nhs_contract_value)}</Row>
           </dl>
-          <div>
-            <p className="text-xs font-semibold tracking-wide text-fg-3">Deal structures the seller will entertain</p>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {structurePills.length
-                ? structurePills.map((s) => <LookupPill key={s.id} color={s.color}>{s.value}</LookupPill>)
-                : <span className="text-sm text-fg-3">—</span>}
-            </div>
-          </div>
           <div>
             <p className="text-xs font-semibold tracking-wide text-fg-3">Specialisms</p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">

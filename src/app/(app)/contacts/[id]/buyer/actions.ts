@@ -13,7 +13,6 @@ const criteriaSchema = z.object({
   min_price: z.number().nonnegative().nullable(),
   max_price: z.number().nonnegative().nullable(),
   specialism_ids: z.array(z.string().uuid()),
-  deal_structure_ids: z.array(z.string().uuid()),
   funding_type_ids: z.array(z.string().uuid()),
   tenure_type_ids: z.array(z.string().uuid()),
   buyer_position_id: z.string().uuid().nullable(),

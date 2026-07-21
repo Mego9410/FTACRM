@@ -33,7 +33,6 @@ const practiceSchema = z.object({
   price_prefix: z.enum(["guide", "offers_over", "fixed", "poa"]),
   funding_type_id: z.string().uuid().nullable(),
   tenure_type_id: z.string().uuid().nullable(),
-  deal_structure_ids: z.array(z.string().uuid()),
   specialism_ids: z.array(z.string().uuid()),
   surgeries: z.number().int().nonnegative().nullable(),
   annual_turnover: money,
