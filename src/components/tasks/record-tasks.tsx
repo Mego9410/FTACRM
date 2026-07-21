@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Circle, ListChecks, type LucideIcon, Mail, Phone } from "lucide-react";
+import { CheckCircle2, ChevronRight, Circle, ListChecks, type LucideIcon, Mail, Phone } from "lucide-react";
 import type { LookupValue } from "@/lib/lookups";
 import { Avatar, Badge, Button, EmptyState, Field, Input, Select, Textarea } from "@/components/ui/primitives";
 import { DialogFooter } from "@/components/ui/dialog";
@@ -173,10 +173,16 @@ export function RecordTasks({
     const isOverdue = t.status === "open" && t.due_at && new Date(t.due_at) < now;
     const assignee = team.find((m) => m.id === t.assignee_id);
     return (
-      <li className="flex items-center gap-3 px-4 py-2.5">
+      <li
+        className="flex cursor-pointer items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-2/60"
+        onClick={() => openEdit(t)}
+      >
         <button
           type="button"
-          onClick={() => complete(t, t.status !== "done")}
+          onClick={(e) => {
+            e.stopPropagation();
+            complete(t, t.status !== "done");
+          }}
           className="shrink-0"
           aria-label={t.status === "done" ? "Mark open" : "Mark done"}
           title={t.status === "done" ? "Mark open" : "Mark done"}
@@ -221,14 +227,7 @@ export function RecordTasks({
         {assignee && assignee.id !== me ? (
           <Avatar name={assignee.full_name} size={22} color={assignee.calendar_color ?? undefined} />
         ) : null}
-        <button
-          type="button"
-          onClick={() => openEdit(t)}
-          className="shrink-0 rounded p-1 text-fg-4 hover:bg-surface-2 hover:text-fg-1"
-          aria-label={`Edit ${t.title}`}
-        >
-          <span className="text-[11px] font-semibold">Edit</span>
-        </button>
+        <ChevronRight size={16} className="shrink-0 text-fg-4" />
       </li>
     );
   }

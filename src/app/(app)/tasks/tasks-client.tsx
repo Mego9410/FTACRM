@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Check, ChevronRight, Columns3, ListChecks, type LucideIcon, Mail, Pencil, Phone, PlayCircle, Rows3, X } from "lucide-react";
+import { Check, ChevronRight, Columns3, ListChecks, type LucideIcon, Mail, Phone, PlayCircle, Rows3, X } from "lucide-react";
 import type { LookupValue } from "@/lib/lookups";
 import { Avatar, Badge, Button, Card, EmptyState, Field, Input, Select, Textarea } from "@/components/ui/primitives";
 import { SortSelect, useClientSort } from "@/components/ui/sortable";
@@ -252,10 +252,14 @@ export function TasksClient({
     const fromSomeoneElse = t.assignee_id === me && t.created_by && t.created_by !== me && t.creatorName;
     const TypeIcon = TYPE_ICON[t.task_type] ?? ListChecks;
     return (
-      <li className="flex items-center gap-3 px-4 py-2.5">
+      <li
+        className="flex cursor-pointer items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-2/60"
+        onClick={() => openEditDialog(t)}
+      >
         <input
           type="checkbox"
           checked={t.status === "done"}
+          onClick={(e) => e.stopPropagation()}
           onChange={async (e) => {
             const markDone = e.target.checked;
             await setTaskStatus({ id: t.id, status: markDone ? "done" : "open" });
@@ -283,6 +287,7 @@ export function TasksClient({
               <Link
                 key={`${l.column}-${l.id}`}
                 href={l.href}
+                onClick={(e) => e.stopPropagation()}
                 className="inline-flex items-center gap-1 rounded-sm bg-gold-tint px-1.5 py-0.5 font-semibold text-gold-deep hover:underline"
               >
                 {LINK_ICON[l.type]}
@@ -310,14 +315,7 @@ export function TasksClient({
           </Badge>
         ) : null}
         {isOverdue ? <Badge tone="danger">Overdue</Badge> : null}
-        <button
-          type="button"
-          onClick={() => openEditDialog(t)}
-          className="shrink-0 rounded p-1 text-fg-4 hover:bg-surface-2 hover:text-fg-1"
-          aria-label={`Edit ${t.title}`}
-        >
-          <Pencil size={15} />
-        </button>
+        <ChevronRight size={16} className="shrink-0 text-fg-4" />
       </li>
     );
   }
