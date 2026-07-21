@@ -40,6 +40,17 @@ export async function Checklist({
         .order("sort_order")
     : { data: [] };
 
+  // Notes fetched separately and tolerantly so an un-migrated `note` column
+  // (migration 0013) can't break the checklist tab.
+  const noteById = new Map<string, string | null>();
+  if (instanceIds.length) {
+    const { data: noteRows } = await supabase
+      .from("checklist_items")
+      .select("id, note")
+      .in("instance_id", instanceIds);
+    for (const r of (noteRows ?? []) as { id: string; note: string | null }[]) noteById.set(r.id, r.note);
+  }
+
   return (
     <ChecklistCLient
       instances={(instances ?? []).map((i) => ({
@@ -52,6 +63,7 @@ export async function Checklist({
             checked: it.checked,
             checked_at: it.checked_at,
             checked_by: (it.profiles as unknown as { full_name: string } | null)?.full_name ?? null,
+            note: noteById.get(it.id) ?? null,
           })),
       }))}
       templates={templates ?? []}

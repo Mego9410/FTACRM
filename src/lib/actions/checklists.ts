@@ -52,18 +52,63 @@ export async function instantiateChecklist(input: unknown): Promise<ActionResult
 export async function toggleChecklistItem(input: unknown): Promise<ActionResult> {
   const me = await requireProfile();
   const parsed = z
-    .object({ id: z.string().uuid(), checked: z.boolean(), path: z.string() })
+    .object({
+      id: z.string().uuid(),
+      checked: z.boolean(),
+      /** Date the step was actually done (YYYY-MM-DD). Defaults to today. */
+      done_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      path: z.string(),
+    })
     .safeParse(input);
   if (!parsed.success) return fail("Invalid.");
   const supabase = await createClient();
+  const doneAt = parsed.data.done_on
+    ? new Date(`${parsed.data.done_on}T12:00:00Z`).toISOString()
+    : new Date().toISOString();
   const { error } = await supabase
     .from("checklist_items")
     .update({
       checked: parsed.data.checked,
       checked_by: parsed.data.checked ? me.id : null,
-      checked_at: parsed.data.checked ? new Date().toISOString() : null,
+      checked_at: parsed.data.checked ? doneAt : null,
     })
     .eq("id", parsed.data.id);
+  if (error) return fail(error.message);
+  revalidatePath(parsed.data.path);
+  return ok();
+}
+
+/** Edit an item's note and/or the date it was done on (legacy-style per-item edit). */
+export async function updateChecklistItem(input: unknown): Promise<ActionResult> {
+  const me = await requireProfile();
+  const parsed = z
+    .object({
+      id: z.string().uuid(),
+      note: z
+        .string()
+        .max(2000)
+        .transform((s) => s.trim() || null)
+        .nullable()
+        .optional(),
+      done_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+      path: z.string(),
+    })
+    .safeParse(input);
+  if (!parsed.success) return fail("Invalid.");
+  const supabase = await createClient();
+
+  const fields: Record<string, unknown> = {};
+  if (parsed.data.note !== undefined) fields.note = parsed.data.note;
+  if (parsed.data.done_on !== undefined && parsed.data.done_on !== null) {
+    // Re-dating an item implies it is done — keep checked state consistent.
+    fields.checked = true;
+    fields.checked_at = new Date(`${parsed.data.done_on}T12:00:00Z`).toISOString();
+    const { data: existing } = await supabase.from("checklist_items").select("checked_by").eq("id", parsed.data.id).single();
+    if (!existing?.checked_by) fields.checked_by = me.id;
+  }
+  if (Object.keys(fields).length === 0) return ok();
+
+  const { error } = await supabase.from("checklist_items").update(fields).eq("id", parsed.data.id);
   if (error) return fail(error.message);
   revalidatePath(parsed.data.path);
   return ok();
