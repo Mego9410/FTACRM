@@ -28,6 +28,7 @@ export default async function ContactLayout({
     { label: "Details", href: base, exact: true },
     ...(isBuyer ? [{ label: "Buyer profile", href: `${base}/buyer` }] : []),
     { label: "Practices", href: `${base}/practices` },
+    { label: "Tasks", href: `${base}/tasks` },
     { label: "Journal", href: `${base}/journal` },
     { label: "Documents", href: `${base}/documents` },
     { label: "Checklists", href: `${base}/checklist` },

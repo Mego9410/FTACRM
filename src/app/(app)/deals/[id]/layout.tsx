@@ -95,6 +95,7 @@ export default async function DealLayout({
         tabs={[
           { label: "Progression", href: base, exact: true },
           { label: "People", href: `${base}/people` },
+          { label: "Tasks", href: `${base}/tasks` },
           { label: "Journal", href: `${base}/journal` },
           { label: "Documents", href: `${base}/documents` },
           { label: "Checklists", href: `${base}/checklist` },

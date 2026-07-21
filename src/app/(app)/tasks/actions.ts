@@ -14,16 +14,20 @@ const taskSchema = z.object({
   due_at: z.string().nullable(),
   assignee_id: z.string().uuid().nullable(),
   category_id: z.string().uuid().nullable(),
+  task_type: z.enum(["todo", "call", "email"]).optional(),
+  priority: z.enum(["low", "medium", "high"]).nullable().optional(),
   contact_id: z.string().uuid().nullable().optional(),
   practice_id: z.string().uuid().nullable().optional(),
   deal_id: z.string().uuid().nullable().optional(),
+  /** Extra path to revalidate (e.g. a record detail page the task lives on). */
+  path: z.string().max(200).optional(),
 });
 
 export async function saveTask(input: unknown): Promise<ActionResult> {
   const me = await requireProfile();
   const parsed = taskSchema.safeParse(input);
   if (!parsed.success) return fail("The task needs a title.");
-  const { id, ...fields } = parsed.data;
+  const { id, path, ...fields } = parsed.data;
   const supabase = await createClient();
 
   if (id) {
@@ -60,13 +64,14 @@ export async function saveTask(input: unknown): Promise<ActionResult> {
   }
   revalidatePath("/tasks");
   revalidatePath("/dashboard");
+  if (path) revalidatePath(path);
   return ok();
 }
 
 export async function setTaskStatus(input: unknown): Promise<ActionResult> {
   await requireProfile();
   const parsed = z
-    .object({ id: z.string().uuid(), status: z.enum(["open", "done", "cancelled"]) })
+    .object({ id: z.string().uuid(), status: z.enum(["open", "done", "cancelled"]), path: z.string().max(200).optional() })
     .safeParse(input);
   if (!parsed.success) return fail("Invalid.");
   const supabase = await createClient();
@@ -80,5 +85,6 @@ export async function setTaskStatus(input: unknown): Promise<ActionResult> {
   if (error) return fail(error.message);
   revalidatePath("/tasks");
   revalidatePath("/dashboard");
+  if (parsed.data.path) revalidatePath(parsed.data.path);
   return ok();
 }
