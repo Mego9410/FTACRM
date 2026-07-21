@@ -18,7 +18,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   let query = supabase
     .from("tasks")
     .select(
-      `id, title, details, due_at, status, task_type, priority, reminder_at, assignee_id, created_by, category_id, completed_at, assignee:profiles!tasks_assignee_id_fkey(full_name, calendar_color), creator:profiles!tasks_created_by_fkey(full_name), ${TASK_LINKS_SELECT}`,
+      `id, title, details, due_at, start_at, status, stage, queue, recurrence, task_type, priority, reminder_at, assignee_id, created_by, category_id, completed_at, assignee:profiles!tasks_assignee_id_fkey(full_name, calendar_color), creator:profiles!tasks_created_by_fkey(full_name), ${TASK_LINKS_SELECT}`,
     )
     .neq("status", "cancelled");
 
@@ -42,7 +42,11 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
       title: t.title,
       details: t.details,
       due_at: t.due_at,
+      start_at: t.start_at ?? null,
       status: t.status,
+      stage: t.stage ?? "not_started",
+      queue: t.queue ?? null,
+      recurrence: t.recurrence ?? null,
       task_type: t.task_type ?? "todo",
       priority: t.priority ?? null,
       reminder_at: t.reminder_at ?? null,

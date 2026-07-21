@@ -3,14 +3,14 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Check, ChevronRight, ListChecks, type LucideIcon, Mail, Pencil, Phone, PlayCircle, X } from "lucide-react";
+import { Check, ChevronRight, Columns3, ListChecks, type LucideIcon, Mail, Pencil, Phone, PlayCircle, Rows3, X } from "lucide-react";
 import type { LookupValue } from "@/lib/lookups";
 import { Avatar, Badge, Button, Card, EmptyState, Field, Input, Select, Textarea } from "@/components/ui/primitives";
 import { SortSelect, useClientSort } from "@/components/ui/sortable";
 import { DialogFooter } from "@/components/ui/dialog";
 import { SlideOver } from "@/components/ui/slide-over";
 import { cn, formatDateTime } from "@/lib/utils";
-import { saveTask, setTaskStatus } from "./actions";
+import { saveTask, setTaskStage, setTaskStatus } from "./actions";
 import { LINK_ICON, TaskLinksPicker, type TaskLink } from "./task-link-picker";
 import type { TaskLinkView } from "./task-links";
 
@@ -19,7 +19,11 @@ export type TaskRow = {
   title: string;
   details: string | null;
   due_at: string | null;
+  start_at: string | null;
   status: string;
+  stage: string;
+  queue: string | null;
+  recurrence: string | null;
   task_type: string;
   priority: string | null;
   reminder_at: string | null;
@@ -42,6 +46,25 @@ const TASK_TYPES: { v: TaskType; label: string; icon: LucideIcon }[] = [
 ];
 const TYPE_ICON: Record<string, LucideIcon> = { todo: ListChecks, call: Phone, email: Mail };
 const PRIORITY_TONE: Record<string, "danger" | "gold" | "neutral"> = { high: "danger", medium: "gold", low: "neutral" };
+
+export const STAGES: { v: string; label: string; color: string }[] = [
+  { v: "not_started", label: "Not started", color: "#2F77BE" },
+  { v: "in_progress", label: "In progress", color: "#0E7490" },
+  { v: "waiting", label: "Waiting", color: "#B4862A" },
+  { v: "completed", label: "Completed", color: "#1F9D4D" },
+  { v: "deferred", label: "Deferred", color: "#8C8C88" },
+];
+const STAGE_LABEL: Record<string, string> = Object.fromEntries(STAGES.map((s) => [s.v, s.label]));
+const STAGE_COLOR: Record<string, string> = Object.fromEntries(STAGES.map((s) => [s.v, s.color]));
+
+const REMINDER_PRESETS: { v: string; label: string; ms: number | null }[] = [
+  { v: "none", label: "No reminder", ms: null },
+  { v: "at", label: "At time of task", ms: 0 },
+  { v: "30m", label: "30 minutes before", ms: 30 * 60_000 },
+  { v: "1h", label: "1 hour before", ms: 60 * 60_000 },
+  { v: "1d", label: "1 day before", ms: 24 * 60 * 60_000 },
+  { v: "1w", label: "1 week before", ms: 7 * 24 * 60 * 60_000 },
+];
 
 function toLocalInputValue(iso: string | null): string {
   if (!iso) return "";
@@ -76,10 +99,16 @@ export function TasksClient({
   const [links, setLinks] = React.useState<TaskLink[]>([]);
   const [type, setType] = React.useState<TaskType>("todo");
   const [priority, setPriority] = React.useState<string>("");
-  const [reminderAt, setReminderAt] = React.useState<string>("");
+  const [stage, setStage] = React.useState<string>("not_started");
+  const [startAt, setStartAt] = React.useState<string>("");
+  const [queueName, setQueueName] = React.useState<string>("");
+  const [recurrence, setRecurrence] = React.useState<string>("");
+  const [reminderPreset, setReminderPreset] = React.useState<string>("none");
+  const [hadReminder, setHadReminder] = React.useState<boolean>(false);
   const [followUp, setFollowUp] = React.useState<TaskRow | null>(null);
   const [queue, setQueue] = React.useState<TaskRow[] | null>(null);
   const [queueIdx, setQueueIdx] = React.useState(0);
+  const [board, setBoard] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
 
@@ -104,7 +133,12 @@ export function TasksClient({
     setLinks([]);
     setType("todo");
     setPriority("");
-    setReminderAt("");
+    setStage("not_started");
+    setStartAt("");
+    setQueueName("");
+    setRecurrence("");
+    setReminderPreset("none");
+    setHadReminder(false);
     setError(null);
     setDialog({ mode: "new", task: null });
   }
@@ -112,7 +146,12 @@ export function TasksClient({
     setLinks(task.links.map((l) => ({ type: l.type, column: l.column, id: l.id, title: l.title })));
     setType((task.task_type as TaskType) || "todo");
     setPriority(task.priority ?? "");
-    setReminderAt(toLocalInputValue(task.reminder_at));
+    setStage(task.stage || "not_started");
+    setStartAt(toLocalInputValue(task.start_at));
+    setQueueName(task.queue ?? "");
+    setRecurrence(task.recurrence ?? "");
+    setReminderPreset(task.reminder_at ? "keep" : "none");
+    setHadReminder(!!task.reminder_at);
     setError(null);
     setDialog({ mode: "edit", task });
   }
@@ -153,16 +192,28 @@ export function TasksClient({
     setError(null);
     const f = new FormData(e.currentTarget);
     const due = String(f.get("due_at") ?? "");
+    const dueIso = due ? new Date(due).toISOString() : null;
+    const preset = REMINDER_PRESETS.find((p) => p.v === reminderPreset);
+    const reminderIso =
+      reminderPreset === "keep"
+        ? undefined // leave the existing reminder untouched
+        : preset && preset.ms !== null && dueIso
+          ? new Date(new Date(dueIso).getTime() - preset.ms).toISOString()
+          : null;
     const res = await saveTask({
       id: dialog?.task?.id,
       title: String(f.get("title")),
       details: String(f.get("details") ?? "") || null,
-      due_at: due ? new Date(due).toISOString() : null,
+      due_at: dueIso,
+      start_at: startAt ? new Date(startAt).toISOString() : null,
       assignee_id: String(f.get("assignee_id") ?? "") || null,
       category_id: String(f.get("category_id") ?? "") || null,
       task_type: type,
       priority: priority || null,
-      reminder_at: reminderAt ? new Date(reminderAt).toISOString() : null,
+      stage,
+      queue: queueName.trim() || null,
+      recurrence: recurrence || null,
+      ...(reminderIso !== undefined ? { reminder_at: reminderIso } : {}),
       links: links.map((l) => ({ column: l.column, id: l.id })),
     });
     setBusy(false);
@@ -241,6 +292,12 @@ export function TasksClient({
             {fromSomeoneElse ? <span className="text-fg-4">from {t.creatorName}</span> : null}
           </div>
         </div>
+        <span
+          className="hidden shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold sm:inline-flex"
+          style={{ backgroundColor: `${STAGE_COLOR[t.stage]}1c`, color: STAGE_COLOR[t.stage] }}
+        >
+          {STAGE_LABEL[t.stage] ?? t.stage}
+        </span>
         {showAssignee ? (
           <span className="hidden items-center gap-1.5 sm:flex" title={`Assigned to ${t.assigneeName}`}>
             <Avatar name={t.assigneeName!} size={22} color={t.assigneeColor ?? undefined} />
@@ -288,17 +345,37 @@ export function TasksClient({
           </optgroup>
         </Select>
         <div className="flex items-center gap-2">
-          <SortSelect
-            options={[
-              { key: "due_at", label: "Due date" },
-              { key: "title", label: "Title" },
-              { key: "assignee", label: "Assignee" },
-              { key: "category", label: "Category" },
-            ]}
-            sortKey={key}
-            dir={dir}
-            onChange={set}
-          />
+          <div className="inline-flex overflow-hidden rounded-md border border-line">
+            <button
+              type="button"
+              onClick={() => setBoard(false)}
+              className={cn("inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-semibold", !board ? "bg-gold-tint text-gold-deep" : "bg-surface text-fg-2 hover:bg-surface-2")}
+              title="List view"
+            >
+              <Rows3 size={15} /> List
+            </button>
+            <button
+              type="button"
+              onClick={() => setBoard(true)}
+              className={cn("inline-flex items-center gap-1.5 border-l border-line px-2.5 py-1.5 text-[13px] font-semibold", board ? "bg-gold-tint text-gold-deep" : "bg-surface text-fg-2 hover:bg-surface-2")}
+              title="Board view"
+            >
+              <Columns3 size={15} /> Board
+            </button>
+          </div>
+          {!board ? (
+            <SortSelect
+              options={[
+                { key: "due_at", label: "Due date" },
+                { key: "title", label: "Title" },
+                { key: "assignee", label: "Assignee" },
+                { key: "category", label: "Category" },
+              ]}
+              sortKey={key}
+              dir={dir}
+              onChange={set}
+            />
+          ) : null}
           {overdue.length + upcoming.length > 0 ? (
             <Button variant="outline" size="sm" onClick={startQueue}>
               <PlayCircle size={15} /> Start queue ({overdue.length + upcoming.length})
@@ -308,7 +385,67 @@ export function TasksClient({
         </div>
       </div>
 
-      {open.length === 0 && done.length === 0 ? (
+      {board ? (
+        <div className="flex gap-3 overflow-x-auto pb-2">
+          {STAGES.map((s) => {
+            const items = sorted.filter((t) => t.stage === s.v);
+            return (
+              <div key={s.v} className="flex w-72 shrink-0 flex-col rounded-lg border border-line bg-surface-2/60">
+                <div className="flex items-center justify-between border-b border-line px-3 py-2.5">
+                  <span
+                    className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold"
+                    style={{ backgroundColor: `${s.color}1c`, color: s.color }}
+                  >
+                    {s.label}
+                  </span>
+                  <span className="text-xs font-semibold text-fg-3">{items.length}</span>
+                </div>
+                <div className="flex-1 space-y-2 overflow-y-auto p-2">
+                  {items.map((t) => {
+                    const TypeIcon = TYPE_ICON[t.task_type] ?? ListChecks;
+                    return (
+                      <div key={t.id} className="rounded-md border border-line bg-surface p-2.5 shadow-xs">
+                        <button type="button" onClick={() => openEditDialog(t)} className="block w-full text-left">
+                          <p className={cn("truncate text-sm font-semibold", t.status === "done" ? "text-fg-3 line-through" : "text-fg-1")}>
+                            {t.title}
+                          </p>
+                          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-fg-3">
+                            <span className="inline-flex items-center gap-1"><TypeIcon size={13} /> {t.task_type}</span>
+                            {t.due_at ? <span className={cn(t.status === "open" && new Date(t.due_at) < now && "font-semibold text-danger")}>{formatDateTime(t.due_at)}</span> : null}
+                            {t.priority ? <Badge tone={PRIORITY_TONE[t.priority] ?? "neutral"} className="capitalize">{t.priority}</Badge> : null}
+                          </div>
+                          {t.assigneeName ? (
+                            <div className="mt-1.5 flex items-center gap-1.5">
+                              <Avatar name={t.assigneeName} size={18} color={t.assigneeColor ?? undefined} />
+                              <span className="truncate text-xs text-fg-3">{t.assigneeName}</span>
+                            </div>
+                          ) : null}
+                        </button>
+                        <Select
+                          value={t.stage}
+                          onChange={async (e) => {
+                            await setTaskStage({ id: t.id, stage: e.target.value });
+                            router.refresh();
+                          }}
+                          className="mt-2 h-8 text-xs"
+                          aria-label="Move stage"
+                        >
+                          {STAGES.map((opt) => (
+                            <option key={opt.v} value={opt.v}>Move to: {opt.label}</option>
+                          ))}
+                        </Select>
+                      </div>
+                    );
+                  })}
+                  {items.length === 0 ? <p className="px-1 py-3 text-center text-xs text-fg-4">Nothing here</p> : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {board ? null : open.length === 0 && done.length === 0 ? (
         <EmptyState
           title={`No tasks in “${viewLabel(view)}”`}
           body="Add a task to keep a follow-up from slipping — you can assign it to anyone and tag it to a practice, buyer, seller or deal."
@@ -375,8 +512,22 @@ export function TasksClient({
             <Input id="tk_title" name="title" defaultValue={dialogTask?.title ?? ""} required autoFocus />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Due" htmlFor="tk_due">
+            <Field label="Due date" htmlFor="tk_due">
               <Input id="tk_due" name="due_at" type="datetime-local" defaultValue={toLocalInputValue(dialogTask?.due_at ?? null)} />
+            </Field>
+            <Field label="Start date" htmlFor="tk_start">
+              <Input id="tk_start" type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Task stage" htmlFor="tk_stage">
+              <Select id="tk_stage" value={stage} onChange={(e) => setStage(e.target.value)}>
+                {STAGES.map((s) => (
+                  <option key={s.v} value={s.v}>
+                    {s.label}
+                  </option>
+                ))}
+              </Select>
             </Field>
             <Field label="Priority" htmlFor="tk_priority">
               <Select id="tk_priority" value={priority} onChange={(e) => setPriority(e.target.value)}>
@@ -387,7 +538,19 @@ export function TasksClient({
               </Select>
             </Field>
           </div>
+          <Field label="Associate task with" htmlFor="tk_link">
+            <TaskLinksPicker value={links} onChange={setLinks} />
+          </Field>
           <div className="grid grid-cols-2 gap-3">
+            <Field label="Assigned to" htmlFor="tk_assignee_grid">
+              <Select id="tk_assignee_grid" name="assignee_id" defaultValue={dialogTask?.assignee_id ?? me}>
+                {team.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.id === me ? `${t.full_name} (me)` : t.full_name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
             <Field label="Category" htmlFor="tk_cat">
               <Select id="tk_cat" name="category_id" defaultValue={dialogTask?.category_id ?? ""}>
                 <option value="">None</option>
@@ -398,24 +561,32 @@ export function TasksClient({
                 ))}
               </Select>
             </Field>
-            <Field label="Assign to" htmlFor="tk_assignee_grid">
-              <Select id="tk_assignee_grid" name="assignee_id" defaultValue={dialogTask?.assignee_id ?? me}>
-                {team.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.id === me ? `${t.full_name} (me)` : t.full_name}
-                  </option>
-                ))}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Queue" htmlFor="tk_queue">
+              <Input id="tk_queue" value={queueName} onChange={(e) => setQueueName(e.target.value)} placeholder="e.g. Morning calls" />
+            </Field>
+            <Field label="Set to repeat" htmlFor="tk_recurrence">
+              <Select id="tk_recurrence" value={recurrence} onChange={(e) => setRecurrence(e.target.value)}>
+                <option value="">Does not repeat</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
               </Select>
             </Field>
           </div>
-          <Field label="Link to practices, buyers, sellers or deals" htmlFor="tk_link">
-            <TaskLinksPicker value={links} onChange={setLinks} />
+          <Field label="Reminder" htmlFor="tk_reminder" hint="Relative to the due date.">
+            <Select id="tk_reminder" value={reminderPreset} onChange={(e) => setReminderPreset(e.target.value)}>
+              {hadReminder ? <option value="keep">Keep current reminder</option> : null}
+              {REMINDER_PRESETS.map((p) => (
+                <option key={p.v} value={p.v}>
+                  {p.label}
+                </option>
+              ))}
+            </Select>
           </Field>
-          <Field label="Reminder" htmlFor="tk_reminder" hint="Notify the assignee at this time.">
-            <Input id="tk_reminder" type="datetime-local" value={reminderAt} onChange={(e) => setReminderAt(e.target.value)} />
-          </Field>
-          <Field label="Details" htmlFor="tk_details">
-            <Textarea id="tk_details" name="details" rows={2} defaultValue={dialogTask?.details ?? ""} />
+          <Field label="Task notes" htmlFor="tk_details">
+            <Textarea id="tk_details" name="details" rows={3} defaultValue={dialogTask?.details ?? ""} />
           </Field>
           {error ? <p className="text-sm font-medium text-danger">{error}</p> : null}
           <DialogFooter>
