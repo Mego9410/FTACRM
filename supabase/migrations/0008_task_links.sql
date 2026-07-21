@@ -35,9 +35,10 @@ begin
 end $$;
 
 -- Backfill existing single-column links into the join table.
+-- Explicit uuid casts on the null placeholders so the UNION column types match.
 insert into public.task_links (task_id, contact_id, practice_id, deal_id)
-select id, contact_id, null, null from public.tasks where contact_id is not null
+select id, contact_id, null::uuid, null::uuid from public.tasks where contact_id is not null
 union all
-select id, null, practice_id, null from public.tasks where practice_id is not null
+select id, null::uuid, practice_id, null::uuid from public.tasks where practice_id is not null
 union all
-select id, null, null, deal_id from public.tasks where deal_id is not null;
+select id, null::uuid, null::uuid, deal_id from public.tasks where deal_id is not null;
