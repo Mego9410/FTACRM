@@ -145,36 +145,20 @@ export function AppNav({
           railWidth,
         )}
       >
-        <div className={cn("flex h-14 shrink-0 items-center border-b border-line", collapsed ? "justify-center px-2" : "px-3")}>
+        <div className={cn("flex h-14 shrink-0 items-center border-b border-line", collapsed ? "gap-0.5 px-1.5" : "px-3")}>
           <Link href="/dashboard" className={cn("flex min-w-0 items-center", collapsed ? "" : "flex-1 pl-1")}>
-            {collapsed ? <AspenMark size={30} /> : <Wordmark />}
+            {collapsed ? <AspenMark size={26} /> : <Wordmark />}
           </Link>
-          {!collapsed ? (
-            <button
-              type="button"
-              onClick={toggleCollapsed}
-              title="Collapse menu"
-              aria-label="Collapse menu"
-              className="shrink-0 rounded-[8px] p-1.5 text-fg-3 transition-colors hover:bg-surface-2 hover:text-fg-1"
-            >
-              <PanelLeftClose size={18} />
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            title={collapsed ? "Expand menu" : "Collapse menu"}
+            aria-label={collapsed ? "Expand menu" : "Collapse menu"}
+            className="shrink-0 rounded-[8px] p-1.5 text-fg-3 transition-colors hover:bg-surface-2 hover:text-fg-1"
+          >
+            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
         </div>
-
-        {collapsed ? (
-          <div className="flex justify-center border-b border-line py-2">
-            <button
-              type="button"
-              onClick={toggleCollapsed}
-              title="Expand menu"
-              aria-label="Expand menu"
-              className="rounded-[8px] p-2 text-fg-3 transition-colors hover:bg-surface-2 hover:text-fg-1"
-            >
-              <PanelLeftOpen size={18} />
-            </button>
-          </div>
-        ) : null}
 
         <nav className="flex flex-1 flex-col overflow-y-auto p-3">
           <div className="flex flex-col gap-0.5">
