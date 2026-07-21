@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getLookup } from "@/lib/lookups";
-import { PracticeForm, type PracticeFormValues } from "../practice-form";
+import { PracticeRecord } from "../practice-record";
+import type { PracticeFormValues } from "../practice-form";
 
 export default async function PracticeDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -20,8 +21,8 @@ export default async function PracticeDetailsPage({ params }: { params: Promise<
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PracticeForm
-        initial={practice as unknown as PracticeFormValues}
+      <PracticeRecord
+        practice={practice as unknown as PracticeFormValues & { id: string }}
         lookups={{ fundings, tenures, structures, specialisms }}
         owners={owners ?? []}
         branches={branches ?? []}

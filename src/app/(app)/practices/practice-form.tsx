@@ -34,6 +34,8 @@ export type PracticeFormValues = {
   branch_id: string | null;
   instructed_at: string | null;
   contract_expiry: string | null;
+  lease_expiry: string | null;
+  closing_date: string | null;
   fee_percent: number | null;
   fee_fixed: number | null;
 };
@@ -69,11 +71,16 @@ function TogglePills({
   );
 }
 
+export type PracticeSection = "identity" | "location" | "dental" | "pricing" | "assignment";
+
 export function PracticeForm({
   initial,
   lookups,
   owners,
   branches,
+  section,
+  onSaved,
+  onCancel,
 }: {
   initial?: PracticeFormValues;
   lookups: {
@@ -84,8 +91,15 @@ export function PracticeForm({
   };
   owners: { id: string; full_name: string }[];
   branches: { id: string; name: string }[];
+  /** When set, only this section is shown (the rest stay in the DOM so nothing is lost on save). */
+  section?: PracticeSection;
+  onSaved?: () => void;
+  onCancel?: () => void;
 }) {
   const router = useRouter();
+  // Keep every field in the DOM (so an untouched section still submits its
+  // current value) but only reveal the section being edited.
+  const hideCls = (k: PracticeSection) => cn(section && section !== k && "hidden");
   const [structures, setStructures] = React.useState<string[]>(initial?.deal_structure_ids ?? []);
   const [specialisms, setSpecialisms] = React.useState<string[]>(initial?.specialism_ids ?? []);
   const [error, setError] = React.useState<string | null>(null);
@@ -133,6 +147,8 @@ export function PracticeForm({
       branch_id: String(f.get("branch_id") ?? "") || null,
       instructed_at: String(f.get("instructed_at") ?? "") || null,
       contract_expiry: String(f.get("contract_expiry") ?? "") || null,
+      lease_expiry: String(f.get("lease_expiry") ?? "") || null,
+      closing_date: String(f.get("closing_date") ?? "") || null,
       fee_percent: num(f.get("fee_percent")),
       fee_fixed: num(f.get("fee_fixed")),
     };
@@ -144,6 +160,7 @@ export function PracticeForm({
     if (initial?.id) {
       setSaved(true);
       router.refresh();
+      onSaved?.();
     } else {
       const created = res.data as { id: string } | undefined;
       router.push(created ? `/practices/${created.id}` : "/practices");
@@ -153,7 +170,7 @@ export function PracticeForm({
 
   return (
     <form onSubmit={submit} className="space-y-5">
-      <Card>
+      <Card className={hideCls("identity")}>
         <CardHeader title="Identity" />
         <div className="grid gap-4 p-5 sm:grid-cols-2">
           <Field
@@ -174,7 +191,7 @@ export function PracticeForm({
         </div>
       </Card>
 
-      <Card>
+      <Card className={hideCls("location")}>
         <CardHeader title="Location" />
         <div className="grid gap-4 p-5 sm:grid-cols-2">
           <Field label="Address line 1" htmlFor="pf_a1">
@@ -195,7 +212,7 @@ export function PracticeForm({
         </div>
       </Card>
 
-      <Card>
+      <Card className={hideCls("dental")}>
         <CardHeader title="Dental profile" />
         <div className="space-y-5 p-5">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -214,6 +231,9 @@ export function PracticeForm({
                   <option key={v.id} value={v.id}>{v.value}</option>
                 ))}
               </Select>
+            </Field>
+            <Field label="Lease expiry" htmlFor="pf_lease" hint="Leasehold practices — when the lease runs out">
+              <Input id="pf_lease" name="lease_expiry" type="date" defaultValue={initial?.lease_expiry ?? ""} />
             </Field>
           </div>
           <div>
@@ -250,7 +270,7 @@ export function PracticeForm({
         </div>
       </Card>
 
-      <Card>
+      <Card className={hideCls("pricing")}>
         <CardHeader title="Price, fees and dates" />
         <div className="grid gap-4 p-5 sm:grid-cols-3">
           <Field label="Asking price (£)" htmlFor="pf_price">
@@ -278,10 +298,13 @@ export function PracticeForm({
           <Field label="Agency contract expiry" htmlFor="pf_expiry">
             <Input id="pf_expiry" name="contract_expiry" type="date" defaultValue={initial?.contract_expiry ?? ""} />
           </Field>
+          <Field label="Best and final closing date" htmlFor="pf_closing" hint="Deadline for offers when running a closing-date process">
+            <Input id="pf_closing" name="closing_date" type="date" defaultValue={initial?.closing_date ?? ""} />
+          </Field>
         </div>
       </Card>
 
-      <Card>
+      <Card className={hideCls("assignment")}>
         <CardHeader title="Assignment" />
         <div className="grid gap-4 p-5 sm:grid-cols-2">
           <Field label="Owner" htmlFor="pf_owner">
@@ -306,7 +329,7 @@ export function PracticeForm({
       {error ? <p className="text-sm font-medium text-danger">{error}</p> : null}
       {saved ? <p className="text-sm font-medium text-available-fg">Saved.</p> : null}
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="ghost" onClick={() => router.back()}>Cancel</Button>
+        <Button type="button" variant="ghost" onClick={() => (onCancel ? onCancel() : router.back())}>Cancel</Button>
         <Button type="submit" disabled={busy}>
           {busy ? "Saving…" : initial?.id ? "Save changes" : "Create practice"}
         </Button>

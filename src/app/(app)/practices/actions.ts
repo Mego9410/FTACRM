@@ -47,6 +47,8 @@ const practiceSchema = z.object({
   branch_id: z.string().uuid().nullable(),
   instructed_at: z.string().nullable(),
   contract_expiry: z.string().nullable(),
+  lease_expiry: z.string().nullable(),
+  closing_date: z.string().nullable(),
   fee_percent: z.number().nonnegative().max(100).nullable(),
   fee_fixed: money,
 });

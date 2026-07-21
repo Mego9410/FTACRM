@@ -156,6 +156,8 @@ email, owner_id, roles (GIN), postcode.
 | branch_id | uuid fk branches | |
 | instructed_at | date | |
 | contract_expiry | date | agency agreement expiry (drives "contracts expiring" smart list) |
+| lease_expiry | date | leasehold practices — when the lease runs out (0010) |
+| closing_date | date | best-and-final offers deadline when running a closing-date process (0010) |
 | fee_percent, fee_fixed | numeric | agency fee |
 | withdrawn_at, withdrawal_reason_id | | |
 | archived_at | timestamptz | |
