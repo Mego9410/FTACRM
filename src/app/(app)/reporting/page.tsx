@@ -134,6 +134,7 @@ export default async function ReportingPage({ searchParams }: { searchParams: Pr
         tabs={[
           { label: "Management", href: "/reporting", exact: true },
           { label: "Reports", href: "/reporting/reports" },
+          { label: "Email marketing", href: "/reporting/email" },
           { label: "Activity feed", href: "/reporting/activity" },
         ]}
       />

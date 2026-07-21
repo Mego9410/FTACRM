@@ -484,6 +484,82 @@ const fallThroughs: ReportDef = {
   },
 };
 
+const emailSends: ReportDef = {
+  key: "email_sends",
+  label: "Email sends",
+  description: "Every campaign and launch created within the period, with delivery and engagement stats.",
+  periodic: true,
+  async run(period, filters) {
+    void filters; // campaigns/launches aren't attributed to an owner or branch
+    const supabase = await createClient();
+    const { from, to } = tsBounds(period);
+    const { data } = await supabase
+      .from("campaigns")
+      .select(
+        "name, kind, status, recipient_count, sent_count, delivered_count, open_count, click_count, bounce_count, unsubscribe_count, scheduled_at, started_at, completed_at, created_at, practices!campaigns_practice_id_fkey(ref, display_title)",
+      )
+      .neq("status", "draft")
+      .gte("created_at", from)
+      .lte("created_at", to)
+      .order("created_at", { ascending: false });
+
+    const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 1000) / 10 : null);
+
+    const rows = (data ?? []).map((c) => {
+      const practice = c.practices as unknown as { ref: string; display_title: string } | null;
+      const sent = Number(c.sent_count ?? 0);
+      const delivered = Number(c.delivered_count ?? 0);
+      const opened = Number(c.open_count ?? 0);
+      const clicked = Number(c.click_count ?? 0);
+      const bounced = Number(c.bounce_count ?? 0);
+      const unsubscribed = Number(c.unsubscribe_count ?? 0);
+      const engagementBase = delivered || sent;
+      return {
+        name: c.name,
+        kind: c.kind === "launch" ? "Launch" : "Campaign",
+        practice: practice ? `${practice.display_title} (${practice.ref})` : null,
+        status: c.status,
+        recipients: c.recipient_count != null ? Number(c.recipient_count) : null,
+        sent,
+        delivered,
+        opened,
+        clicked,
+        bounced,
+        unsubscribed,
+        delivery_rate: pct(delivered, sent),
+        open_rate: pct(opened, engagementBase),
+        click_rate: pct(clicked, engagementBase),
+        bounce_rate: pct(bounced, sent),
+        unsub_rate: pct(unsubscribed, engagementBase),
+        sent_at: c.started_at ?? c.scheduled_at ?? c.created_at ?? null,
+      };
+    });
+
+    return {
+      columns: [
+        { key: "name", label: "Name", type: "text" },
+        { key: "kind", label: "Kind", type: "text" },
+        { key: "practice", label: "Practice", type: "text" },
+        { key: "status", label: "Status", type: "text" },
+        { key: "recipients", label: "Recipients", type: "number" },
+        { key: "sent", label: "Sent", type: "number" },
+        { key: "delivered", label: "Delivered", type: "number" },
+        { key: "delivery_rate", label: "Delivery %", type: "number" },
+        { key: "opened", label: "Opened", type: "number" },
+        { key: "open_rate", label: "Open %", type: "number" },
+        { key: "clicked", label: "Clicked", type: "number" },
+        { key: "click_rate", label: "Click %", type: "number" },
+        { key: "bounced", label: "Bounced", type: "number" },
+        { key: "bounce_rate", label: "Bounce %", type: "number" },
+        { key: "unsubscribed", label: "Unsubscribed", type: "number" },
+        { key: "unsub_rate", label: "Unsub %", type: "number" },
+        { key: "sent_at", label: "Sent / scheduled", type: "datetime" },
+      ],
+      rows,
+    };
+  },
+};
+
 export const REPORTS: ReportDef[] = [
   completions,
   pipeline,
@@ -492,4 +568,5 @@ export const REPORTS: ReportDef[] = [
   offers,
   leaderboard,
   fallThroughs,
+  emailSends,
 ];
