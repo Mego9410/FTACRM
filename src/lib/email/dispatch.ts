@@ -22,10 +22,18 @@ export async function dispatchCampaigns(): Promise<{ sent: number } | { skipped:
   }
 
   const admin = createAdminClient();
+
+  // Promote scheduled campaigns/launches whose time has arrived.
+  await admin
+    .from("campaigns")
+    .update({ status: "sending", started_at: new Date().toISOString() })
+    .eq("status", "scheduled")
+    .lte("scheduled_at", new Date().toISOString());
+
   const { data: campaigns } = await admin
     .from("campaigns")
     .select(
-      "id, subject, body_html, practice_id, from_profile_id, profiles!campaigns_from_profile_id_fkey(full_name, email, signature_html)",
+      "id, kind, subject, body_html, practice_id, from_profile_id, profiles!campaigns_from_profile_id_fkey(full_name, email, signature_html)",
     )
     .eq("status", "sending")
     .limit(3);
@@ -76,12 +84,18 @@ export async function dispatchCampaigns(): Promise<{ sent: number } | { skipped:
         ...(contact ? buildContactContext(contact) : {}),
         ...practiceCtx,
         ...(sender ? buildSenderContext(sender) : {}),
+        unsubscribe_url: unsubscribeUrl,
       };
-      const html = renderEmailShell({
-        bodyText: renderMergeTags(campaign.body_html ?? "", ctx),
-        unsubscribeUrl,
-        senderName: sender?.full_name ?? "Frank Taylor & Associates",
-      });
+      // Launches carry complete pre-designed HTML (launch-template.ts) — only
+      // merge tags remain. Ordinary campaigns are plain text wrapped in the shell.
+      const html =
+        (campaign as { kind?: string }).kind === "launch"
+          ? renderMergeTags(campaign.body_html ?? "", ctx)
+          : renderEmailShell({
+              bodyText: renderMergeTags(campaign.body_html ?? "", ctx),
+              unsubscribeUrl,
+              senderName: sender?.full_name ?? "Frank Taylor & Associates",
+            });
       const subject = renderMergeTags(campaign.subject ?? "", ctx);
 
       const result = await provider.send({

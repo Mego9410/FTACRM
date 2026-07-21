@@ -14,6 +14,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
+  Rocket,
   Settings,
   User,
   UsersRound,
@@ -36,6 +37,7 @@ const NAV = [
   { label: "Contacts", href: "/contacts", icon: UsersRound },
   { label: "Practices", href: "/practices", icon: Building2 },
   { label: "Deals", href: "/deals", icon: Handshake },
+  { label: "Launches", href: "/launches", icon: Rocket },
 ];
 
 function Wordmark() {
