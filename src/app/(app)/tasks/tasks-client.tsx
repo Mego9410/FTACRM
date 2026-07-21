@@ -109,8 +109,36 @@ export function TasksClient({
   const [queue, setQueue] = React.useState<TaskRow[] | null>(null);
   const [queueIdx, setQueueIdx] = React.useState(0);
   const [board, setBoard] = React.useState(false);
+  const [dragId, setDragId] = React.useState<string | null>(null);
+  const [overStage, setOverStage] = React.useState<string | null>(null);
+  const [stageOverride, setStageOverride] = React.useState<Record<string, string>>({});
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
+
+  // Optimistic stage for the board so a dropped card jumps columns instantly.
+  const stageOf = React.useCallback(
+    (t: TaskRow) => stageOverride[t.id] ?? t.stage,
+    [stageOverride],
+  );
+
+  async function moveToStage(id: string, stage: string) {
+    setDragId(null);
+    setOverStage(null);
+    const task = tasks.find((t) => t.id === id);
+    if (!task || stageOf(task) === stage) return;
+    setStageOverride((m) => ({ ...m, [id]: stage }));
+    const res = await setTaskStage({ id, stage });
+    if (!res.ok) {
+      setStageOverride((m) => {
+        const next = { ...m };
+        delete next[id];
+        return next;
+      });
+      setError(res.error);
+      return;
+    }
+    router.refresh();
+  }
 
   const { sorted, key, dir, set } = useClientSort(
     tasks,
@@ -386,9 +414,26 @@ export function TasksClient({
       {board ? (
         <div className="flex gap-3 overflow-x-auto pb-2">
           {STAGES.map((s) => {
-            const items = sorted.filter((t) => t.stage === s.v);
+            const items = sorted.filter((t) => stageOf(t) === s.v);
+            const isOver = overStage === s.v && dragId !== null;
             return (
-              <div key={s.v} className="flex w-72 shrink-0 flex-col rounded-lg border border-line bg-surface-2/60">
+              <div
+                key={s.v}
+                onDragOver={(e) => {
+                  if (!dragId) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  if (overStage !== s.v) setOverStage(s.v);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (dragId) moveToStage(dragId, s.v);
+                }}
+                className={cn(
+                  "flex w-72 shrink-0 flex-col rounded-lg border bg-surface-2/60 transition-colors",
+                  isOver ? "border-gold ring-2 ring-gold/40 bg-gold-tint/30" : "border-line",
+                )}
+              >
                 <div className="flex items-center justify-between border-b border-line px-3 py-2.5">
                   <span
                     className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold"
@@ -402,7 +447,23 @@ export function TasksClient({
                   {items.map((t) => {
                     const TypeIcon = TYPE_ICON[t.task_type] ?? ListChecks;
                     return (
-                      <div key={t.id} className="rounded-md border border-line bg-surface p-2.5 shadow-xs">
+                      <div
+                        key={t.id}
+                        draggable
+                        onDragStart={(e) => {
+                          setDragId(t.id);
+                          e.dataTransfer.effectAllowed = "move";
+                          e.dataTransfer.setData("text/plain", t.id);
+                        }}
+                        onDragEnd={() => {
+                          setDragId(null);
+                          setOverStage(null);
+                        }}
+                        className={cn(
+                          "cursor-grab rounded-md border border-line bg-surface p-2.5 shadow-xs active:cursor-grabbing",
+                          dragId === t.id && "opacity-50",
+                        )}
+                      >
                         <button type="button" onClick={() => openEditDialog(t)} className="block w-full text-left">
                           <p className={cn("truncate text-sm font-semibold", t.status === "done" ? "text-fg-3 line-through" : "text-fg-1")}>
                             {t.title}
@@ -420,11 +481,8 @@ export function TasksClient({
                           ) : null}
                         </button>
                         <Select
-                          value={t.stage}
-                          onChange={async (e) => {
-                            await setTaskStage({ id: t.id, stage: e.target.value });
-                            router.refresh();
-                          }}
+                          value={stageOf(t)}
+                          onChange={(e) => moveToStage(t.id, e.target.value)}
                           className="mt-2 h-8 text-xs"
                           aria-label="Move stage"
                         >
@@ -435,7 +493,11 @@ export function TasksClient({
                       </div>
                     );
                   })}
-                  {items.length === 0 ? <p className="px-1 py-3 text-center text-xs text-fg-4">Nothing here</p> : null}
+                  {items.length === 0 ? (
+                    <p className={cn("px-1 py-6 text-center text-xs", isOver ? "text-gold-deep" : "text-fg-4")}>
+                      {isOver ? "Drop here" : "Nothing here"}
+                    </p>
+                  ) : null}
                 </div>
               </div>
             );
