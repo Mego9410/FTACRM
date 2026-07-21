@@ -71,14 +71,14 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
           editable={campaign.sent_count === 0 && ["draft", "scheduled", "sending"].includes(campaign.status)}
         />
 
-        <Card>
+        <Card className="flex h-full flex-col">
           <CardHeader title={`Recipients ${recipients && recipients.length >= 500 ? "(first 500)" : `(${recipients?.length ?? 0})`}`} />
           {(recipients ?? []).length === 0 ? (
             <p className="px-5 py-6 text-sm text-fg-3">
               Recipients are snapshotted when the campaign is queued for sending.
             </p>
           ) : (
-            <div className="max-h-[480px] overflow-y-auto">
+            <div className="min-h-0 flex-1 overflow-y-auto">
               <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-surface">

@@ -7,6 +7,7 @@ const SECTIONS = [
   { label: "Branches", href: "/admin/branches" },
   { label: "Lookups", href: "/admin/lookups" },
   { label: "Checklists", href: "/admin/checklists" },
+  { label: "Intro email blocks", href: "/admin/intro-blocks" },
   { label: "Permissions", href: "/admin/permissions" },
   { label: "Audit", href: "/admin/audit" },
 ];

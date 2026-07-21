@@ -341,6 +341,15 @@ write journal entries for opens/clicks on tracked one-to-one mail.
 `gdpr`), `source_campaign_id nullable`, `created_at`. Checked at every dispatch. Public
 unsubscribe page (tokenised link) inserts here + flips `contacts.consent_email`.
 
+### `intro_email_blocks` / `intro_emails` — one-to-one introduction emails
+Separate from the campaigns/launches pipeline by design: a plain, natural-language follow-up an
+agent sends to a single buyer after a phone call, not a marketing send (no branded shell, no
+unsubscribe footer). `intro_email_blocks` (`label`, `body`, `sort_order`, `is_active`) is the
+admin-managed library of tickable introductions (Control Centre → Intro email blocks) — e.g. FTA
+Finance, the CQC registration contact, recommended solicitors. `intro_emails` (`contact_id`,
+`subject`, `body_text`, `block_labels text[]`, `sent_by`, `sent_at`) logs each send; a matching
+`journal_entries` row is also written. Composed from a contacts/[id]/intro tab on buyer contacts.
+
 ### `graph_connections` — per-user Microsoft 365 link
 `profile_id unique`, `ms_user_id`, `email`, `refresh_token_enc bytea` (pgcrypto),
 `scopes text[]`, `mail_delta_token text`, `calendar_delta_token text`, `mail_subscription_id`,

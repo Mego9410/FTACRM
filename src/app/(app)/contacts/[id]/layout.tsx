@@ -32,6 +32,7 @@ export default async function ContactLayout({
   const tabs = [
     { label: "Details", href: base, exact: true },
     ...(isBuyer ? [{ label: "Buyer profile", href: `${base}/buyer` }] : []),
+    ...(isBuyer ? [{ label: "Introduction email", href: `${base}/intro` }] : []),
     { label: "Practices", href: `${base}/practices` },
     { label: "Tasks", href: `${base}/tasks` },
     { label: "Journal", href: `${base}/journal` },
