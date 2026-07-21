@@ -9,6 +9,8 @@ import { DialogFooter } from "@/components/ui/dialog";
 import { SlideOver } from "@/components/ui/slide-over";
 import { cn, formatDateTime } from "@/lib/utils";
 import { saveTask, setTaskStatus } from "@/app/(app)/tasks/actions";
+import { LINK_ICON, TaskLinksPicker, type TaskLink } from "@/app/(app)/tasks/task-link-picker";
+import type { TaskLinkView } from "@/app/(app)/tasks/task-links";
 
 export type RecordTaskRow = {
   id: string;
@@ -21,6 +23,7 @@ export type RecordTaskRow = {
   reminder_at: string | null;
   assignee_id: string | null;
   category_id: string | null;
+  links: TaskLinkView[];
   assigneeName: string | null;
   assigneeColor: string | null;
 };
@@ -69,6 +72,7 @@ export function RecordTasks({
   const [type, setType] = React.useState<TaskType>("todo");
   const [priority, setPriority] = React.useState<string>("");
   const [reminderAt, setReminderAt] = React.useState<string>("");
+  const [extraLinks, setExtraLinks] = React.useState<TaskLink[]>([]);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [showDone, setShowDone] = React.useState(false);
@@ -83,6 +87,7 @@ export function RecordTasks({
     setType("todo");
     setPriority("");
     setReminderAt("");
+    setExtraLinks([]);
     setError(null);
     setDialog({ mode: "new", task: null });
   }
@@ -90,6 +95,12 @@ export function RecordTasks({
     setType((t.task_type as TaskType) || "todo");
     setPriority(t.priority ?? "");
     setReminderAt(toLocalInputValue(t.reminder_at));
+    // Additional links = everything except this record itself.
+    setExtraLinks(
+      t.links
+        .filter((l) => !(l.column === column && l.id === recordId))
+        .map((l) => ({ type: l.type, column: l.column, id: l.id, title: l.title })),
+    );
     setError(null);
     setDialog({ mode: "edit", task: t });
   }
@@ -100,6 +111,10 @@ export function RecordTasks({
     setError(null);
     const f = new FormData(e.currentTarget);
     const due = String(f.get("due_at") ?? "");
+    const linkSet = [
+      { column, id: recordId },
+      ...extraLinks.map((l) => ({ column: l.column, id: l.id })),
+    ].filter((l, i, arr) => arr.findIndex((x) => x.column === l.column && x.id === l.id) === i);
     const res = await saveTask({
       id: dialog?.task?.id,
       title: String(f.get("title")),
@@ -110,7 +125,7 @@ export function RecordTasks({
       task_type: type,
       priority: priority || null,
       reminder_at: reminderAt ? new Date(reminderAt).toISOString() : null,
-      [column]: recordId,
+      links: linkSet,
       path,
     });
     setBusy(false);
@@ -131,6 +146,10 @@ export function RecordTasks({
     const due = new Date();
     due.setDate(due.getDate() + days);
     due.setHours(9, 0, 0, 0);
+    const linkSet = [
+      { column, id: recordId },
+      ...followUp.links.map((l) => ({ column: l.column, id: l.id })),
+    ].filter((l, i, arr) => arr.findIndex((x) => x.column === l.column && x.id === l.id) === i);
     await saveTask({
       title: `Follow up: ${followUp.title}`,
       details: null,
@@ -139,7 +158,7 @@ export function RecordTasks({
       category_id: followUp.category_id ?? null,
       task_type: followUp.task_type,
       priority: followUp.priority,
-      [column]: recordId,
+      links: linkSet,
       path,
     });
     setBusy(false);
@@ -182,6 +201,14 @@ export function RecordTasks({
                 {categories.find((c) => c.id === t.category_id)?.value}
               </Badge>
             ) : null}
+            {t.links
+              .filter((l) => !(l.column === column && l.id === recordId))
+              .map((l) => (
+                <span key={`${l.column}-${l.id}`} className="inline-flex items-center gap-1 rounded-sm bg-gold-tint px-1.5 py-0.5 font-semibold text-gold-deep">
+                  {LINK_ICON[l.type]}
+                  <span className="max-w-32 truncate">{l.title}</span>
+                </span>
+              ))}
             {t.details ? <span className="truncate">{t.details}</span> : null}
           </div>
         </div>
@@ -333,6 +360,9 @@ export function RecordTasks({
               </Select>
             </Field>
           </div>
+          <Field label="Also link to other records" htmlFor="rt_links" hint="This task is already linked to this record; add any others.">
+            <TaskLinksPicker value={extraLinks} onChange={setExtraLinks} />
+          </Field>
           <Field label="Reminder" htmlFor="rt_reminder" hint="Notify the assignee at this time.">
             <Input id="rt_reminder" type="datetime-local" value={reminderAt} onChange={(e) => setReminderAt(e.target.value)} />
           </Field>

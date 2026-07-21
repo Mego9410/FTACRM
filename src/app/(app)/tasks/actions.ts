@@ -17,27 +17,46 @@ const taskSchema = z.object({
   task_type: z.enum(["todo", "call", "email"]).optional(),
   priority: z.enum(["low", "medium", "high"]).nullable().optional(),
   reminder_at: z.string().nullable().optional(),
-  contact_id: z.string().uuid().nullable().optional(),
-  practice_id: z.string().uuid().nullable().optional(),
-  deal_id: z.string().uuid().nullable().optional(),
+  /** Full set of record associations for this task. Replaces any existing links. */
+  links: z
+    .array(z.object({ column: z.enum(["contact_id", "practice_id", "deal_id"]), id: z.string().uuid() }))
+    .optional(),
   /** Extra path to revalidate (e.g. a record detail page the task lives on). */
   path: z.string().max(200).optional(),
 });
+
+async function syncTaskLinks(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  taskId: string,
+  links: { column: "contact_id" | "practice_id" | "deal_id"; id: string }[],
+) {
+  await supabase.from("task_links").delete().eq("task_id", taskId);
+  if (links.length > 0) {
+    await supabase.from("task_links").insert(links.map((l) => ({ task_id: taskId, [l.column]: l.id })));
+  }
+}
 
 export async function saveTask(input: unknown): Promise<ActionResult> {
   const me = await requireProfile();
   const parsed = taskSchema.safeParse(input);
   if (!parsed.success) return fail("The task needs a title.");
-  const { id, path, ...fields } = parsed.data;
+  const { id, path, links, ...fields } = parsed.data;
   const supabase = await createClient();
-  // A (re)scheduled reminder should fire again — clear the sent marker.
-  const writeFields =
-    fields.reminder_at !== undefined ? { ...fields, reminded_at: null } : fields;
+
+  // Denormalised "primary" pointer (first link of each type) for light displays.
+  const writeFields: Record<string, unknown> = { ...fields };
+  if (fields.reminder_at !== undefined) writeFields.reminded_at = null;
+  if (links !== undefined) {
+    writeFields.contact_id = links.find((l) => l.column === "contact_id")?.id ?? null;
+    writeFields.practice_id = links.find((l) => l.column === "practice_id")?.id ?? null;
+    writeFields.deal_id = links.find((l) => l.column === "deal_id")?.id ?? null;
+  }
 
   if (id) {
     const { data: existing } = await supabase.from("tasks").select("assignee_id").eq("id", id).single();
     const { error } = await supabase.from("tasks").update(writeFields).eq("id", id);
     if (error) return fail(error.message);
+    if (links !== undefined) await syncTaskLinks(supabase, id, links);
     const newAssignee = fields.assignee_id;
     if (newAssignee && newAssignee !== me.id && newAssignee !== existing?.assignee_id) {
       const admin = createAdminClient();
@@ -51,10 +70,13 @@ export async function saveTask(input: unknown): Promise<ActionResult> {
     }
   } else {
     const assignee = fields.assignee_id ?? me.id;
-    const { error } = await supabase
+    const { data: created, error } = await supabase
       .from("tasks")
-      .insert({ ...writeFields, assignee_id: assignee, created_by: me.id });
+      .insert({ ...writeFields, assignee_id: assignee, created_by: me.id })
+      .select("id")
+      .single();
     if (error) return fail(error.message);
+    if (created && links && links.length > 0) await syncTaskLinks(supabase, created.id, links);
     if (assignee !== me.id) {
       const admin = createAdminClient();
       await admin.from("notifications").insert({

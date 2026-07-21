@@ -11,8 +11,8 @@ import { DialogFooter } from "@/components/ui/dialog";
 import { SlideOver } from "@/components/ui/slide-over";
 import { cn, formatDateTime } from "@/lib/utils";
 import { saveTask, setTaskStatus } from "./actions";
-import type { LinkColumn, LinkType } from "./link-search";
-import { LINK_ICON, TaskLinkPicker, type TaskLink } from "./task-link-picker";
+import { LINK_ICON, TaskLinksPicker, type TaskLink } from "./task-link-picker";
+import type { TaskLinkView } from "./task-links";
 
 export type TaskRow = {
   id: string;
@@ -26,7 +26,7 @@ export type TaskRow = {
   assignee_id: string | null;
   created_by: string | null;
   category_id: string | null;
-  link: { type: LinkType; column: LinkColumn; id: string; title: string; href: string } | null;
+  links: TaskLinkView[];
   assigneeName: string | null;
   assigneeColor: string | null;
   creatorName: string | null;
@@ -73,7 +73,7 @@ export function TasksClient({
   const [dialog, setDialog] = React.useState<{ mode: "new" | "edit"; task: TaskRow | null } | null>(
     openNew ? { mode: "new", task: null } : null,
   );
-  const [link, setLink] = React.useState<TaskLink | null>(null);
+  const [links, setLinks] = React.useState<TaskLink[]>([]);
   const [type, setType] = React.useState<TaskType>("todo");
   const [priority, setPriority] = React.useState<string>("");
   const [reminderAt, setReminderAt] = React.useState<string>("");
@@ -101,7 +101,7 @@ export function TasksClient({
   const upcoming = open.filter((t) => !t.due_at || new Date(t.due_at) >= now);
 
   function openNewDialog() {
-    setLink(null);
+    setLinks([]);
     setType("todo");
     setPriority("");
     setReminderAt("");
@@ -109,7 +109,7 @@ export function TasksClient({
     setDialog({ mode: "new", task: null });
   }
   function openEditDialog(task: TaskRow) {
-    setLink(task.link ? { type: task.link.type, column: task.link.column, id: task.link.id, title: task.link.title } : null);
+    setLinks(task.links.map((l) => ({ type: l.type, column: l.column, id: l.id, title: l.title })));
     setType((task.task_type as TaskType) || "todo");
     setPriority(task.priority ?? "");
     setReminderAt(toLocalInputValue(task.reminder_at));
@@ -153,8 +153,6 @@ export function TasksClient({
     setError(null);
     const f = new FormData(e.currentTarget);
     const due = String(f.get("due_at") ?? "");
-    const links = { contact_id: null as string | null, practice_id: null as string | null, deal_id: null as string | null };
-    if (link) links[link.column] = link.id;
     const res = await saveTask({
       id: dialog?.task?.id,
       title: String(f.get("title")),
@@ -165,7 +163,7 @@ export function TasksClient({
       task_type: type,
       priority: priority || null,
       reminder_at: reminderAt ? new Date(reminderAt).toISOString() : null,
-      ...links,
+      links: links.map((l) => ({ column: l.column, id: l.id })),
     });
     setBusy(false);
     if (!res.ok) return setError(res.error);
@@ -179,8 +177,6 @@ export function TasksClient({
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + days);
     dueDate.setHours(9, 0, 0, 0);
-    const links = { contact_id: null as string | null, practice_id: null as string | null, deal_id: null as string | null };
-    if (followUp.link) links[followUp.link.column] = followUp.link.id;
     await saveTask({
       title: `Follow up: ${followUp.title}`,
       details: null,
@@ -189,7 +185,7 @@ export function TasksClient({
       category_id: followUp.category_id ?? null,
       task_type: followUp.task_type,
       priority: followUp.priority,
-      ...links,
+      links: followUp.links.map((l) => ({ column: l.column, id: l.id })),
     });
     setBusy(false);
     setFollowUp(null);
@@ -232,15 +228,16 @@ export function TasksClient({
                 {categories.find((c) => c.id === t.category_id)?.value}
               </Badge>
             ) : null}
-            {t.link ? (
+            {t.links.map((l) => (
               <Link
-                href={t.link.href}
+                key={`${l.column}-${l.id}`}
+                href={l.href}
                 className="inline-flex items-center gap-1 rounded-sm bg-gold-tint px-1.5 py-0.5 font-semibold text-gold-deep hover:underline"
               >
-                {LINK_ICON[t.link.type]}
-                <span className="max-w-40 truncate">{t.link.title}</span>
+                {LINK_ICON[l.type]}
+                <span className="max-w-40 truncate">{l.title}</span>
               </Link>
-            ) : null}
+            ))}
             {fromSomeoneElse ? <span className="text-fg-4">from {t.creatorName}</span> : null}
           </div>
         </div>
@@ -411,8 +408,8 @@ export function TasksClient({
               </Select>
             </Field>
           </div>
-          <Field label="Link to a practice, buyer, seller or deal" htmlFor="tk_link">
-            <TaskLinkPicker value={link} onChange={setLink} />
+          <Field label="Link to practices, buyers, sellers or deals" htmlFor="tk_link">
+            <TaskLinksPicker value={links} onChange={setLinks} />
           </Field>
           <Field label="Reminder" htmlFor="tk_reminder" hint="Notify the assignee at this time.">
             <Input id="tk_reminder" type="datetime-local" value={reminderAt} onChange={(e) => setReminderAt(e.target.value)} />
@@ -533,13 +530,18 @@ function QueueMode({
             {t.due_at ? <span>Due {formatDateTime(t.due_at)}</span> : null}
             {t.category_id ? <span>{categories.find((c) => c.id === t.category_id)?.value}</span> : null}
           </div>
-          {t.link ? (
-            <Link
-              href={t.link.href}
-              className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-line bg-surface-2 px-3 py-2 text-sm font-semibold text-gold-deep hover:bg-gold-tint"
-            >
-              {LINK_ICON[t.link.type]} {t.link.title}
-            </Link>
+          {t.links.length > 0 ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {t.links.map((l) => (
+                <Link
+                  key={`${l.column}-${l.id}`}
+                  href={l.href}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface-2 px-3 py-2 text-sm font-semibold text-gold-deep hover:bg-gold-tint"
+                >
+                  {LINK_ICON[l.type]} {l.title}
+                </Link>
+              ))}
+            </div>
           ) : null}
           {t.details ? <p className="mt-4 whitespace-pre-wrap text-sm text-fg-2">{t.details}</p> : null}
           <div className="mt-6 flex items-center gap-2">
