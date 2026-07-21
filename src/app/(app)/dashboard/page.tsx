@@ -74,9 +74,13 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <div className="relative mb-6 overflow-hidden rounded-xl border border-line bg-gradient-to-br from-gold-tint/70 via-surface to-surface px-6 py-6 shadow-xs sm:px-8 sm:py-7">
-        <div aria-hidden className="pointer-events-none absolute -right-10 -top-12 h-44 w-44 rounded-full bg-gold/15 blur-2xl" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-16 right-24 h-36 w-36 rounded-full bg-nhs-fg/10 blur-2xl" />
+      {/* No overflow-hidden here — it would clip the search results dropdown.
+          The decorative blurs are clipped by their own inset layer instead. */}
+      <div className="relative mb-6 rounded-xl border border-line bg-gradient-to-br from-gold-tint/70 via-surface to-surface px-6 py-6 shadow-xs sm:px-8 sm:py-7">
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl">
+          <div className="absolute -right-10 -top-12 h-44 w-44 rounded-full bg-gold/15 blur-2xl" />
+          <div className="absolute -bottom-16 right-24 h-36 w-36 rounded-full bg-nhs-fg/10 blur-2xl" />
+        </div>
         <div className="relative">
           <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-gold-deep">
             {new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date())}
