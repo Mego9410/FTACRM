@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Building2,
@@ -25,6 +24,7 @@ import type { SessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/ui/primitives";
 import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
+import { AspenMark, AspenWordmark } from "@/components/shell/brand";
 import { InlineSearch } from "@/components/shell/inline-search";
 import { NotificationsBell } from "@/components/shell/notifications-bell";
 import { SidebarPanels } from "@/components/shell/sidebar-panels";
@@ -38,17 +38,12 @@ const NAV = [
   { label: "Deals", href: "/deals", icon: Handshake },
 ];
 
-function Wordmark({ size = 30 }: { size?: number }) {
+function Wordmark() {
   return (
-    <span className="flex min-w-0 items-center gap-2.5">
-      <Image src="/brand/logo.png" alt="" width={size} height={size} className="shrink-0 rounded-[8px]" />
-      <span className="flex min-w-0 flex-col leading-none">
-        <span className="truncate text-[15px] font-extrabold tracking-tight text-fg-1">
-          Aspen<span className="text-gold-deep">.</span>
-        </span>
-        <span className="mt-0.5 truncate text-[9px] font-bold uppercase tracking-[0.16em] text-fg-4">
-          Frank Taylor &amp; Associates
-        </span>
+    <span className="flex min-w-0 flex-col leading-none">
+      <AspenWordmark className="h-[26px] w-auto" />
+      <span className="mt-1 truncate text-[9px] font-bold uppercase tracking-[0.16em] text-fg-4">
+        Frank Taylor &amp; Associates
       </span>
     </span>
   );
@@ -152,11 +147,7 @@ export function AppNav({
       >
         <div className={cn("flex h-14 shrink-0 items-center border-b border-line", collapsed ? "justify-center px-2" : "px-3")}>
           <Link href="/dashboard" className={cn("flex min-w-0 items-center", collapsed ? "" : "flex-1 pl-1")}>
-            {collapsed ? (
-              <Image src="/brand/logo.png" alt="Aspen" width={30} height={30} className="rounded-[8px]" />
-            ) : (
-              <Wordmark />
-            )}
+            {collapsed ? <AspenMark size={30} /> : <Wordmark />}
           </Link>
           {!collapsed ? (
             <button
@@ -213,7 +204,7 @@ export function AppNav({
           </button>
 
           <Link href="/dashboard" className="flex shrink-0 items-center lg:hidden">
-            <Image src="/brand/logo.png" alt="Aspen" width={28} height={28} className="rounded-[7px]" />
+            <AspenMark size={28} />
           </Link>
 
           <InlineSearch hotkey className="min-w-0 flex-1 sm:mx-1 lg:max-w-lg" />
@@ -287,7 +278,7 @@ export function AppNav({
           <div className="absolute inset-0 bg-black/30" onClick={() => setMobileOpen(false)} aria-hidden />
           <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[82%] flex-col overflow-y-auto bg-surface shadow-lg">
             <div className="flex h-14 shrink-0 items-center justify-between border-b border-line px-4">
-              <Wordmark size={28} />
+              <Wordmark />
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}

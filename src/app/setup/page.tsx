@@ -1,3 +1,5 @@
+import { AspenWordmark } from "@/components/shell/brand";
+
 export const metadata = { title: "Setup required" };
 export const dynamic = "force-dynamic";
 
@@ -18,9 +20,7 @@ export default function SetupPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-surface-2 px-4 py-10">
       <div className="w-full max-w-xl rounded-lg border border-line bg-surface p-8 shadow-sm">
-        <span className="inline-block rounded-sm bg-gold px-3 py-1.5 text-sm font-extrabold tracking-tight text-ink">
-          Aspen
-        </span>
+        <AspenWordmark className="h-8 w-auto" />
         <h1 className="mt-4 text-2xl font-extrabold tracking-tight text-fg-1">
           Nearly there — this deployment needs configuring
         </h1>
