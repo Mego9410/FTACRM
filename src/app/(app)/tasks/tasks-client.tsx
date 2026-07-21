@@ -3,11 +3,12 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ListChecks, type LucideIcon, Mail, Pencil, Phone } from "lucide-react";
+import { Check, ChevronRight, ListChecks, type LucideIcon, Mail, Pencil, Phone, PlayCircle, X } from "lucide-react";
 import type { LookupValue } from "@/lib/lookups";
 import { Avatar, Badge, Button, Card, EmptyState, Field, Input, Select, Textarea } from "@/components/ui/primitives";
 import { SortSelect, useClientSort } from "@/components/ui/sortable";
-import { Dialog, DialogFooter } from "@/components/ui/dialog";
+import { DialogFooter } from "@/components/ui/dialog";
+import { SlideOver } from "@/components/ui/slide-over";
 import { cn, formatDateTime } from "@/lib/utils";
 import { saveTask, setTaskStatus } from "./actions";
 import type { LinkColumn, LinkType } from "./link-search";
@@ -21,6 +22,7 @@ export type TaskRow = {
   status: string;
   task_type: string;
   priority: string | null;
+  reminder_at: string | null;
   assignee_id: string | null;
   created_by: string | null;
   category_id: string | null;
@@ -74,7 +76,10 @@ export function TasksClient({
   const [link, setLink] = React.useState<TaskLink | null>(null);
   const [type, setType] = React.useState<TaskType>("todo");
   const [priority, setPriority] = React.useState<string>("");
+  const [reminderAt, setReminderAt] = React.useState<string>("");
   const [followUp, setFollowUp] = React.useState<TaskRow | null>(null);
+  const [queue, setQueue] = React.useState<TaskRow[] | null>(null);
+  const [queueIdx, setQueueIdx] = React.useState(0);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
 
@@ -99,6 +104,7 @@ export function TasksClient({
     setLink(null);
     setType("todo");
     setPriority("");
+    setReminderAt("");
     setError(null);
     setDialog({ mode: "new", task: null });
   }
@@ -106,8 +112,31 @@ export function TasksClient({
     setLink(task.link ? { type: task.link.type, column: task.link.column, id: task.link.id, title: task.link.title } : null);
     setType((task.task_type as TaskType) || "todo");
     setPriority(task.priority ?? "");
+    setReminderAt(toLocalInputValue(task.reminder_at));
     setError(null);
     setDialog({ mode: "edit", task });
+  }
+
+  function startQueue() {
+    const q = [...overdue, ...upcoming];
+    if (q.length === 0) return;
+    setQueueIdx(0);
+    setQueue(q);
+  }
+  function advanceQueue() {
+    if (!queue) return;
+    if (queueIdx + 1 >= queue.length) {
+      setQueue(null);
+      setQueueIdx(0);
+      router.refresh();
+    } else {
+      setQueueIdx(queueIdx + 1);
+    }
+  }
+  async function queueComplete(t: TaskRow) {
+    await setTaskStatus({ id: t.id, status: "done" });
+    advanceQueue();
+    router.refresh();
   }
 
   // Deep link: /tasks?task=<id> opens that task's editor.
@@ -135,6 +164,7 @@ export function TasksClient({
       category_id: String(f.get("category_id") ?? "") || null,
       task_type: type,
       priority: priority || null,
+      reminder_at: reminderAt ? new Date(reminderAt).toISOString() : null,
       ...links,
     });
     setBusy(false);
@@ -272,6 +302,11 @@ export function TasksClient({
             dir={dir}
             onChange={set}
           />
+          {overdue.length + upcoming.length > 0 ? (
+            <Button variant="outline" size="sm" onClick={startQueue}>
+              <PlayCircle size={15} /> Start queue ({overdue.length + upcoming.length})
+            </Button>
+          ) : null}
           <Button size="sm" onClick={openNewDialog}>New task</Button>
         </div>
       </div>
@@ -318,7 +353,7 @@ export function TasksClient({
         </div>
       )}
 
-      <Dialog open={!!dialog} onClose={() => setDialog(null)} title={dialog?.mode === "edit" ? "Edit task" : "New task"}>
+      <SlideOver open={!!dialog} onClose={() => setDialog(null)} title={dialog?.mode === "edit" ? "Edit task" : "New task"}>
         <form key={dialogTask?.id ?? "new"} onSubmit={submit} className="space-y-4">
           <div className="flex gap-1.5">
             {TASK_TYPES.map((tt) => {
@@ -379,6 +414,9 @@ export function TasksClient({
           <Field label="Link to a practice, buyer, seller or deal" htmlFor="tk_link">
             <TaskLinkPicker value={link} onChange={setLink} />
           </Field>
+          <Field label="Reminder" htmlFor="tk_reminder" hint="Notify the assignee at this time.">
+            <Input id="tk_reminder" type="datetime-local" value={reminderAt} onChange={(e) => setReminderAt(e.target.value)} />
+          </Field>
           <Field label="Details" htmlFor="tk_details">
             <Textarea id="tk_details" name="details" rows={2} defaultValue={dialogTask?.details ?? ""} />
           </Field>
@@ -392,27 +430,131 @@ export function TasksClient({
             </Button>
           </DialogFooter>
         </form>
-      </Dialog>
+      </SlideOver>
 
-      <Dialog open={!!followUp} onClose={() => setFollowUp(null)} title="Task completed">
+      <SlideOver open={!!followUp} onClose={() => setFollowUp(null)} title="Task completed">
         <p className="text-sm text-fg-2">Nice work. Want to line up a follow-up?</p>
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => void createFollowUp(1)}>
-            Tomorrow
+        <div className="mt-4 grid grid-cols-1 gap-2">
+          <Button variant="outline" disabled={busy} onClick={() => void createFollowUp(1)}>
+            Follow up tomorrow
           </Button>
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => void createFollowUp(3)}>
-            In 3 days
+          <Button variant="outline" disabled={busy} onClick={() => void createFollowUp(3)}>
+            Follow up in 3 days
           </Button>
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => void createFollowUp(7)}>
-            In a week
+          <Button variant="outline" disabled={busy} onClick={() => void createFollowUp(7)}>
+            Follow up in a week
           </Button>
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => setFollowUp(null)}>
+          <Button variant="ghost" onClick={() => setFollowUp(null)}>
             No follow-up
           </Button>
-        </DialogFooter>
-      </Dialog>
+        </div>
+      </SlideOver>
+
+      {queue ? (
+        <QueueMode
+          tasks={queue}
+          index={queueIdx}
+          busy={busy}
+          categories={categories}
+          onComplete={queueComplete}
+          onSkip={advanceQueue}
+          onEdit={(t) => {
+            setQueue(null);
+            openEditDialog(t);
+          }}
+          onExit={() => {
+            setQueue(null);
+            router.refresh();
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/* ── Queue: work through tasks one at a time (HubSpot "Start queue") ─── */
+
+function QueueMode({
+  tasks,
+  index,
+  busy,
+  categories,
+  onComplete,
+  onSkip,
+  onEdit,
+  onExit,
+}: {
+  tasks: TaskRow[];
+  index: number;
+  busy: boolean;
+  categories: LookupValue[];
+  onComplete: (t: TaskRow) => void;
+  onSkip: () => void;
+  onEdit: (t: TaskRow) => void;
+  onExit: () => void;
+}) {
+  const t = tasks[index];
+  if (!t) return null;
+  const TypeIcon = TYPE_ICON[t.task_type] ?? ListChecks;
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-surface-2">
+      <div className="flex items-center justify-between border-b border-line bg-surface px-4 py-3">
+        <p className="text-sm font-bold text-fg-1">Task queue</p>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold text-fg-3">
+            {index + 1} of {tasks.length}
+          </span>
+          <button
+            type="button"
+            onClick={onExit}
+            className="rounded-md p-1.5 text-fg-3 hover:bg-surface-2 hover:text-fg-1"
+            aria-label="Exit queue"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      </div>
+      <div className="h-1 bg-line">
+        <div className="h-full bg-gold transition-all" style={{ width: `${(index / tasks.length) * 100}%` }} />
+      </div>
+      <div className="flex flex-1 items-center justify-center overflow-y-auto p-4">
+        <div className="w-full max-w-xl rounded-xl border border-line bg-surface p-6 shadow-sm">
+          <div className="flex items-center gap-2 text-fg-3">
+            <TypeIcon size={16} />
+            <span className="text-xs font-bold uppercase tracking-wide capitalize">{t.task_type}</span>
+            {t.priority ? (
+              <Badge tone={PRIORITY_TONE[t.priority] ?? "neutral"} className="capitalize">
+                {t.priority}
+              </Badge>
+            ) : null}
+          </div>
+          <h2 className="mt-2 text-xl font-extrabold text-fg-1">{t.title}</h2>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-fg-3">
+            {t.due_at ? <span>Due {formatDateTime(t.due_at)}</span> : null}
+            {t.category_id ? <span>{categories.find((c) => c.id === t.category_id)?.value}</span> : null}
+          </div>
+          {t.link ? (
+            <Link
+              href={t.link.href}
+              className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-line bg-surface-2 px-3 py-2 text-sm font-semibold text-gold-deep hover:bg-gold-tint"
+            >
+              {LINK_ICON[t.link.type]} {t.link.title}
+            </Link>
+          ) : null}
+          {t.details ? <p className="mt-4 whitespace-pre-wrap text-sm text-fg-2">{t.details}</p> : null}
+          <div className="mt-6 flex items-center gap-2">
+            <Button disabled={busy} onClick={() => onComplete(t)}>
+              <Check size={15} /> Complete
+            </Button>
+            <Button variant="outline" onClick={onSkip}>
+              Skip <ChevronRight size={15} />
+            </Button>
+            <Button variant="ghost" onClick={() => onEdit(t)}>
+              Edit
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -139,6 +139,11 @@ select:focus-visible {
 /* Native dialogs: keep inside the viewport with breathing room on phones */
 dialog { max-width: min(var(--dialog-max, 32rem), calc(100vw - 2rem)); }
 
+@keyframes slidein {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }

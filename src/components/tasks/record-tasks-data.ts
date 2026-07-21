@@ -11,7 +11,7 @@ export async function loadRecordTasks(column: "contact_id" | "practice_id" | "de
     supabase
       .from("tasks")
       .select(
-        "id, title, details, due_at, status, task_type, priority, assignee_id, category_id, assignee:profiles!tasks_assignee_id_fkey(full_name, calendar_color)",
+        "id, title, details, due_at, status, task_type, priority, reminder_at, assignee_id, category_id, assignee:profiles!tasks_assignee_id_fkey(full_name, calendar_color)",
       )
       .eq(column, id)
       .neq("status", "cancelled")
@@ -32,6 +32,7 @@ export async function loadRecordTasks(column: "contact_id" | "practice_id" | "de
       status: t.status,
       task_type: t.task_type ?? "todo",
       priority: t.priority ?? null,
+      reminder_at: t.reminder_at ?? null,
       assignee_id: t.assignee_id,
       category_id: t.category_id,
       assigneeName: a?.full_name ?? null,

@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2, Circle, ListChecks, type LucideIcon, Mail, Phone } from "lucide-react";
 import type { LookupValue } from "@/lib/lookups";
 import { Avatar, Badge, Button, EmptyState, Field, Input, Select, Textarea } from "@/components/ui/primitives";
-import { Dialog, DialogFooter } from "@/components/ui/dialog";
+import { DialogFooter } from "@/components/ui/dialog";
+import { SlideOver } from "@/components/ui/slide-over";
 import { cn, formatDateTime } from "@/lib/utils";
 import { saveTask, setTaskStatus } from "@/app/(app)/tasks/actions";
 
@@ -17,6 +18,7 @@ export type RecordTaskRow = {
   status: string;
   task_type: string;
   priority: string | null;
+  reminder_at: string | null;
   assignee_id: string | null;
   category_id: string | null;
   assigneeName: string | null;
@@ -66,6 +68,7 @@ export function RecordTasks({
   const [followUp, setFollowUp] = React.useState<RecordTaskRow | null>(null);
   const [type, setType] = React.useState<TaskType>("todo");
   const [priority, setPriority] = React.useState<string>("");
+  const [reminderAt, setReminderAt] = React.useState<string>("");
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [showDone, setShowDone] = React.useState(false);
@@ -79,12 +82,14 @@ export function RecordTasks({
   function openNew() {
     setType("todo");
     setPriority("");
+    setReminderAt("");
     setError(null);
     setDialog({ mode: "new", task: null });
   }
   function openEdit(t: RecordTaskRow) {
     setType((t.task_type as TaskType) || "todo");
     setPriority(t.priority ?? "");
+    setReminderAt(toLocalInputValue(t.reminder_at));
     setError(null);
     setDialog({ mode: "edit", task: t });
   }
@@ -104,6 +109,7 @@ export function RecordTasks({
       category_id: String(f.get("category_id") ?? "") || null,
       task_type: type,
       priority: priority || null,
+      reminder_at: reminderAt ? new Date(reminderAt).toISOString() : null,
       [column]: recordId,
       path,
     });
@@ -268,8 +274,8 @@ export function RecordTasks({
         </div>
       )}
 
-      {/* Add / edit dialog */}
-      <Dialog open={!!dialog} onClose={() => setDialog(null)} title={dialog?.mode === "edit" ? "Edit task" : "New task"}>
+      {/* Add / edit panel */}
+      <SlideOver open={!!dialog} onClose={() => setDialog(null)} title={dialog?.mode === "edit" ? "Edit task" : "New task"}>
         <form key={dialogTask?.id ?? "new"} onSubmit={submit} className="space-y-4">
           <div className="flex gap-1.5">
             {TYPES.map((t) => {
@@ -327,6 +333,9 @@ export function RecordTasks({
               </Select>
             </Field>
           </div>
+          <Field label="Reminder" htmlFor="rt_reminder" hint="Notify the assignee at this time.">
+            <Input id="rt_reminder" type="datetime-local" value={reminderAt} onChange={(e) => setReminderAt(e.target.value)} />
+          </Field>
           <Field label="Details" htmlFor="rt_details">
             <Textarea id="rt_details" name="details" rows={2} defaultValue={dialogTask?.details ?? ""} />
           </Field>
@@ -340,28 +349,26 @@ export function RecordTasks({
             </Button>
           </DialogFooter>
         </form>
-      </Dialog>
+      </SlideOver>
 
       {/* Follow-up prompt on completion */}
-      <Dialog open={!!followUp} onClose={() => setFollowUp(null)} title="Task completed">
+      <SlideOver open={!!followUp} onClose={() => setFollowUp(null)} title="Task completed">
         <p className="text-sm text-fg-2">Nice work. Want to line up a follow-up on this record?</p>
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => void createFollowUp(1)}>
-            Tomorrow
+        <div className="mt-4 grid grid-cols-1 gap-2">
+          <Button variant="outline" disabled={busy} onClick={() => void createFollowUp(1)}>
+            Follow up tomorrow
           </Button>
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => void createFollowUp(3)}>
-            In 3 days
+          <Button variant="outline" disabled={busy} onClick={() => void createFollowUp(3)}>
+            Follow up in 3 days
           </Button>
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => void createFollowUp(7)}>
-            In a week
+          <Button variant="outline" disabled={busy} onClick={() => void createFollowUp(7)}>
+            Follow up in a week
           </Button>
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => setFollowUp(null)}>
+          <Button variant="ghost" onClick={() => setFollowUp(null)}>
             No follow-up
           </Button>
-        </DialogFooter>
-      </Dialog>
+        </div>
+      </SlideOver>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 {
   "crons": [
     { "path": "/api/cron/stalled-deals", "schedule": "0 7 * * *" },
-    { "path": "/api/cron/heartbeat", "schedule": "30 7 * * *" }
+    { "path": "/api/cron/heartbeat", "schedule": "30 7 * * *" },
+    { "path": "/api/cron/task-reminders", "schedule": "*/15 * * * *" }
   ]
 }

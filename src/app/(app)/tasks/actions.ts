@@ -16,6 +16,7 @@ const taskSchema = z.object({
   category_id: z.string().uuid().nullable(),
   task_type: z.enum(["todo", "call", "email"]).optional(),
   priority: z.enum(["low", "medium", "high"]).nullable().optional(),
+  reminder_at: z.string().nullable().optional(),
   contact_id: z.string().uuid().nullable().optional(),
   practice_id: z.string().uuid().nullable().optional(),
   deal_id: z.string().uuid().nullable().optional(),
@@ -29,10 +30,13 @@ export async function saveTask(input: unknown): Promise<ActionResult> {
   if (!parsed.success) return fail("The task needs a title.");
   const { id, path, ...fields } = parsed.data;
   const supabase = await createClient();
+  // A (re)scheduled reminder should fire again — clear the sent marker.
+  const writeFields =
+    fields.reminder_at !== undefined ? { ...fields, reminded_at: null } : fields;
 
   if (id) {
     const { data: existing } = await supabase.from("tasks").select("assignee_id").eq("id", id).single();
-    const { error } = await supabase.from("tasks").update(fields).eq("id", id);
+    const { error } = await supabase.from("tasks").update(writeFields).eq("id", id);
     if (error) return fail(error.message);
     const newAssignee = fields.assignee_id;
     if (newAssignee && newAssignee !== me.id && newAssignee !== existing?.assignee_id) {
@@ -49,7 +53,7 @@ export async function saveTask(input: unknown): Promise<ActionResult> {
     const assignee = fields.assignee_id ?? me.id;
     const { error } = await supabase
       .from("tasks")
-      .insert({ ...fields, assignee_id: assignee, created_by: me.id });
+      .insert({ ...writeFields, assignee_id: assignee, created_by: me.id });
     if (error) return fail(error.message);
     if (assignee !== me.id) {
       const admin = createAdminClient();
