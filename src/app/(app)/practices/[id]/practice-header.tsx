@@ -7,6 +7,7 @@ import { Building2, EyeOff, MapPin } from "lucide-react";
 import type { LookupValue } from "@/lib/lookups";
 import { Badge, Button, Field, LookupPill, Select } from "@/components/ui/primitives";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
+import { RecordWarning } from "@/components/record/record-warning";
 import { PRACTICE_STATUS_LABELS, PRACTICE_STATUS_TONES } from "@/lib/contact-helpers";
 import { formatGBP } from "@/lib/utils";
 import { changePracticeStatus } from "../actions";
@@ -27,6 +28,7 @@ type HeaderPractice = {
   confidential: boolean;
   contract_expiry: string | null;
   seller: { id: string; name: string } | null;
+  warning: string | null;
 };
 
 // Which transitions make sense from each status (withdrawn from any live state).
@@ -80,6 +82,7 @@ export function PracticeHeader({
 
   return (
     <div className="mb-5">
+      <RecordWarning table="practices" id={practice.id} warning={practice.warning} />
       {expiring ? (
         <div className="mb-3 rounded-sm border border-warn/30 bg-warn-bg px-4 py-2.5 text-sm font-semibold text-warn">
           Agency contract expires {practice.contract_expiry} — renew or conclude before it lapses.

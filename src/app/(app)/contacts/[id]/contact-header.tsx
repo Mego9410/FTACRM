@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Archive, Mail, Phone, ShieldAlert } from "lucide-react";
 import { Avatar, Badge, Button } from "@/components/ui/primitives";
+import { RecordWarning } from "@/components/record/record-warning";
 import { relativeTime } from "@/lib/utils";
 import { archiveContact } from "../actions";
 
@@ -24,6 +25,7 @@ type HeaderContact = {
   address_verified: boolean;
   last_contacted_at: string | null;
   archived_at: string | null;
+  warning: string | null;
 };
 
 export function ContactHeader({ contact }: { contact: HeaderContact }) {
@@ -32,6 +34,7 @@ export function ContactHeader({ contact }: { contact: HeaderContact }) {
 
   return (
     <div className="mb-5">
+      <RecordWarning table="contacts" id={contact.id} warning={contact.warning} />
       {contact.do_not_contact ? (
         <div className="mb-3 flex items-center gap-2 rounded-sm border border-danger/30 bg-danger-bg px-4 py-2.5 text-sm font-semibold text-danger">
           <ShieldAlert size={16} /> Do not contact — this person is excluded from all communications.

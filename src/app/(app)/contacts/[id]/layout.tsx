@@ -22,6 +22,11 @@ export default async function ContactLayout({
     .maybeSingle();
   if (!contact) notFound();
 
+  // Fetched separately and tolerantly so an un-migrated `warning` column can't
+  // break the record page.
+  const { data: warnRow } = await supabase.from("contacts").select("warning").eq("id", id).maybeSingle();
+  const warning = (warnRow as { warning: string | null } | null)?.warning ?? null;
+
   const isBuyer = (contact.roles as string[]).includes("buyer");
   const base = `/contacts/${id}`;
   const tabs = [
@@ -38,7 +43,7 @@ export default async function ContactLayout({
 
   return (
     <div>
-      <ContactHeader contact={{ ...contact, name: contactName(contact) }} />
+      <ContactHeader contact={{ ...contact, name: contactName(contact), warning }} />
       <LinkTabs tabs={tabs} className="mb-5" />
       {children}
     </div>

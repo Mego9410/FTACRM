@@ -35,6 +35,11 @@ export default async function PracticeLayout({
   ]);
   if (!practice) notFound();
 
+  // Fetched separately and tolerantly so an un-migrated `warning` column can't
+  // break the record page.
+  const { data: warnRow } = await supabase.from("practices").select("warning").eq("id", id).maybeSingle();
+  const warning = (warnRow as { warning: string | null } | null)?.warning ?? null;
+
   const seller = primarySeller?.contacts as unknown as {
     first_name: string | null;
     last_name: string | null;
@@ -60,6 +65,7 @@ export default async function PracticeLayout({
           surgeries: practice.surgeries,
           confidential: practice.confidential,
           contract_expiry: practice.contract_expiry,
+          warning,
           seller: seller
             ? { id: primarySeller!.contact_id, name: contactName(seller) }
             : null,
