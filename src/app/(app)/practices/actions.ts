@@ -71,7 +71,42 @@ export async function createPractice(input: unknown): Promise<ActionResult<{ id:
     .single();
   if (error) return fail(error.message);
   await audit("practices", data.id, me.id, [{ field: "created", oldValue: null, newValue: parsed.data.display_title }]);
+  await attachLaunchPrep(supabase, data.id, me.id);
   return ok({ id: data.id });
+}
+
+/**
+ * Attach the "Launch prep" checklist to a freshly created practice, copying its
+ * template items. Best-effort — a checklist failure must never block the
+ * practice being created.
+ */
+async function attachLaunchPrep(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  practiceId: string,
+  meId: string,
+) {
+  const { data: template } = await supabase
+    .from("checklist_templates")
+    .select("id, name, checklist_template_items(label, sort_order)")
+    .eq("applies_to", "practice")
+    .eq("name", "Launch prep")
+    .eq("is_active", true)
+    .maybeSingle();
+  if (!template) return;
+
+  const { data: instance } = await supabase
+    .from("checklist_instances")
+    .insert({ template_id: template.id, name: template.name, practice_id: practiceId, created_by: meId })
+    .select("id")
+    .single();
+  if (!instance) return;
+
+  const items = (template.checklist_template_items ?? []) as { label: string; sort_order: number }[];
+  if (items.length > 0) {
+    await supabase
+      .from("checklist_items")
+      .insert(items.map((it) => ({ instance_id: instance.id, label: it.label, sort_order: it.sort_order })));
+  }
 }
 
 export async function updatePractice(input: unknown): Promise<ActionResult> {
