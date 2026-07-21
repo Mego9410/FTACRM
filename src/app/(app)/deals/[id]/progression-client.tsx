@@ -4,8 +4,10 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Check, Undo2 } from "lucide-react";
 import type { LookupValue } from "@/lib/lookups";
+import { Pencil } from "lucide-react";
 import { Badge, Button, Card, CardHeader, Field, Input, Select, Textarea } from "@/components/ui/primitives";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
+import { SlideOver } from "@/components/ui/slide-over";
 import { cn, daysSince, formatDate } from "@/lib/utils";
 import { markStage, setDealStatus, unmarkStage, updateDealFields } from "../actions";
 
@@ -43,8 +45,11 @@ export function ProgressionClient({
   const router = useRouter();
   const [marking, setMarking] = React.useState<Stage | null>(null);
   const [fallOpen, setFallOpen] = React.useState(false);
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
+
+  const ownerName = owners.find((o) => o.id === deal.owner_id)?.full_name ?? null;
 
   const firstUnachieved = stages.find((s) => !s.achieved_on);
   const live = deal.status === "in_progress";
@@ -164,39 +169,26 @@ export function ProgressionClient({
         </Card>
 
         <Card>
-          <CardHeader title="Deal settings" />
-          <form
-            className="space-y-3 px-5 py-4"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              setBusy(true);
-              const f = new FormData(e.currentTarget);
-              await updateDealFields({
-                deal_id: deal.id,
-                target_completion_date: String(f.get("target") ?? "") || null,
-                owner_id: String(f.get("owner_id") ?? "") || null,
-                buyer_solicitor_id: null,
-                seller_solicitor_id: null,
-              });
-              setBusy(false);
-              router.refresh();
-            }}
-          >
-            <Field label="Target completion" htmlFor="dp_target">
-              <Input id="dp_target" name="target" type="date" defaultValue={deal.target_completion_date ?? ""} />
-            </Field>
-            <Field label="Progression owner" htmlFor="dp_owner">
-              <Select id="dp_owner" name="owner_id" defaultValue={deal.owner_id ?? ""}>
-                <option value="">Unassigned</option>
-                {owners.map((o) => (
-                  <option key={o.id} value={o.id}>{o.full_name}</option>
-                ))}
-              </Select>
-            </Field>
-            <Button type="submit" size="sm" variant="outline" disabled={busy} className="w-full">
-              Save
-            </Button>
-          </form>
+          <CardHeader
+            title="Deal settings"
+            action={
+              <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)} className="gap-1.5">
+                <Pencil size={13} /> Edit
+              </Button>
+            }
+          />
+          <dl className="space-y-3 px-5 py-4 text-sm">
+            <div>
+              <dt className="text-xs font-semibold tracking-wide text-fg-3">Target completion</dt>
+              <dd className="mt-0.5 font-medium text-fg-1">
+                {deal.target_completion_date ? formatDate(deal.target_completion_date) : "Not set"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-semibold tracking-wide text-fg-3">Progression owner</dt>
+              <dd className="mt-0.5 font-medium text-fg-1">{ownerName ?? "Unassigned"}</dd>
+            </div>
+          </dl>
         </Card>
 
         {deal.status !== "completed" ? (
@@ -237,6 +229,43 @@ export function ProgressionClient({
           </Card>
         ) : null}
       </div>
+
+      <SlideOver open={settingsOpen} onClose={() => setSettingsOpen(false)} title="Edit deal settings">
+        <form
+          className="space-y-4"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setBusy(true);
+            const f = new FormData(e.currentTarget);
+            await updateDealFields({
+              deal_id: deal.id,
+              target_completion_date: String(f.get("target") ?? "") || null,
+              owner_id: String(f.get("owner_id") ?? "") || null,
+              buyer_solicitor_id: null,
+              seller_solicitor_id: null,
+            });
+            setBusy(false);
+            setSettingsOpen(false);
+            router.refresh();
+          }}
+        >
+          <Field label="Target completion" htmlFor="dp_target">
+            <Input id="dp_target" name="target" type="date" defaultValue={deal.target_completion_date ?? ""} />
+          </Field>
+          <Field label="Progression owner" htmlFor="dp_owner">
+            <Select id="dp_owner" name="owner_id" defaultValue={deal.owner_id ?? ""}>
+              <option value="">Unassigned</option>
+              {owners.map((o) => (
+                <option key={o.id} value={o.id}>{o.full_name}</option>
+              ))}
+            </Select>
+          </Field>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setSettingsOpen(false)}>Cancel</Button>
+            <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save changes"}</Button>
+          </div>
+        </form>
+      </SlideOver>
 
       <Dialog open={!!marking} onClose={() => setMarking(null)} title={`Mark “${marking?.label}” done`}>
         <form onSubmit={submitMark} className="space-y-4">

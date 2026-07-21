@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import type { LookupValue } from "@/lib/lookups";
 import { Button, Card, CardHeader, Field, Input, Select, Textarea } from "@/components/ui/primitives";
+import { cn } from "@/lib/utils";
 import { createContact, updateContact } from "./actions";
 
 export type ContactFormValues = {
@@ -41,18 +42,30 @@ const ROLE_OPTIONS = [
   { value: "other", label: "Other" },
 ];
 
+export type ContactSection = "identity" | "contact" | "address" | "crm";
+
 export function ContactForm({
   initial,
   sources,
   owners,
   branches,
+  section,
+  onSaved,
+  onCancel,
 }: {
   initial?: ContactFormValues;
   sources: LookupValue[];
   owners: { id: string; full_name: string }[];
   branches: { id: string; name: string }[];
+  /** When set, only this section is shown (the rest stay in the DOM so nothing is lost on save). */
+  section?: ContactSection;
+  onSaved?: () => void;
+  onCancel?: () => void;
 }) {
   const router = useRouter();
+  // Keep every field in the DOM (so an untouched section still submits its
+  // current value) but only reveal the section being edited.
+  const hideCls = (k: ContactSection) => cn(section && section !== k && "hidden");
   const [roles, setRoles] = React.useState<string[]>(initial?.roles ?? ["buyer"]);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
@@ -100,6 +113,7 @@ export function ContactForm({
     if (initial?.id) {
       setSaved(true);
       router.refresh();
+      onSaved?.();
     } else {
       const created = res.data as { id: string } | undefined;
       router.push(created ? `/contacts/${created.id}` : "/contacts");
@@ -109,7 +123,7 @@ export function ContactForm({
 
   return (
     <form onSubmit={submit} className="space-y-5">
-      <Card>
+      <Card className={hideCls("identity")}>
         <CardHeader title="Who they are" />
         <div className="grid gap-4 p-5 sm:grid-cols-2">
           <Field label="Type" htmlFor="cf_kind">
@@ -162,7 +176,7 @@ export function ContactForm({
         </div>
       </Card>
 
-      <Card>
+      <Card className={hideCls("contact")}>
         <CardHeader title="Contact details" />
         <div className="grid gap-4 p-5 sm:grid-cols-2">
           <Field label="Email" htmlFor="cf_email">
@@ -186,7 +200,7 @@ export function ContactForm({
         </div>
       </Card>
 
-      <Card>
+      <Card className={hideCls("address")}>
         <CardHeader title="Address" />
         <div className="grid gap-4 p-5 sm:grid-cols-2">
           <Field label="Address line 1" htmlFor="cf_a1">
@@ -207,7 +221,7 @@ export function ContactForm({
         </div>
       </Card>
 
-      <Card>
+      <Card className={hideCls("crm")}>
         <CardHeader title="CRM" />
         <div className="grid gap-4 p-5 sm:grid-cols-2">
           <Field label="Owner" htmlFor="cf_owner">
@@ -254,7 +268,7 @@ export function ContactForm({
       {error ? <p className="text-sm font-medium text-danger">{error}</p> : null}
       {saved ? <p className="text-sm font-medium text-available-fg">Saved.</p> : null}
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="ghost" onClick={() => router.back()}>Cancel</Button>
+        <Button type="button" variant="ghost" onClick={() => (onCancel ? onCancel() : router.back())}>Cancel</Button>
         <Button type="submit" disabled={busy}>{busy ? "Saving…" : initial?.id ? "Save changes" : "Create contact"}</Button>
       </div>
     </form>

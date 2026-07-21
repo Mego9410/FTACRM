@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getLookup } from "@/lib/lookups";
 import { getProfile } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
-import { ContactForm, type ContactFormValues } from "../contact-form";
+import { type ContactFormValues } from "../contact-form";
+import { ContactRecord } from "../contact-record";
 import { ConsentAmlPanel } from "./consent-aml-panel";
 
 export default async function ContactDetailsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -21,8 +22,8 @@ export default async function ContactDetailsPage({ params }: { params: Promise<{
 
   return (
     <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
-      <ContactForm
-        initial={contact as unknown as ContactFormValues}
+      <ContactRecord
+        contact={contact as unknown as ContactFormValues & { id: string }}
         sources={sources}
         owners={owners ?? []}
         branches={branches ?? []}
