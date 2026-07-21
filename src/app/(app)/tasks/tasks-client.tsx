@@ -42,6 +42,7 @@ export function TasksClient({
   me,
   view,
   openNew,
+  openTaskId,
   tasks,
   team,
   categories,
@@ -49,6 +50,7 @@ export function TasksClient({
   me: string;
   view: string;
   openNew: boolean;
+  openTaskId?: string | null;
   tasks: TaskRow[];
   team: TeamMember[];
   categories: LookupValue[];
@@ -89,6 +91,14 @@ export function TasksClient({
     setError(null);
     setDialog({ mode: "edit", task });
   }
+
+  // Deep link: /tasks?task=<id> opens that task's editor.
+  React.useEffect(() => {
+    if (!openTaskId) return;
+    const t = tasks.find((x) => x.id === openTaskId);
+    if (t) openEditDialog(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openTaskId]);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

@@ -43,7 +43,7 @@ export function SidebarPanels({ data }: { data: SidebarData }) {
               const overdue = t.dueAt && new Date(t.dueAt) < now;
               return (
                 <li key={t.id}>
-                  <Link href={t.href} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-surface-2">
+                  <Link href={`/tasks?task=${t.id}`} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-surface-2">
                     <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", overdue ? "bg-danger" : "bg-gold")} />
                     <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-fg-1">{t.title}</span>
                     {t.dueAt ? (

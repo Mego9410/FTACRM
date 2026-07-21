@@ -7,7 +7,7 @@ import type { LinkType } from "./link-search";
 
 export const metadata = { title: "Tasks" };
 
-type Search = { view?: string; new?: string };
+type Search = { view?: string; new?: string; task?: string };
 
 function contactType(roles: string[]): LinkType {
   if (roles.includes("seller")) return "seller";
@@ -91,6 +91,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
         me={me.id}
         view={view}
         openNew={params.new === "1"}
+        openTaskId={params.task ?? null}
         tasks={rows}
         team={team ?? []}
         categories={categories}

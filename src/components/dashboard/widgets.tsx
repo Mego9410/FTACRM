@@ -183,7 +183,7 @@ export function TasksWidget({ data }: { data: DashboardData }) {
                 </button>
                 <div className="min-w-0 flex-1">
                   <Link
-                    href={t.href ?? "/tasks"}
+                    href={`/tasks?task=${t.id}`}
                     className="block truncate text-sm font-semibold text-fg-1 hover:text-gold-deep hover:underline"
                   >
                     {t.title}
