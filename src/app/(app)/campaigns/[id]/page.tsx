@@ -2,9 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/shell/page-header";
-import { Badge, Button, Card, CardHeader } from "@/components/ui/primitives";
+import { Badge, Card, CardHeader } from "@/components/ui/primitives";
 import { formatDateTime } from "@/lib/utils";
 import { CampaignActions } from "./campaign-actions";
+import { MessageEditor } from "./message-editor";
 
 const STATUS_TONES: Record<string, "neutral" | "gold" | "green" | "danger"> = {
   draft: "neutral",
@@ -62,24 +63,13 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
-        <Card>
-          <CardHeader title="Message" />
-          <div className="p-5">
-            <p className="mb-2 text-sm font-bold text-fg-1">{campaign.subject ?? "No subject"}</p>
-            <div className="whitespace-pre-wrap rounded-sm border border-line bg-surface-2 p-4 text-sm text-fg-2">
-              {campaign.body_html ?? "No body yet."}
-            </div>
-            {campaign.status === "draft" ? (
-              <p className="mt-3 text-xs text-fg-3">
-                Drafts are edited from the composer.{" "}
-                <Link href={`/campaigns/new`} className="font-semibold text-gold-deep hover:underline">
-                  Start a fresh draft
-                </Link>{" "}
-                if this one has gone stale.
-              </p>
-            ) : null}
-          </div>
-        </Card>
+        <MessageEditor
+          campaignId={id}
+          kind={campaign.kind ?? "campaign"}
+          subject={campaign.subject}
+          bodyHtml={campaign.body_html}
+          editable={campaign.sent_count === 0 && ["draft", "scheduled", "sending"].includes(campaign.status)}
+        />
 
         <Card>
           <CardHeader title={`Recipients ${recipients && recipients.length >= 500 ? "(first 500)" : `(${recipients?.length ?? 0})`}`} />

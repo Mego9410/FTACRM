@@ -66,6 +66,48 @@ export async function saveCampaignDraft(input: unknown): Promise<ActionResult<{ 
   return ok({ id: data.id });
 }
 
+const updateContentSchema = z.object({
+  id: z.string().uuid(),
+  subject: z.string().min(1).max(300),
+  body_html: z.string().min(1).max(200000),
+});
+
+/**
+ * Edit the subject/body of a campaign or launch that hasn't gone out yet —
+ * draft, or scheduled/sending but with nothing actually sent so far. Once a
+ * single recipient has been sent the content is locked, so a live send is
+ * never rewritten mid-flight.
+ */
+export async function updateCampaignContent(input: unknown): Promise<ActionResult> {
+  const me = await requireProfile();
+  await requirePermission(me, "campaigns.send");
+  const parsed = updateContentSchema.safeParse(input);
+  if (!parsed.success) return fail("Add a subject and body first.");
+  const { id, subject, body_html } = parsed.data;
+  const supabase = await createClient();
+
+  const { data: campaign } = await supabase
+    .from("campaigns")
+    .select("status, sent_count, subject")
+    .eq("id", id)
+    .single();
+  if (!campaign) return fail("Not found.");
+  if (campaign.sent_count > 0 || !["draft", "scheduled", "sending"].includes(campaign.status)) {
+    return fail("This has already started sending, so the content is locked.");
+  }
+
+  const { error } = await supabase.from("campaigns").update({ subject, body_html }).eq("id", id);
+  if (error) return fail(error.message);
+
+  await audit("campaigns", id, me.id, [
+    { field: "subject", oldValue: campaign.subject, newValue: subject },
+    { field: "body_html", oldValue: null, newValue: "edited" },
+  ]);
+  revalidatePath(`/campaigns/${id}`);
+  revalidatePath("/launches");
+  return ok();
+}
+
 /**
  * Queue for sending: snapshot the segment into campaign_recipients with
  * consent + suppression re-checked. Blocked while no provider is linked.
