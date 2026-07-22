@@ -5,10 +5,8 @@ import { Select } from "@/components/ui/primitives";
 
 export function ReportingFilters({
   owners,
-  branches,
 }: {
   owners: { id: string; full_name: string }[];
-  branches: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -34,12 +32,6 @@ export function ReportingFilters({
         <option value="">All agents</option>
         {owners.map((o) => (
           <option key={o.id} value={o.id}>{o.full_name}</option>
-        ))}
-      </Select>
-      <Select value={params.get("branch") ?? ""} onChange={(e) => apply({ branch: e.target.value })} className="w-44" aria-label="Filter by branch">
-        <option value="">All branches</option>
-        {branches.map((b) => (
-          <option key={b.id} value={b.id}>{b.name}</option>
         ))}
       </Select>
     </div>

@@ -36,18 +36,12 @@ const dash = (v: string | number | null | undefined) =>
 export function ContactRecord({
   contact,
   sources,
-  owners,
-  branches,
 }: {
   contact: ContactFormValues & { id: string };
   sources: LookupValue[];
-  owners: { id: string; full_name: string }[];
-  branches: { id: string; name: string }[];
 }) {
   const [editing, setEditing] = React.useState<ContactSection | null>(null);
 
-  const ownerName = owners.find((o) => o.id === contact.owner_id)?.full_name ?? null;
-  const branchName = branches.find((b) => b.id === contact.branch_id)?.name ?? null;
   const sourceName = sources.find((s) => s.id === contact.source_id)?.value ?? null;
 
   const editButton = (section: ContactSection) => (
@@ -110,8 +104,6 @@ export function ContactRecord({
       <Card>
         <CardHeader title="CRM" action={editButton("crm")} />
         <dl className="grid gap-4 p-5 sm:grid-cols-2">
-          <Row label="Owner">{dash(ownerName) || "Unassigned"}</Row>
-          <Row label="Branch">{dash(branchName)}</Row>
           <Row label="Source">{dash(sourceName)}</Row>
           <Row label="Temperature">
             {contact.temperature ? (
@@ -142,8 +134,6 @@ export function ContactRecord({
           <ContactForm
             initial={contact}
             sources={sources}
-            owners={owners}
-            branches={branches}
             section={editing}
             onSaved={() => setEditing(null)}
             onCancel={() => setEditing(null)}

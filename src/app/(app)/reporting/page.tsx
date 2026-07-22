@@ -70,16 +70,14 @@ export default async function ReportingPage({ searchParams }: { searchParams: Pr
   const filters = { owner: params.owner, branch: params.branch };
 
   const supabase = await createClient();
-  const [kpisNow, kpisPrev, pipeline, monthly, smartLists, { data: owners }, { data: branches }] =
-    await Promise.all([
-      computeKpis(current, filters),
-      computeKpis(previous, filters),
-      computePipeline(filters),
-      completionsByMonth(),
-      computeSmartLists(),
-      supabase.from("profiles").select("id, full_name").eq("is_active", true).order("full_name"),
-      supabase.from("branches").select("id, name").eq("is_active", true).order("name"),
-    ]);
+  const [kpisNow, kpisPrev, pipeline, monthly, smartLists, { data: owners }] = await Promise.all([
+    computeKpis(current, filters),
+    computeKpis(previous, filters),
+    computePipeline(filters),
+    completionsByMonth(),
+    computeSmartLists(),
+    supabase.from("profiles").select("id, full_name").eq("is_active", true).order("full_name"),
+  ]);
 
   const tiles: { label: string; value: string; sub?: string; delta?: React.ReactNode }[] = [
     {
@@ -138,7 +136,7 @@ export default async function ReportingPage({ searchParams }: { searchParams: Pr
           { label: "Activity feed", href: "/reporting/activity" },
         ]}
       />
-      <ReportingFilters owners={owners ?? []} branches={branches ?? []} />
+      <ReportingFilters owners={owners ?? []} />
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {tiles.map((t) => (

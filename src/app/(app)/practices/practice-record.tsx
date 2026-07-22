@@ -13,7 +13,6 @@ const SECTION_TITLES: Record<PracticeSection, string> = {
   location: "Location",
   dental: "Dental profile",
   pricing: "Price, fees and dates",
-  assignment: "Assignment",
 };
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -31,8 +30,6 @@ const dash = (v: string | number | null | undefined) =>
 export function PracticeRecord({
   practice,
   lookups,
-  owners,
-  branches,
 }: {
   practice: PracticeFormValues & { id: string };
   lookups: {
@@ -40,16 +37,12 @@ export function PracticeRecord({
     tenures: LookupValue[];
     specialisms: LookupValue[];
   };
-  owners: { id: string; full_name: string }[];
-  branches: { id: string; name: string }[];
 }) {
   const [editing, setEditing] = React.useState<PracticeSection | null>(null);
 
   const lookupName = (list: LookupValue[], id: string | null) =>
     list.find((v) => v.id === id)?.value ?? null;
   const specialismPills = lookups.specialisms.filter((s) => practice.specialism_ids.includes(s.id));
-  const ownerName = owners.find((o) => o.id === practice.owner_id)?.full_name ?? null;
-  const branchName = branches.find((b) => b.id === practice.branch_id)?.name ?? null;
 
   const editButton = (section: PracticeSection) => (
     <Button variant="outline" size="sm" onClick={() => setEditing(section)} className="gap-1.5">
@@ -72,13 +65,6 @@ export function PracticeRecord({
         <dl className="grid gap-4 p-5 sm:grid-cols-2">
           <Row label="Marketing title">{practice.display_title}</Row>
           <Row label="Trading name">{dash(practice.name)}</Row>
-          <Row label="Confidentiality">
-            {practice.confidential ? (
-              <Badge tone="warn">Confidential listing</Badge>
-            ) : (
-              <Badge>Name and address may appear in outbound material</Badge>
-            )}
-          </Row>
         </dl>
       </Card>
 
@@ -156,14 +142,6 @@ export function PracticeRecord({
         </dl>
       </Card>
 
-      <Card>
-        <CardHeader title="Assignment" action={editButton("assignment")} />
-        <dl className="grid gap-4 p-5 sm:grid-cols-2">
-          <Row label="Owner">{dash(ownerName) || "Unassigned"}</Row>
-          <Row label="Branch">{dash(branchName)}</Row>
-        </dl>
-      </Card>
-
       <SlideOver
         open={editing !== null}
         onClose={() => setEditing(null)}
@@ -174,8 +152,6 @@ export function PracticeRecord({
           <PracticeForm
             initial={practice}
             lookups={lookups}
-            owners={owners}
-            branches={branches}
             section={editing}
             onSaved={() => setEditing(null)}
             onCancel={() => setEditing(null)}

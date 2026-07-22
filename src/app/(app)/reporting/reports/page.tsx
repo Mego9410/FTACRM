@@ -37,10 +37,9 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const filters = { owner: params.owner, branch: params.branch };
 
   const supabase = await createClient();
-  const [result, { data: owners }, { data: branches }] = await Promise.all([
+  const [result, { data: owners }] = await Promise.all([
     def.run(period, filters),
     supabase.from("profiles").select("id, full_name").eq("is_active", true).order("full_name"),
-    supabase.from("branches").select("id, name").eq("is_active", true).order("name"),
   ]);
 
   const qs = (extra: Record<string, string | undefined>) => {
@@ -87,7 +86,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         ))}
       </div>
 
-      <ReportingFilters owners={owners ?? []} branches={branches ?? []} />
+      <ReportingFilters owners={owners ?? []} />
 
       <div className="mt-5">
         <h2 className="text-lg font-extrabold text-fg-1">{def.label}</h2>

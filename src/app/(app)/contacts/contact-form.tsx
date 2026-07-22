@@ -29,8 +29,6 @@ export type ContactFormValues = {
   roles: string[];
   status: string | null;
   source_id: string | null;
-  owner_id: string | null;
-  branch_id: string | null;
   temperature: string | null;
   notes: string | null;
 };
@@ -47,16 +45,12 @@ export type ContactSection = "identity" | "contact" | "address" | "crm";
 export function ContactForm({
   initial,
   sources,
-  owners,
-  branches,
   section,
   onSaved,
   onCancel,
 }: {
   initial?: ContactFormValues;
   sources: LookupValue[];
-  owners: { id: string; full_name: string }[];
-  branches: { id: string; name: string }[];
   /** When set, only this section is shown (the rest stay in the DOM so nothing is lost on save). */
   section?: ContactSection;
   onSaved?: () => void;
@@ -99,8 +93,6 @@ export function ContactForm({
       roles,
       status: String(f.get("status") ?? ""),
       source_id: String(f.get("source_id") ?? "") || null,
-      owner_id: String(f.get("owner_id") ?? "") || null,
-      branch_id: String(f.get("branch_id") ?? "") || null,
       temperature: (String(f.get("temperature") ?? "") || null) as "hot" | "warm" | "cold" | null,
       notes: String(f.get("notes") ?? ""),
     };
@@ -224,22 +216,6 @@ export function ContactForm({
       <Card className={hideCls("crm")}>
         <CardHeader title="CRM" />
         <div className="grid gap-4 p-5 sm:grid-cols-2">
-          <Field label="Owner" htmlFor="cf_owner">
-            <Select id="cf_owner" name="owner_id" defaultValue={initial?.owner_id ?? ""}>
-              <option value="">Unassigned</option>
-              {owners.map((o) => (
-                <option key={o.id} value={o.id}>{o.full_name}</option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Branch" htmlFor="cf_branch">
-            <Select id="cf_branch" name="branch_id" defaultValue={initial?.branch_id ?? ""}>
-              <option value="">No branch</option>
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </Select>
-          </Field>
           <Field label="Source" htmlFor="cf_source">
             <Select id="cf_source" name="source_id" defaultValue={initial?.source_id ?? ""}>
               <option value="">Unknown</option>

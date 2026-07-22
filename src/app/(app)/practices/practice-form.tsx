@@ -28,9 +28,6 @@ export type PracticeFormValues = {
   udas: number | null;
   staff_count: number | null;
   description: string | null;
-  confidential: boolean;
-  owner_id: string | null;
-  branch_id: string | null;
   instructed_at: string | null;
   contract_expiry: string | null;
   lease_expiry: string | null;
@@ -70,13 +67,11 @@ function TogglePills({
   );
 }
 
-export type PracticeSection = "identity" | "location" | "dental" | "pricing" | "assignment";
+export type PracticeSection = "identity" | "location" | "dental" | "pricing";
 
 export function PracticeForm({
   initial,
   lookups,
-  owners,
-  branches,
   section,
   onSaved,
   onCancel,
@@ -87,8 +82,6 @@ export function PracticeForm({
     tenures: LookupValue[];
     specialisms: LookupValue[];
   };
-  owners: { id: string; full_name: string }[];
-  branches: { id: string; name: string }[];
   /** When set, only this section is shown (the rest stay in the DOM so nothing is lost on save). */
   section?: PracticeSection;
   onSaved?: () => void;
@@ -138,9 +131,6 @@ export function PracticeForm({
       udas: intOrNull(f.get("udas")),
       staff_count: intOrNull(f.get("staff_count")),
       description: String(f.get("description") ?? ""),
-      confidential: f.get("confidential") === "on",
-      owner_id: String(f.get("owner_id") ?? "") || null,
-      branch_id: String(f.get("branch_id") ?? "") || null,
       instructed_at: String(f.get("instructed_at") ?? "") || null,
       contract_expiry: String(f.get("contract_expiry") ?? "") || null,
       lease_expiry: String(f.get("lease_expiry") ?? "") || null,
@@ -177,13 +167,9 @@ export function PracticeForm({
           >
             <Input id="pf_display" name="display_title" defaultValue={initial?.display_title ?? ""} required minLength={3} />
           </Field>
-          <Field label="Trading name" htmlFor="pf_name" hint="Confidential — internal use only">
+          <Field label="Trading name" htmlFor="pf_name" hint="Internal use only">
             <Input id="pf_name" name="name" defaultValue={initial?.name ?? ""} />
           </Field>
-          <label className="flex items-center gap-2 self-end pb-2 text-sm font-semibold text-fg-1">
-            <input type="checkbox" name="confidential" defaultChecked={initial?.confidential ?? true} className="h-4 w-4 accent-[#E4AD25]" />
-            Confidential listing — hide name and address in outbound material
-          </label>
         </div>
       </Card>
 
@@ -292,28 +278,6 @@ export function PracticeForm({
           </Field>
           <Field label="Best and final closing date" htmlFor="pf_closing" hint="Deadline for offers when running a closing-date process">
             <Input id="pf_closing" name="closing_date" type="date" defaultValue={initial?.closing_date ?? ""} />
-          </Field>
-        </div>
-      </Card>
-
-      <Card className={hideCls("assignment")}>
-        <CardHeader title="Assignment" />
-        <div className="grid gap-4 p-5 sm:grid-cols-2">
-          <Field label="Owner" htmlFor="pf_owner">
-            <Select id="pf_owner" name="owner_id" defaultValue={initial?.owner_id ?? ""}>
-              <option value="">Unassigned</option>
-              {owners.map((o) => (
-                <option key={o.id} value={o.id}>{o.full_name}</option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Branch" htmlFor="pf_branch">
-            <Select id="pf_branch" name="branch_id" defaultValue={initial?.branch_id ?? ""}>
-              <option value="">No branch</option>
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </Select>
           </Field>
         </div>
       </Card>

@@ -11,11 +11,9 @@ export default async function ContactDetailsPage({ params }: { params: Promise<{
   const { id } = await params;
   const supabase = await createClient();
   const me = await getProfile();
-  const [{ data: contact }, sources, { data: owners }, { data: branches }] = await Promise.all([
+  const [{ data: contact }, sources] = await Promise.all([
     supabase.from("contacts").select("*").eq("id", id).maybeSingle(),
     getLookup("contact_source"),
-    supabase.from("profiles").select("id, full_name").eq("is_active", true).order("full_name"),
-    supabase.from("branches").select("id, name").eq("is_active", true).order("name"),
   ]);
   if (!contact) notFound();
   const canErase = me ? await hasPermission(me, "contacts.erase") : false;
@@ -25,8 +23,6 @@ export default async function ContactDetailsPage({ params }: { params: Promise<{
       <ContactRecord
         contact={contact as unknown as ContactFormValues & { id: string }}
         sources={sources}
-        owners={owners ?? []}
-        branches={branches ?? []}
       />
       <div>
         <ConsentAmlPanel
