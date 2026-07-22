@@ -47,7 +47,9 @@ export function MessageEditor({
 
   return (
     <>
-      <Card>
+      {/* Fixed card height (desktop) so the preview fills the box and the
+          recipients card alongside can match it exactly. */}
+      <Card className="flex flex-col lg:h-[680px]">
         <CardHeader
           title="Message"
           action={
@@ -58,22 +60,22 @@ export function MessageEditor({
             ) : null
           }
         />
-        <div className="p-5">
-          <p className="mb-2 text-sm font-bold text-fg-1">{subject ?? "No subject"}</p>
+        <div className="flex min-h-0 flex-1 flex-col p-5">
+          <p className="mb-2 shrink-0 text-sm font-bold text-fg-1">{subject ?? "No subject"}</p>
           {isLaunch && bodyHtml ? (
             <iframe
               title="Email preview"
               srcDoc={bodyHtml}
               sandbox=""
-              className="h-[520px] w-full rounded-md border border-line bg-surface-2"
+              className="h-[420px] w-full rounded-md border border-line bg-surface-2 lg:h-auto lg:min-h-0 lg:flex-1"
             />
           ) : (
-            <div className="whitespace-pre-wrap rounded-sm border border-line bg-surface-2 p-4 text-sm text-fg-2">
+            <div className="min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap rounded-sm border border-line bg-surface-2 p-4 text-sm text-fg-2">
               {bodyHtml ?? "No body yet."}
             </div>
           )}
           {!editable ? (
-            <p className="mt-3 text-xs text-fg-3">
+            <p className="mt-3 shrink-0 text-xs text-fg-3">
               This has already started sending, so the content is locked — what's shown here is what recipients see.
             </p>
           ) : null}
