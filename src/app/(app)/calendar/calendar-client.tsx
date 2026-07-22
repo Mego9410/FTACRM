@@ -7,6 +7,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { EventInput } from "@fullcalendar/core";
 import type { LookupValue } from "@/lib/lookups";
+import type { Recurrence } from "@/lib/calendar/recurrence";
 import { Avatar, Button, Card, Field, Input, Select, Textarea } from "@/components/ui/primitives";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,31 @@ import {
   saveCalendarEvent,
   type CalendarEventDto,
 } from "./actions";
+
+const WEEKDAYS: { d: number; label: string }[] = [
+  { d: 1, label: "Mon" },
+  { d: 2, label: "Tue" },
+  { d: 3, label: "Wed" },
+  { d: 4, label: "Thu" },
+  { d: 5, label: "Fri" },
+  { d: 6, label: "Sat" },
+  { d: 0, label: "Sun" },
+];
+
+const REMINDER_PRESETS: { label: string; minutes: number }[] = [
+  { label: "At start", minutes: 0 },
+  { label: "5 min", minutes: 5 },
+  { label: "10 min", minutes: 10 },
+  { label: "15 min", minutes: 15 },
+  { label: "30 min", minutes: 30 },
+  { label: "1 hour", minutes: 60 },
+  { label: "2 hours", minutes: 120 },
+  { label: "1 day", minutes: 1440 },
+  { label: "2 days", minutes: 2880 },
+  { label: "1 week", minutes: 10080 },
+];
+
+const freqUnit = (f: Recurrence["freq"]) => (f === "daily" ? "days" : f === "weekly" ? "weeks" : "months");
 
 type TeamMember = { id: string; full_name: string; calendar_color: string };
 
@@ -30,6 +56,9 @@ type EditorState = {
   body: string;
   attendee_profile_ids: string[];
   visibility: "normal" | "private";
+  recurrence: Recurrence | null;
+  reminder_minutes: number[];
+  isRecurringSeries?: boolean;
   readonly?: boolean;
 } | null;
 
@@ -87,7 +116,8 @@ export function CalendarClient({
           const organiserColor =
             team.find((t) => t.id === e.organiser_id)?.calendar_color ?? "#5E5E5A";
           return {
-            id: e.id,
+            // Unique per occurrence so a recurring series renders every instance.
+            id: `${e.id}::${e.starts_at}`,
             title: e.title,
             start: e.starts_at,
             end: e.ends_at,
@@ -113,6 +143,8 @@ export function CalendarClient({
       body: "",
       attendee_profile_ids: [me],
       visibility: "normal",
+      recurrence: null,
+      reminder_minutes: [],
     });
   }
 
@@ -132,6 +164,8 @@ export function CalendarClient({
       body: editor.body || null,
       attendee_profile_ids: editor.attendee_profile_ids,
       visibility: editor.visibility,
+      recurrence: editor.recurrence,
+      reminder_minutes: editor.reminder_minutes,
     });
     setBusy(false);
     if (!res.ok) return setError(res.error);
@@ -229,13 +263,17 @@ export function CalendarClient({
               id: e.id,
               title: e.title,
               event_type_id: e.event_type_id ?? "",
-              starts_at: toLocalInput(new Date(e.starts_at)),
-              ends_at: toLocalInput(new Date(e.ends_at)),
+              // Load the series anchor — editing changes the whole series.
+              starts_at: toLocalInput(new Date(e.series_starts_at)),
+              ends_at: toLocalInput(new Date(e.series_ends_at)),
               all_day: e.all_day,
               location: e.location ?? "",
               body: e.body ?? "",
               attendee_profile_ids: e.attendee_profile_ids,
               visibility: "normal",
+              recurrence: e.recurrence,
+              reminder_minutes: e.reminder_minutes,
+              isRecurringSeries: e.recurrence !== null,
               readonly: e.organiser_id !== me && !e.attendee_profile_ids.includes(me),
             });
           }}
@@ -341,6 +379,206 @@ export function CalendarClient({
                 disabled={editor.readonly}
               />
             </Field>
+
+            {/* Recurrence */}
+            <div className="rounded-md border border-line p-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Repeat" htmlFor="ev_repeat">
+                  <Select
+                    id="ev_repeat"
+                    value={editor.recurrence?.freq ?? "none"}
+                    disabled={editor.readonly}
+                    onChange={(ev) => {
+                      const v = ev.target.value;
+                      setEditor((s) => {
+                        if (!s) return s;
+                        if (v === "none") return { ...s, recurrence: null };
+                        const freq = v as Recurrence["freq"];
+                        const startDay = new Date(s.starts_at).getDay();
+                        return {
+                          ...s,
+                          recurrence: {
+                            freq,
+                            interval: s.recurrence?.interval ?? 1,
+                            byday:
+                              freq === "weekly"
+                                ? s.recurrence?.byday?.length
+                                  ? s.recurrence.byday
+                                  : [startDay]
+                                : undefined,
+                            end: s.recurrence?.end ?? { type: "never" },
+                          },
+                        };
+                      });
+                    }}
+                  >
+                    <option value="none">Does not repeat</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </Select>
+                </Field>
+                {editor.recurrence ? (
+                  <Field label={`Every (${freqUnit(editor.recurrence.freq)})`} htmlFor="ev_interval">
+                    <Input
+                      id="ev_interval"
+                      type="number"
+                      min={1}
+                      max={99}
+                      value={editor.recurrence.interval}
+                      disabled={editor.readonly}
+                      onChange={(ev) =>
+                        setEditor((s) =>
+                          s && s.recurrence
+                            ? { ...s, recurrence: { ...s.recurrence, interval: Math.max(1, Number(ev.target.value) || 1) } }
+                            : s,
+                        )
+                      }
+                    />
+                  </Field>
+                ) : null}
+              </div>
+
+              {editor.recurrence?.freq === "weekly" ? (
+                <div className="mt-3">
+                  <p className="mb-1.5 text-[12px] font-semibold text-fg-2">On these days</p>
+                  <div className="flex flex-wrap gap-1">
+                    {WEEKDAYS.map((w) => {
+                      const on = editor.recurrence?.byday?.includes(w.d) ?? false;
+                      return (
+                        <button
+                          key={w.d}
+                          type="button"
+                          disabled={editor.readonly}
+                          onClick={() =>
+                            setEditor((s) => {
+                              if (!s || !s.recurrence) return s;
+                              const cur = s.recurrence.byday ?? [];
+                              const byday = on ? cur.filter((d) => d !== w.d) : [...cur, w.d];
+                              return { ...s, recurrence: { ...s.recurrence, byday } };
+                            })
+                          }
+                          className={cn(
+                            "h-8 w-10 rounded-md text-[12px] font-semibold",
+                            on ? "bg-ink text-white" : "bg-surface-3 text-fg-2 hover:text-fg-1",
+                          )}
+                        >
+                          {w.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
+              {editor.recurrence ? (
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px]">
+                  <span className="font-semibold text-fg-2">Ends</span>
+                  <Select
+                    value={editor.recurrence.end.type}
+                    disabled={editor.readonly}
+                    className="w-36"
+                    onChange={(ev) =>
+                      setEditor((s) => {
+                        if (!s || !s.recurrence) return s;
+                        const t = ev.target.value;
+                        const end =
+                          t === "on"
+                            ? { type: "on" as const, date: new Date(s.starts_at).toISOString().slice(0, 10) }
+                            : t === "after"
+                              ? { type: "after" as const, count: 10 }
+                              : { type: "never" as const };
+                        return { ...s, recurrence: { ...s.recurrence, end } };
+                      })
+                    }
+                  >
+                    <option value="never">Never</option>
+                    <option value="on">On date</option>
+                    <option value="after">After…</option>
+                  </Select>
+                  {editor.recurrence.end.type === "on" ? (
+                    <Input
+                      type="date"
+                      className="w-44"
+                      value={editor.recurrence.end.date}
+                      disabled={editor.readonly}
+                      onChange={(ev) =>
+                        setEditor((s) =>
+                          s && s.recurrence && s.recurrence.end.type === "on"
+                            ? { ...s, recurrence: { ...s.recurrence, end: { type: "on", date: ev.target.value } } }
+                            : s,
+                        )
+                      }
+                    />
+                  ) : null}
+                  {editor.recurrence.end.type === "after" ? (
+                    <span className="flex items-center gap-1.5">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={999}
+                        className="w-20"
+                        value={editor.recurrence.end.count}
+                        disabled={editor.readonly}
+                        onChange={(ev) =>
+                          setEditor((s) =>
+                            s && s.recurrence && s.recurrence.end.type === "after"
+                              ? {
+                                  ...s,
+                                  recurrence: {
+                                    ...s.recurrence,
+                                    end: { type: "after", count: Math.max(1, Number(ev.target.value) || 1) },
+                                  },
+                                }
+                              : s,
+                          )
+                        }
+                      />
+                      <span className="text-fg-3">occurrences</span>
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+
+            {/* Reminders */}
+            <div>
+              <p className="mb-1.5 text-[13px] font-semibold text-fg-1">Reminders</p>
+              <div className="flex flex-wrap gap-1.5">
+                {REMINDER_PRESETS.map((r) => {
+                  const on = editor.reminder_minutes.includes(r.minutes);
+                  return (
+                    <button
+                      key={r.minutes}
+                      type="button"
+                      disabled={editor.readonly}
+                      onClick={() =>
+                        setEditor((s) => {
+                          if (!s) return s;
+                          const on2 = s.reminder_minutes.includes(r.minutes);
+                          const reminder_minutes = on2
+                            ? s.reminder_minutes.filter((m) => m !== r.minutes)
+                            : [...s.reminder_minutes, r.minutes].sort((a, b) => a - b);
+                          return { ...s, reminder_minutes };
+                        })
+                      }
+                      className={cn(
+                        "rounded-full px-2.5 py-1 text-[12px] font-semibold",
+                        on ? "bg-gold text-ink" : "bg-surface-3 text-fg-2 hover:text-fg-1",
+                      )}
+                    >
+                      {r.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-1 text-[11px] text-fg-4">
+                {editor.reminder_minutes.length
+                  ? "You'll be reminded before the event at the times ticked."
+                  : "Pick one or more times to be reminded before the event."}
+              </p>
+            </div>
+
             <label className="flex items-center gap-2 text-sm font-semibold text-fg-1">
               <input
                 type="checkbox"

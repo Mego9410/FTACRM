@@ -392,6 +392,8 @@ thread don't duplicate journal spam: one journal entry per (message, contact).
 | organiser_id | uuid fk profiles | |
 | practice_id / contact_id / deal_id | nullable fks | record linking (valuations & viewings auto-create linked events) |
 | visibility | text | `normal` \| `private` (private syncs busy-time only) |
+| recurrence | jsonb nullable | repeat rule `{freq: daily\|weekly\|monthly, interval, byday?[0-6], end: never\|on{date}\|after{count}}`. Expanded to occurrences within the requested window by `lib/calendar/recurrence.ts` (unit-tested); the stored row is the series anchor. |
+| reminder_minutes | int[] | minutes-before-start reminder offsets (multiple allowed); empty = none |
 | status | text | `confirmed` \| `tentative` \| `cancelled` |
 | graph_event_id | text nullable | per-organiser Outlook copy |
 | sync_state | text | `pending_push` \| `synced` \| `pull_only` \| `error` |
