@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Building2, Check, Link2, MapPin, Rocket } from "lucide-react";
+import { Building2, Link2, MapPin, Rocket } from "lucide-react";
 import type { LookupValue } from "@/lib/lookups";
 import { Badge, Button, Field, LookupPill, Select } from "@/components/ui/primitives";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
@@ -59,20 +59,6 @@ export function PracticeHeader({
   const [reasonId, setReasonId] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
-  const [linkCopied, setLinkCopied] = React.useState(false);
-
-  async function copyPublicLink() {
-    if (!publicToken) return;
-    const url = `${window.location.origin}/p/${publicToken}`;
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch {
-      window.prompt("Copy the public link:", url);
-    }
-    setLinkCopied(true);
-    window.setTimeout(() => setLinkCopied(false), 2000);
-  }
-
   const expiring =
     practice.contract_expiry &&
     !["completed", "withdrawn"].includes(practice.status) &&
@@ -161,14 +147,11 @@ export function PracticeHeader({
               : "POA"}
           </p>
           {publicToken ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void copyPublicLink()}
-              title="Copy the public landing page link to share with buyers"
-            >
-              {linkCopied ? <Check size={14} /> : <Link2 size={14} />} {linkCopied ? "Copied" : "Public page"}
-            </Button>
+            <a href={`/p/${publicToken}`} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm" title="Open the public landing page in a new tab">
+                <Link2 size={14} /> Public page
+              </Button>
+            </a>
           ) : null}
           {NEXT_STATUSES[practice.status]?.length ? (
             <Button variant="outline" size="sm" onClick={() => setStatusOpen(true)}>
