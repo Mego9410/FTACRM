@@ -162,7 +162,7 @@ export default async function PublicPracticePage({ params }: { params: Promise<{
     <Shell stickyCta>
       <main className="flex-1">
         {/* ── Hero: dark, editorial, price given real scale ─────────────── */}
-        <section className="bg-ink text-white">
+        <section className="relative bg-ink text-white">
           <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-6 pb-28 pt-14 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:pb-36 lg:pt-20">
             <div className="min-w-0">
               <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] font-bold uppercase tracking-[0.22em] text-gold">
@@ -222,7 +222,18 @@ export default async function PublicPracticePage({ params }: { params: Promise<{
               </div>
             </div>
           </div>
+          {/* The gold thread begins — dropping out of the hero. */}
+          <span aria-hidden className="absolute bottom-0 left-1/2 h-20 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-gold/50 to-gold" />
         </section>
+
+        {/* ── The flow zone: one gold thread weaves beneath the content ── */}
+        <div className="relative">
+          {/* Decor clipped in its own layer so the stats card can still overlap the hero above. */}
+          <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+            <FlowRibbon />
+            <span className="absolute -right-24 top-32 h-72 w-72 rounded-full bg-gold-tint/60 blur-3xl" />
+            <span className="absolute -left-28 top-[55%] h-80 w-80 rounded-full bg-gold-tint/50 blur-3xl" />
+          </div>
 
         {/* ── Overlapping stats card — the numbers do the talking ───────── */}
         {heroStats.length >= 2 ? (
@@ -241,7 +252,7 @@ export default async function PublicPracticePage({ params }: { params: Promise<{
         ) : null}
 
         {/* ── About + details: asymmetric editorial spread ──────────────── */}
-        <section className="mx-auto grid w-full max-w-6xl gap-12 px-6 pb-20 pt-16 lg:grid-cols-[1fr_380px] lg:gap-20 lg:pt-20">
+        <section className="relative z-10 mx-auto grid w-full max-w-6xl gap-12 px-6 pb-20 pt-16 lg:grid-cols-[1fr_380px] lg:gap-20 lg:pt-20">
           <div className="min-w-0">
             <p className="text-[12px] font-bold uppercase tracking-[0.22em] text-gold-deep">The opportunity</p>
             <h2 className="mt-3 text-[28px] font-extrabold leading-tight tracking-[-0.02em] text-fg-1 sm:text-[32px]">
@@ -304,8 +315,42 @@ export default async function PublicPracticePage({ params }: { params: Promise<{
           </aside>
         </section>
 
+        {/* ── The journey: staggered steps carried along the thread ─────── */}
+        <section className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-24">
+          <div className="text-center">
+            <p className="text-[12px] font-bold uppercase tracking-[0.22em] text-gold-deep">The journey</p>
+            <h2 className="mt-3 text-[28px] font-extrabold leading-tight tracking-[-0.02em] text-fg-1 sm:text-[32px]">
+              From this page to your practice
+            </h2>
+          </div>
+          <ol className="mt-12 space-y-8">
+            {[
+              ["Request the details", "Complete the short form below — it takes under a minute and stays fully confidential."],
+              ["Receive the full picture", "The practice name, exact location, accounts and full particulars, sent directly to you."],
+              ["View the practice", "A discreet visit, arranged around you and the seller's team."],
+              ["Offer to completion", "We guide the negotiation, finance and legals through to the keys in your hand."],
+            ].map(([title, body], i) => (
+              <li key={title} className={`sm:w-[46%] ${i % 2 === 1 ? "sm:ml-auto" : ""}`}>
+                <div className="rounded-[20px] border border-line bg-white p-6 shadow-[0_12px_35px_-20px_rgba(15,15,10,0.3)]">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gold text-[15px] font-extrabold text-ink">
+                      {i + 1}
+                    </span>
+                    <p className="text-[16px] font-extrabold tracking-tight text-fg-1">{title}</p>
+                  </div>
+                  <p className="mt-3 text-[14px] leading-relaxed text-fg-2">{body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+        </div>
+
         {/* ── Trust band ────────────────────────────────────────────────── */}
-        <section className="bg-ink text-white">
+        <section className="relative bg-ink text-white">
+          {/* The thread passes through the dark band. */}
+          <span aria-hidden className="absolute left-1/2 top-0 h-12 w-px -translate-x-1/2 bg-gradient-to-b from-gold to-transparent" />
+          <span aria-hidden className="absolute bottom-0 left-1/2 h-12 w-px -translate-x-1/2 bg-gradient-to-b from-transparent to-gold" />
           <div className="mx-auto w-full max-w-6xl px-6 py-16 lg:py-20">
             <p className="max-w-3xl text-[24px] font-extrabold leading-snug tracking-[-0.02em] sm:text-[28px]">
               Requesting details commits you to nothing<span className="text-gold">.</span> It simply opens a
@@ -331,8 +376,14 @@ export default async function PublicPracticePage({ params }: { params: Promise<{
         </section>
 
         {/* ── Persuasion + form ─────────────────────────────────────────── */}
-        <section id="enquire" className="bg-surface-2">
-          <div className="mx-auto grid w-full max-w-6xl gap-12 px-6 py-16 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16 lg:py-24">
+        <section id="enquire" className="relative overflow-hidden bg-surface-2">
+          <span aria-hidden className="absolute -right-24 bottom-10 h-72 w-72 rounded-full bg-gold-tint/60 blur-3xl" />
+          {/* The thread arrives at its destination. */}
+          <div aria-hidden className="flex flex-col items-center pt-0">
+            <span className="h-14 w-px bg-gradient-to-b from-gold to-gold/40" />
+            <span className="mt-1 h-3 w-3 rounded-full bg-gold ring-4 ring-gold/25" />
+          </div>
+          <div className="relative z-10 mx-auto grid w-full max-w-6xl gap-12 px-6 pb-16 pt-8 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16 lg:pb-24 lg:pt-10">
             <div className="min-w-0 lg:pt-4">
               <p className="text-[12px] font-bold uppercase tracking-[0.22em] text-gold-deep">Request full details</p>
               <h2 className="mt-3 text-[28px] font-extrabold leading-tight tracking-[-0.02em] text-fg-1 sm:text-[34px]">
@@ -364,6 +415,29 @@ export default async function PublicPracticePage({ params }: { params: Promise<{
         </section>
       </main>
     </Shell>
+  );
+}
+
+/**
+ * The gold thread: one continuous ribbon weaving down the light zone,
+ * passing beneath the content cards. Stretches with the content
+ * (preserveAspectRatio none) while non-scaling strokes keep it crisp.
+ */
+function FlowRibbon() {
+  const d =
+    "M50 0 C 50 4, 80 6, 80 13 C 80 24, 20 26, 20 38 C 20 50, 76 48, 76 61 C 76 73, 24 71, 24 83 C 24 94, 50 92, 50 100";
+  return (
+    <svg
+      aria-hidden
+      className="pointer-events-none absolute inset-0 h-full w-full"
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      fill="none"
+    >
+      <path d={d} stroke="#E4AD25" strokeOpacity="0.1" strokeWidth="18" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+      <path d={d} stroke="#E4AD25" strokeOpacity="0.18" strokeWidth="7" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+      <path d={d} stroke="#E4AD25" strokeOpacity="0.85" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" />
+    </svg>
   );
 }
 
