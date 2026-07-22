@@ -3,9 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/shell/page-header";
 import { LinkTabs } from "@/components/ui/tabs";
 import { Badge, Button, Card, EmptyState } from "@/components/ui/primitives";
-import { StageTracker } from "@/components/deals/stage-tracker";
+import { StageChevrons } from "@/components/deals/stage-chevrons";
 import { contactName } from "@/lib/contact-helpers";
-import { daysSince, formatGBP, relativeTime } from "@/lib/utils";
+import { practiceLabel } from "@/lib/practice-helpers";
+import { cn, daysSince, formatDate, formatGBP } from "@/lib/utils";
 import { DealFilters } from "./deal-filters";
 
 export const metadata = { title: "Sales progression" };
@@ -35,9 +36,10 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
   ]);
 
   let query = supabase.from("deals").select(
-    `id, ref, status, agreed_price, target_completion_date, last_activity_at, completed_at,
-     practices!deals_practice_id_fkey(id, display_title, town),
+    `id, ref, status, agreed_price, target_completion_date, last_activity_at, completed_at, created_at,
+     practices!deals_practice_id_fkey(id, display_title, name, county),
      buyer:contacts!deals_buyer_contact_id_fkey(id, first_name, last_name, company_name),
+     seller:contacts!deals_seller_contact_id_fkey(id, first_name, last_name, company_name),
      deal_stage_events(stage_id, achieved_on)`,
     { count: "exact" },
   );
@@ -89,44 +91,70 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
       ) : (
         <div className="mt-4 space-y-3">
           {(deals ?? []).map((d) => {
-            const practice = d.practices as unknown as { id: string; display_title: string; town: string | null } | null;
+            const practice = d.practices as unknown as {
+              id: string;
+              display_title: string;
+              name: string | null;
+              county: string | null;
+            } | null;
             const buyer = d.buyer as unknown as { id: string; first_name: string | null; last_name: string | null; company_name: string | null } | null;
+            const seller = d.seller as unknown as { id: string; first_name: string | null; last_name: string | null; company_name: string | null } | null;
             const events = (d.deal_stage_events as { stage_id: string; achieved_on: string }[]) ?? [];
             const stageStates = (stages ?? []).map((s) => ({
               ...s,
               achieved_on: events.find((e) => e.stage_id === s.id)?.achieved_on ?? null,
             }));
             const idleDays = daysSince(d.last_activity_at) ?? 0;
+            const startDate = stageStates[0]?.achieved_on ?? d.created_at;
+            const headerBits = [
+              startDate ? formatDate(startDate) : null,
+              d.agreed_price != null ? formatGBP(d.agreed_price) : null,
+              practice ? practiceLabel(practice) : d.ref,
+            ].filter(Boolean);
+            const partyBits = [
+              buyer ? `Buyer: ${contactName(buyer)}` : null,
+              seller ? `Seller: ${contactName(seller)}` : null,
+            ].filter(Boolean);
+            const completed = d.status === "completed";
             return (
               <Link key={d.id} href={`/deals/${d.id}`} className="block">
-                <Card className="flex flex-wrap items-center gap-4 px-5 py-4 transition-shadow hover:shadow-md">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-bold text-fg-1">{practice?.display_title ?? d.ref}</span>
-                      <span className="text-xs text-fg-4">{d.ref}</span>
-                      {d.status === "completed" ? <Badge tone="green">Completed</Badge> : null}
-                      {d.status === "fallen_through" ? <Badge tone="danger">Fallen through</Badge> : null}
-                      {d.status === "on_hold" ? <Badge tone="warn">On hold</Badge> : null}
-                      {d.status === "in_progress" && idleDays >= STALLED_DAYS ? (
-                        <Badge tone="danger">No activity {idleDays}d</Badge>
-                      ) : d.status === "in_progress" && idleDays >= 7 ? (
-                        <Badge tone="warn">Quiet {idleDays}d</Badge>
+                <Card className="overflow-hidden p-0 transition-shadow hover:shadow-md">
+                  <div
+                    className={cn(
+                      "flex items-center justify-between gap-3 border-b border-line px-4 py-2.5",
+                      completed ? "bg-available-fg/8" : "bg-surface-2/50",
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-fg-1">{headerBits.join(" – ")}</p>
+                      {partyBits.length ? (
+                        <p className="mt-0.5 truncate text-xs text-fg-3">{partyBits.join(" · ")}</p>
                       ) : null}
                     </div>
-                    <p className="mt-0.5 text-xs text-fg-3">
-                      {[
-                        buyer ? `Buyer: ${contactName(buyer)}` : null,
-                        formatGBP(d.agreed_price),
-                        d.status === "completed"
-                          ? `Completed ${d.completed_at ?? ""}`
-                          : `Updated ${relativeTime(d.last_activity_at)}`,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
+                    <div className="shrink-0">
+                      {completed ? (
+                        <Badge tone="green">Completed</Badge>
+                      ) : d.status === "fallen_through" ? (
+                        <Badge tone="danger">Fallen through</Badge>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          {d.status === "on_hold" ? <Badge tone="warn">On hold</Badge> : null}
+                          {d.status === "in_progress" && idleDays >= STALLED_DAYS ? (
+                            <Badge tone="danger">No activity {idleDays}d</Badge>
+                          ) : d.status === "in_progress" && idleDays >= 7 ? (
+                            <Badge tone="warn">Quiet {idleDays}d</Badge>
+                          ) : null}
+                          <span className="hidden text-xs text-fg-4 sm:inline">
+                            Last updated: {formatDate(d.last_activity_at)}
+                          </span>
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="order-3 w-full sm:order-2 sm:w-56 sm:shrink-0">
-                    <StageTracker stages={stageStates} dealStatus={d.status} />
+                  <div className="overflow-x-auto p-3">
+                    <div className="min-w-[720px]">
+                      <StageChevrons stages={stageStates} dealStatus={d.status} />
+                    </div>
                   </div>
                 </Card>
               </Link>

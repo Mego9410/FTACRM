@@ -56,6 +56,7 @@ export default async function PracticeLayout({
           display_title: practice.display_title,
           name: practice.name,
           town: practice.town,
+          county: practice.county,
           postcode: practice.postcode,
           status: practice.status,
           asking_price: practice.asking_price,

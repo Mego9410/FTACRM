@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { contactName } from "@/lib/contact-helpers";
+import { practiceLabel } from "@/lib/practice-helpers";
 import { LinkTabs } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/primitives";
 import { StageTracker, type StageState } from "@/components/deals/stage-tracker";
@@ -21,7 +22,7 @@ export default async function DealLayout({
       .from("deals")
       .select(
         `id, ref, status, agreed_price, target_completion_date, last_activity_at, completed_at,
-         practices!deals_practice_id_fkey(id, display_title, ref),
+         practices!deals_practice_id_fkey(id, display_title, name, county, ref),
          buyer:contacts!deals_buyer_contact_id_fkey(id, first_name, last_name, company_name),
          seller:contacts!deals_seller_contact_id_fkey(id, first_name, last_name, company_name)`,
       )
@@ -39,7 +40,7 @@ export default async function DealLayout({
     achieved_on: (events ?? []).find((e) => e.stage_id === s.id)?.achieved_on ?? null,
   }));
 
-  const practice = deal.practices as unknown as { id: string; display_title: string; ref: string } | null;
+  const practice = deal.practices as unknown as { id: string; display_title: string; name: string | null; county: string | null; ref: string } | null;
   const buyer = deal.buyer as unknown as { id: string; first_name: string | null; last_name: string | null; company_name: string | null } | null;
   const seller = deal.seller as unknown as { id: string; first_name: string | null; last_name: string | null; company_name: string | null } | null;
 
@@ -49,7 +50,7 @@ export default async function DealLayout({
       <div className="mb-5">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-[24px] font-extrabold tracking-tight text-fg-1">
-            {practice?.display_title ?? deal.ref}
+            {practice ? practiceLabel(practice) : deal.ref}
           </h1>
           {deal.status === "in_progress" ? <Badge tone="gold">In progress</Badge> : null}
           {deal.status === "completed" ? <Badge tone="green">Completed</Badge> : null}

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getLookup } from "@/lib/lookups";
 import { contactName } from "@/lib/contact-helpers";
+import { practiceLabel } from "@/lib/practice-helpers";
 import { originKindForRoles, resolveOrigin, type EntryOrigin } from "@/lib/journal-origin";
 import { JournalClient } from "./journal-client";
 
@@ -103,7 +104,7 @@ export async function Journal({ link, path }: { link: JournalLink; path: string 
     relContactIds.length
       ? supabase.from("contacts").select("id, first_name, last_name, company_name, roles").in("id", relContactIds)
       : empty,
-    relPracticeIds.length ? supabase.from("practices").select("id, display_title").in("id", relPracticeIds) : empty,
+    relPracticeIds.length ? supabase.from("practices").select("id, display_title, name, county").in("id", relPracticeIds) : empty,
     relDealIds.length ? supabase.from("deals").select("id, ref").in("id", relDealIds) : empty,
   ]);
 
@@ -119,8 +120,8 @@ export async function Journal({ link, path }: { link: JournalLink; path: string 
     contactOrigin.set(c.id, { kind, label: contactName(c), href: `/contacts/${c.id}/journal` });
   }
   const practiceOrigin = new Map<string, EntryOrigin>();
-  for (const p of (practicesRes.data ?? []) as { id: string; display_title: string }[]) {
-    practiceOrigin.set(p.id, { kind: "Practice", label: p.display_title, href: `/practices/${p.id}/journal` });
+  for (const p of (practicesRes.data ?? []) as { id: string; display_title: string; name: string | null; county: string | null }[]) {
+    practiceOrigin.set(p.id, { kind: "Practice", label: practiceLabel(p), href: `/practices/${p.id}/journal` });
   }
   const dealOrigin = new Map<string, EntryOrigin>();
   for (const d of (dealsRes.data ?? []) as { id: string; ref: string }[]) {

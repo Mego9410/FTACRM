@@ -9,6 +9,7 @@ import { PRACTICE_STATUS_LABELS, PRACTICE_STATUS_TONES } from "@/lib/contact-hel
 import { formatGBP } from "@/lib/utils";
 import { resolveSort, applySort, type SortOptions } from "@/lib/sort";
 import { PracticeMapDefs, PracticeMapUse } from "@/components/practices/practice-map";
+import { practiceLabel } from "@/lib/practice-helpers";
 import { PracticeFilters } from "./practice-filters";
 
 export const metadata = { title: "Practices" };
@@ -176,7 +177,7 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
                       {funding ? <LookupPill color={funding.color}>{funding.value}</LookupPill> : null}
                       {expiring ? <Badge tone="warn">Contract expiring</Badge> : null}
                     </div>
-                    <p className="font-bold leading-snug text-fg-1">{p.display_title}</p>
+                    <p className="font-bold leading-snug text-fg-1">{practiceLabel(p)}</p>
                     <p className="mt-0.5 text-xs text-fg-3">
                       {[p.ref, p.town, tenure?.value, p.surgeries ? `${p.surgeries} surgeries` : null]
                         .filter(Boolean)

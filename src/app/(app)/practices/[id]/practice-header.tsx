@@ -9,6 +9,7 @@ import { Badge, Button, Field, LookupPill, Select } from "@/components/ui/primit
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
 import { RecordWarning } from "@/components/record/record-warning";
 import { PRACTICE_STATUS_LABELS, PRACTICE_STATUS_TONES } from "@/lib/contact-helpers";
+import { practiceLabel } from "@/lib/practice-helpers";
 import { formatGBP } from "@/lib/utils";
 import { changePracticeStatus } from "../actions";
 
@@ -18,6 +19,7 @@ type HeaderPractice = {
   display_title: string;
   name: string | null;
   town: string | null;
+  county: string | null;
   postcode: string | null;
   status: string;
   asking_price: number | null;
@@ -107,7 +109,7 @@ export function PracticeHeader({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-[24px] font-extrabold tracking-tight text-fg-1">{practice.display_title}</h1>
+            <h1 className="text-[24px] font-extrabold tracking-tight text-fg-1">{practiceLabel(practice)}</h1>
             <Badge tone={PRACTICE_STATUS_TONES[practice.status] ?? "neutral"}>
               {PRACTICE_STATUS_LABELS[practice.status] ?? practice.status}
             </Badge>
