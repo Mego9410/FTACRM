@@ -61,7 +61,20 @@ export async function createLaunch(input: unknown): Promise<ActionResult<{ id: s
     return fail("No sendable buyers remain after consent, do-not-send and suppression checks.");
   }
 
-  const { subject, html } = renderLaunchEmail(practice);
+  // Fetched separately and tolerantly so an un-migrated public_token column
+  // can't block launches; without it the email falls back to the mailto CTA.
+  let publicUrl: string | null = null;
+  const { data: tokenRow } = await createAdminClient()
+    .from("practices")
+    .select("public_token")
+    .eq("id", practice_id)
+    .maybeSingle();
+  const publicToken = (tokenRow as { public_token?: string | null } | null)?.public_token ?? null;
+  if (publicToken && process.env.NEXT_PUBLIC_APP_URL) {
+    publicUrl = `${process.env.NEXT_PUBLIC_APP_URL}/p/${publicToken}`;
+  }
+
+  const { subject, html } = renderLaunchEmail(practice, { publicUrl });
 
   const { data: campaign, error } = await supabase
     .from("campaigns")

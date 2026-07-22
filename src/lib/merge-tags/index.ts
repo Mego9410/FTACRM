@@ -67,6 +67,7 @@ type PracticeRow = {
   address_line1?: string | null;
   postcode?: string | null;
   confidential?: boolean;
+  public_token?: string | null;
 };
 
 type SenderRow = { full_name: string; email: string; signature_html?: string | null };
@@ -95,13 +96,14 @@ export function buildContactContext(contact: ContactRow) {
  * Marketing-safe practice context: NEVER includes trading name, street
  * address or postcode — confidential listings depend on this.
  */
-export function buildPracticeMarketingContext(practice: PracticeRow) {
+export function buildPracticeMarketingContext(practice: PracticeRow, opts?: { appUrl?: string }) {
   const priceLabel =
     practice.price_prefix === "offers_over"
       ? `Offers over ${gbp(practice.asking_price)}`
       : practice.price_prefix === "poa" || practice.asking_price == null
         ? "Price on application"
         : gbp(practice.asking_price);
+  const appUrl = opts?.appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
   return {
     practice: {
       display_title: practice.display_title,
@@ -110,6 +112,7 @@ export function buildPracticeMarketingContext(practice: PracticeRow) {
       asking_price: gbp(practice.asking_price),
       price_label: priceLabel,
       surgeries: practice.surgeries ?? "",
+      public_link: practice.public_token && appUrl ? `${appUrl}/p/${practice.public_token}` : "",
     },
   };
 }
@@ -143,6 +146,7 @@ export const TAG_PALETTE: { group: string; tags: { tag: string; label: string }[
       { tag: "{{practice.town}}", label: "Town" },
       { tag: "{{practice.county}}", label: "County" },
       { tag: "{{practice.surgeries}}", label: "Surgeries" },
+      { tag: "{{practice.public_link}}", label: "Public page link" },
     ],
   },
   {

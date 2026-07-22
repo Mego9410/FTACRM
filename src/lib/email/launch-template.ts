@@ -60,7 +60,11 @@ function factCell(label: string, value: string): string {
   </td>`;
 }
 
-export function renderLaunchEmail(practice: LaunchPractice): { subject: string; html: string } {
+export function renderLaunchEmail(
+  practice: LaunchPractice,
+  opts?: { publicUrl?: string | null },
+): { subject: string; html: string } {
+  const publicUrl = opts?.publicUrl ?? null;
   const location = [practice.town, practice.county].filter(Boolean).join(", ");
   const subject = `New launch — ${practice.display_title}${location ? `, ${location}` : ""}`;
 
@@ -126,9 +130,9 @@ export function renderLaunchEmail(practice: LaunchPractice): { subject: string; 
         ${description ? `<div style="margin:24px 0 0;">${description}</div>` : ""}
 
         <div style="margin:28px 0 0;text-align:center;">
-          <a href="mailto:{{sender.email}}?subject=${encodeURIComponent(`Interest in ${practice.ref} — ${practice.display_title}`)}"
+          <a href="${publicUrl ? esc(publicUrl) : `mailto:{{sender.email}}?subject=${encodeURIComponent(`Interest in ${practice.ref} — ${practice.display_title}`)}`}"
              style="display:inline-block;background:${GOLD};color:${INK};font-weight:800;font-size:15px;text-decoration:none;padding:14px 30px;border-radius:14px;">
-            Register your interest
+            ${publicUrl ? "View Full Details" : "Register your interest"}
           </a>
           <p style="margin:10px 0 0;font-size:13px;color:${FG3};">or simply reply to this email — quote ref ${esc(practice.ref)}</p>
         </div>

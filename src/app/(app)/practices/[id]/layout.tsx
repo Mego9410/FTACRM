@@ -35,10 +35,14 @@ export default async function PracticeLayout({
   ]);
   if (!practice) notFound();
 
-  // Fetched separately and tolerantly so an un-migrated `warning` column can't
-  // break the record page.
-  const { data: warnRow } = await supabase.from("practices").select("warning").eq("id", id).maybeSingle();
+  // Fetched separately and tolerantly so un-migrated `warning` / `public_token`
+  // columns can't break the record page.
+  const [{ data: warnRow }, { data: tokenRow }] = await Promise.all([
+    supabase.from("practices").select("warning").eq("id", id).maybeSingle(),
+    supabase.from("practices").select("public_token").eq("id", id).maybeSingle(),
+  ]);
   const warning = (warnRow as { warning: string | null } | null)?.warning ?? null;
+  const publicToken = (tokenRow as { public_token: string | null } | null)?.public_token ?? null;
 
   const seller = primarySeller?.contacts as unknown as {
     first_name: string | null;
@@ -72,6 +76,7 @@ export default async function PracticeLayout({
             : null,
         }}
         withdrawalReasons={reasons}
+        publicToken={publicToken}
       />
       <LinkTabs
         className="mb-5"

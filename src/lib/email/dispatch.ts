@@ -53,7 +53,19 @@ export async function dispatchCampaigns(): Promise<{ sent: number } | { skipped:
         .select("display_title, town, county, asking_price, price_prefix, surgeries")
         .eq("id", campaign.practice_id)
         .single();
-      if (practice) practiceCtx = buildPracticeMarketingContext(practice);
+      // Separate, tolerant fetch: an un-migrated public_token column must not
+      // blank the whole practice context for in-flight campaigns.
+      const { data: tokenRow } = await admin
+        .from("practices")
+        .select("public_token")
+        .eq("id", campaign.practice_id)
+        .maybeSingle();
+      if (practice) {
+        practiceCtx = buildPracticeMarketingContext({
+          ...practice,
+          public_token: (tokenRow as { public_token?: string | null } | null)?.public_token ?? null,
+        });
+      }
     }
 
     const { data: recipients } = await admin
