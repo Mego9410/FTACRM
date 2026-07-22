@@ -28,6 +28,14 @@ export default async function ContactLayout({
   const warning = (warnRow as { warning: string | null } | null)?.warning ?? null;
 
   const isBuyer = (contact.roles as string[]).includes("buyer");
+
+  // Tolerant (table may not be migrated yet): has an introduction email been
+  // sent to this buyer? Drives the header shortcut, which hides once sent.
+  const { count: introCount } = await supabase
+    .from("intro_emails")
+    .select("id", { count: "exact", head: true })
+    .eq("contact_id", id);
+  const introSent = (introCount ?? 0) > 0;
   const base = `/contacts/${id}`;
   const tabs = [
     { label: "Details", href: base, exact: true },
@@ -44,7 +52,7 @@ export default async function ContactLayout({
 
   return (
     <div>
-      <ContactHeader contact={{ ...contact, name: contactName(contact), warning }} />
+      <ContactHeader contact={{ ...contact, name: contactName(contact), warning }} showIntroEmail={isBuyer && !introSent} />
       <LinkTabs tabs={tabs} className="mb-5" />
       {children}
     </div>

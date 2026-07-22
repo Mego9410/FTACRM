@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
+import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { IntroComposer } from "./intro-composer";
 
 export default async function IntroEmailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const me = await requireProfile();
   const supabase = await createClient();
   const [{ data: contact }, { data: blocks }, { data: history }] = await Promise.all([
     supabase.from("contacts").select("id, first_name, last_name, company_name, email, do_not_contact").eq("id", id).maybeSingle(),
@@ -25,6 +27,7 @@ export default async function IntroEmailPage({ params }: { params: Promise<{ id:
       firstName={firstName}
       email={contact.email}
       doNotContact={contact.do_not_contact}
+      senderName={me.full_name}
       blocks={blocks ?? []}
       history={(history ?? []).map((h) => ({
         id: h.id,

@@ -34,10 +34,19 @@ alter table public.intro_emails enable row level security;
 
 do $$
 begin
-  -- Blocks: every signed-in user can read the library; only Control Centre
-  -- (admin, via the service-role client) can add/edit/remove them.
+  -- Blocks: every signed-in user can read AND manage the shared library
+  -- (add, edit, remove) — it's non-sensitive reusable email copy.
   if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'intro_email_blocks' and policyname = 'intro_email_blocks_select') then
     create policy intro_email_blocks_select on public.intro_email_blocks for select to authenticated using (true);
+  end if;
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'intro_email_blocks' and policyname = 'intro_email_blocks_insert') then
+    create policy intro_email_blocks_insert on public.intro_email_blocks for insert to authenticated with check (true);
+  end if;
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'intro_email_blocks' and policyname = 'intro_email_blocks_update') then
+    create policy intro_email_blocks_update on public.intro_email_blocks for update to authenticated using (true) with check (true);
+  end if;
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'intro_email_blocks' and policyname = 'intro_email_blocks_delete') then
+    create policy intro_email_blocks_delete on public.intro_email_blocks for delete to authenticated using (true);
   end if;
 
   -- Sent-email log: ordinary staff read/write, same shape as journal_entries.

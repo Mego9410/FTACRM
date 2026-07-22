@@ -175,7 +175,7 @@ export async function computeSmartLists(): Promise<SmartList[]> {
   const stale30 = new Date(Date.now() - 30 * 86_400_000).toISOString();
   const stalled = new Date(Date.now() - 14 * 86_400_000).toISOString();
 
-  const [contracts, staleBuyers, valuationsPending, offersPending, stalledDeals, feedback] = await Promise.all([
+  const [contracts, staleBuyers, valuationsPending, offersPending, stalledDeals, feedback, introEmails] = await Promise.all([
     supabase
       .from("practices")
       .select("id", { count: "exact", head: true })
@@ -204,6 +204,11 @@ export async function computeSmartLists(): Promise<SmartList[]> {
       .select("id", { count: "exact", head: true })
       .eq("status", "completed")
       .is("feedback", null),
+    supabase
+      .from("tasks")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "open")
+      .eq("title", "Send introduction email"),
   ]);
 
   return [
@@ -242,6 +247,12 @@ export async function computeSmartLists(): Promise<SmartList[]> {
       count: feedback.count ?? 0,
       href: "/practices?status=live",
       hint: "Completed viewings with no feedback recorded",
+    },
+    {
+      name: "Introduction emails to send",
+      count: introEmails.count ?? 0,
+      href: "/tasks?view=all",
+      hint: "Buyers with an open post-call introduction email reminder",
     },
   ];
 }

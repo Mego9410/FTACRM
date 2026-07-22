@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { audit, diffChanges } from "@/lib/audit";
 import { geocodePostcode } from "@/lib/geo";
+import { INTRO_TASK_TITLE } from "@/lib/email/intro-email";
 import { ok, fail, type ActionResult } from "@/lib/action-result";
 
 const optional = (max = 200) =>
@@ -68,6 +69,30 @@ export async function createContact(input: unknown): Promise<ActionResult<{ id: 
     .single();
   if (error) return fail(error.message);
   await audit("contacts", data.id, me.id, [{ field: "created", oldValue: null, newValue: "contact" }]);
+
+  // Buyers get a reminder task to send their post-call introduction email.
+  // Best-effort — a task failure must never block the contact being created.
+  if (parsed.data.roles.includes("buyer")) {
+    const due = new Date();
+    due.setDate(due.getDate() + 3);
+    const assignee = parsed.data.owner_id ?? me.id;
+    const { data: task } = await supabase
+      .from("tasks")
+      .insert({
+        title: INTRO_TASK_TITLE,
+        details: "Send this buyer their introduction email after your first call.",
+        due_at: due.toISOString(),
+        assignee_id: assignee,
+        created_by: me.id,
+        contact_id: data.id,
+        task_type: "email",
+        stage: "not_started",
+        status: "open",
+      })
+      .select("id")
+      .single();
+    if (task) await supabase.from("task_links").insert({ task_id: task.id, contact_id: data.id });
+  }
   return ok({ id: data.id });
 }
 

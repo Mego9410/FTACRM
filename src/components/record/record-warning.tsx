@@ -29,12 +29,15 @@ export function RecordWarning({
   warning,
   variant = "header",
   canEdit = true,
+  bare = false,
 }: {
   table: WarningTable;
   id: string;
   warning: string | null;
   variant?: "header" | "pinned";
   canEdit?: boolean;
+  /** Drop the bottom margin so this can sit inside a flex row with siblings. */
+  bare?: boolean;
 }) {
   const router = useRouter();
   const pinned = variant === "pinned";
@@ -122,7 +125,7 @@ export function RecordWarning({
   ) : null;
 
   return (
-    <div className={cn(!pinned && (card || control) && "mb-3", (card || control) && "space-y-2")}>
+    <div className={cn(!pinned && !bare && (card || control) && "mb-3", (card || control) && "space-y-2")}>
       {control}
       {card}
 

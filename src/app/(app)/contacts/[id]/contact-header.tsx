@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Archive, Mail, Phone, ShieldAlert } from "lucide-react";
+import { Archive, Mail, Phone, Send, ShieldAlert } from "lucide-react";
 import { Avatar, Badge, Button } from "@/components/ui/primitives";
 import { RecordWarning } from "@/components/record/record-warning";
 import { relativeTime } from "@/lib/utils";
@@ -28,13 +29,31 @@ type HeaderContact = {
   warning: string | null;
 };
 
-export function ContactHeader({ contact }: { contact: HeaderContact }) {
+export function ContactHeader({
+  contact,
+  showIntroEmail = false,
+}: {
+  contact: HeaderContact;
+  /** Buyer, and no introduction email sent yet — offer the shortcut. */
+  showIntroEmail?: boolean;
+}) {
   const router = useRouter();
   const consentUnset = contact.consent_updated_at === null;
 
   return (
     <div className="mb-5">
-      <RecordWarning table="contacts" id={contact.id} warning={contact.warning} />
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <RecordWarning table="contacts" id={contact.id} warning={contact.warning} bare />
+        {showIntroEmail ? (
+          <Link
+            href={`/contacts/${contact.id}/intro`}
+            className="inline-flex items-center gap-1.5 rounded-full border border-gold/50 bg-gold-tint px-3 py-1.5 text-[13px] font-bold text-gold-deep transition-colors hover:bg-gold/20"
+            title="Send this buyer their post-call introduction email"
+          >
+            <Send size={14} /> Introduction email
+          </Link>
+        ) : null}
+      </div>
       {contact.do_not_contact ? (
         <div className="mb-3 flex items-center gap-2 rounded-sm border border-danger/30 bg-danger-bg px-4 py-2.5 text-sm font-semibold text-danger">
           <ShieldAlert size={16} /> Do not contact — this person is excluded from all communications.

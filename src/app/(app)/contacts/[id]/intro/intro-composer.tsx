@@ -2,11 +2,13 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Mail, TriangleAlert } from "lucide-react";
+import { ChevronDown, Mail, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
 import { Badge, Button, Card, CardHeader, Field, Input, Textarea } from "@/components/ui/primitives";
+import { Dialog, DialogFooter } from "@/components/ui/dialog";
 import { cn, formatDateTime } from "@/lib/utils";
-import { assembleIntroBody, type IntroBlock } from "@/lib/email/intro-email";
+import { assembleIntroBody, introSignOff, type IntroBlock } from "@/lib/email/intro-email";
 import { sendIntroEmail } from "./actions";
+import { deleteIntroBlockShared, saveIntroBlockShared } from "./blocks-actions";
 
 type HistoryRow = {
   id: string;
@@ -22,6 +24,7 @@ export function IntroComposer({
   firstName,
   email,
   doNotContact,
+  senderName,
   blocks,
   history,
 }: {
@@ -29,6 +32,7 @@ export function IntroComposer({
   firstName: string;
   email: string | null;
   doNotContact: boolean;
+  senderName: string;
   blocks: IntroBlock[];
   history: HistoryRow[];
 }) {
@@ -41,13 +45,18 @@ export function IntroComposer({
     "If anything comes up in the meantime, just reply to this email or give me a call.",
   );
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  // Per-email edits to a block's text — ephemeral, reverts to the template next time.
+  const [edits, setEdits] = React.useState<Record<string, string>>({});
   const [expanded, setExpanded] = React.useState<Set<string>>(new Set());
+  const [manageOpen, setManageOpen] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [sent, setSent] = React.useState(false);
 
-  const orderedSelectedBlocks = blocks.filter((b) => selected.has(b.id));
-  const preview = assembleIntroBody(topText, orderedSelectedBlocks, tailText);
+  const bodyFor = (b: IntroBlock) => edits[b.id] ?? b.body;
+  const orderedSelected = blocks.filter((b) => selected.has(b.id));
+  const signOff = introSignOff(senderName);
+  const preview = assembleIntroBody(topText, orderedSelected.map(bodyFor), tailText, signOff);
   const canSend = Boolean(email) && !doNotContact;
 
   function toggle(id: string) {
@@ -68,12 +77,13 @@ export function IntroComposer({
       subject,
       top_text: topText,
       tail_text: tailText,
-      block_ids: [...selected],
+      blocks: orderedSelected.map((b) => ({ id: b.id, body: bodyFor(b) })),
     });
     setBusy(false);
     if (!res.ok) return setError(res.error);
     setSent(true);
     setSelected(new Set());
+    setEdits({});
     router.refresh();
   }
 
@@ -120,36 +130,64 @@ export function IntroComposer({
                 <span className="ml-1 text-xs font-semibold text-fg-3">{selected.size} of {blocks.length} added</span>
               </>
             }
+            action={
+              <Button variant="outline" size="sm" onClick={() => setManageOpen(true)} className="gap-1.5">
+                <Pencil size={13} /> Edit
+              </Button>
+            }
           />
           {blocks.length === 0 ? (
             <p className="px-5 py-6 text-sm text-fg-3">
-              No introduction blocks are set up yet — add some in Control Centre → Intro email blocks.
+              No introduction blocks yet — use <span className="font-semibold">Edit</span> to add the first one.
             </p>
           ) : (
             <ul className="divide-y divide-line">
-              {blocks.map((b) => (
-                <li key={b.id} className="flex items-start gap-3 px-5 py-3">
-                  <input
-                    type="checkbox"
-                    checked={selected.has(b.id)}
-                    onChange={() => toggle(b.id)}
-                    className="mt-0.5 h-4 w-4 shrink-0 accent-[#E4AD25]"
-                    aria-label={b.label}
-                  />
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-fg-1">{b.label}</p>
-                    <p className="mt-0.5 text-xs text-fg-3">{b.body}</p>
-                  </div>
-                </li>
-              ))}
+              {blocks.map((b) => {
+                const isSelected = selected.has(b.id);
+                return (
+                  <li key={b.id} className="px-5 py-3">
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggle(b.id)}
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-[#E4AD25]"
+                        aria-label={b.label}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-fg-1">{b.label}</p>
+                        {isSelected ? (
+                          <>
+                            <Textarea
+                              value={bodyFor(b)}
+                              onChange={(e) => setEdits((prev) => ({ ...prev, [b.id]: e.target.value }))}
+                              rows={3}
+                              className="mt-1.5 text-[13px]"
+                            />
+                            <p className="mt-1 text-[11px] text-fg-4">
+                              Edited just for this email — the saved version isn't changed.
+                            </p>
+                          </>
+                        ) : (
+                          <p className="mt-0.5 text-xs text-fg-3">{b.body}</p>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Card>
 
         <Card>
           <CardHeader title="Closing" />
-          <div className="p-5">
+          <div className="space-y-3 p-5">
             <Textarea value={tailText} onChange={(e) => setTailText(e.target.value)} rows={3} />
+            <div className="rounded-sm border border-line bg-surface-2 px-3 py-2 text-xs text-fg-3">
+              Signed off automatically as:
+              <span className="mt-1 block whitespace-pre-line font-semibold text-fg-2">{signOff}</span>
+            </div>
           </div>
         </Card>
 
@@ -216,6 +254,110 @@ export function IntroComposer({
           </div>
         </Card>
       </div>
+
+      <ManageBlocksDialog open={manageOpen} onClose={() => setManageOpen(false)} blocks={blocks} />
     </div>
+  );
+}
+
+/** Add / edit / remove the shared introduction-block library — open to all users. */
+function ManageBlocksDialog({
+  open,
+  onClose,
+  blocks,
+}: {
+  open: boolean;
+  onClose: () => void;
+  blocks: IntroBlock[];
+}) {
+  const router = useRouter();
+  const [editing, setEditing] = React.useState<IntroBlock | "new" | null>(null);
+  const [label, setLabel] = React.useState("");
+  const [body, setBody] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const current = editing === "new" ? null : editing;
+
+  function startNew() {
+    setEditing("new");
+    setLabel("");
+    setBody("");
+    setError(null);
+  }
+  function startEdit(b: IntroBlock) {
+    setEditing(b);
+    setLabel(b.label);
+    setBody(b.body);
+    setError(null);
+  }
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    const res = await saveIntroBlockShared({ id: current?.id, label, body });
+    setBusy(false);
+    if (!res.ok) return setError(res.error);
+    setEditing(null);
+    router.refresh();
+  }
+
+  async function remove(b: IntroBlock) {
+    if (!window.confirm(`Remove "${b.label}"? Past emails keep their own copy of the text.`)) return;
+    await deleteIntroBlockShared({ id: b.id });
+    router.refresh();
+  }
+
+  return (
+    <Dialog open={open} onClose={onClose} title="Introduction blocks" wide>
+      {editing ? (
+        <div className="space-y-4">
+          <Field label="Label (shown next to the tick box)" htmlFor="mb_label">
+            <Input id="mb_label" value={label} onChange={(e) => setLabel(e.target.value)} maxLength={120} placeholder="e.g. FTA Finance" />
+          </Field>
+          <Field label="Text (inserted into the email when ticked)" htmlFor="mb_body">
+            <Textarea id="mb_body" value={body} onChange={(e) => setBody(e.target.value)} rows={4} placeholder="Write this as a natural paragraph." />
+          </Field>
+          {error ? <p className="text-sm font-medium text-danger">{error}</p> : null}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditing(null)}>Back</Button>
+            <Button disabled={busy || !label.trim() || !body.trim()} onClick={() => void save()}>
+              {busy ? "Saving…" : "Save block"}
+            </Button>
+          </DialogFooter>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-fg-3">These are shared by the whole team.</p>
+            <Button size="sm" onClick={startNew}><Plus size={14} /> Add block</Button>
+          </div>
+          {blocks.length === 0 ? (
+            <p className="py-6 text-center text-sm text-fg-3">No blocks yet — add the first one.</p>
+          ) : (
+            <ul className="divide-y divide-line rounded-md border border-line">
+              {blocks.map((b) => (
+                <li key={b.id} className="flex items-start justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-fg-1">{b.label}</p>
+                    <p className="mt-0.5 text-xs text-fg-3">{b.body}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => startEdit(b)}>Edit</Button>
+                    <button
+                      type="button"
+                      onClick={() => void remove(b)}
+                      className="rounded p-1.5 text-fg-3 hover:bg-surface-3 hover:text-danger"
+                      aria-label="Delete block"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </Dialog>
   );
 }
