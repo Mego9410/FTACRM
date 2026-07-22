@@ -292,7 +292,7 @@ export function CalendarClient({
                 disabled={editor.readonly}
               />
             </Field>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Starts" htmlFor="ev_start">
                 <Input
                   id="ev_start"
@@ -314,7 +314,7 @@ export function CalendarClient({
                 />
               </Field>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Type" htmlFor="ev_type">
                 <Select
                   id="ev_type"

@@ -86,8 +86,8 @@ export function ChecklistCLient({
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-2">
-        <Select value={templateId} onChange={(e) => setTemplateId(e.target.value)} className="w-64" aria-label="Checklist template">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Select value={templateId} onChange={(e) => setTemplateId(e.target.value)} className="w-full max-w-xs sm:w-64" aria-label="Checklist template">
           <option value="">Choose a template…</option>
           {templates.map((t) => (
             <option key={t.id} value={t.id}>{t.name}</option>

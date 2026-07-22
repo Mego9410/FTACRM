@@ -97,8 +97,8 @@ export function PeopleClient({ practiceId, people }: { practiceId: string; peopl
                   <li key={p.linkId} className="flex items-center gap-3 px-5 py-3">
                     <Avatar name={p.name} size={32} />
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <Link href={`/contacts/${p.contactId}`} className="text-sm font-semibold text-fg-1 hover:underline">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Link href={`/contacts/${p.contactId}`} className="min-w-0 truncate text-sm font-semibold text-fg-1 hover:underline">
                           {p.name}
                         </Link>
                         <Badge tone="gold">{PRACTICE_ROLE_LABELS[p.role] ?? p.role}</Badge>

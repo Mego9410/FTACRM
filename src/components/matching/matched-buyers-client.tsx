@@ -64,7 +64,7 @@ export function MatchedBuyersClient({ practiceId, rows }: { practiceId: string; 
           <strong className="text-fg-1">{actionable.length}</strong> matching buyers
           {rows.length !== actionable.length ? ` (${rows.length - actionable.length} excluded or DNC)` : ""}
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="ghost"
             size="sm"

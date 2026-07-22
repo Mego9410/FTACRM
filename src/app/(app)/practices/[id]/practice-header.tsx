@@ -140,7 +140,7 @@ export function PracticeHeader({
             ) : null}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <p className="text-[22px] font-extrabold text-gold-deep">
             {practice.asking_price
               ? `${practice.price_prefix === "offers_over" ? "Offers over " : ""}${formatGBP(practice.asking_price)}`

@@ -236,7 +236,7 @@ export function CampaignComposer({
             title="Message"
             action={
               templates.length > 0 ? (
-                <Select onChange={(e) => applyTemplate(e.target.value)} defaultValue="" className="w-56" aria-label="Apply template">
+                <Select onChange={(e) => applyTemplate(e.target.value)} defaultValue="" className="w-full max-w-56 sm:w-56" aria-label="Apply template">
                   <option value="">Apply a template…</option>
                   {templates.map((t) => (
                     <option key={t.id} value={t.id}>{t.name}</option>

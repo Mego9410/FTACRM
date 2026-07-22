@@ -43,8 +43,8 @@ export default async function DealPeoplePage({ params }: { params: Promise<{ id:
                 <li key={p.label} className="flex items-center gap-3 px-5 py-3">
                   <Avatar name={contactName(p.contact!)} size={32} />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <Link href={`/contacts/${p.contact!.id}`} className="text-sm font-semibold text-fg-1 hover:underline">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link href={`/contacts/${p.contact!.id}`} className="min-w-0 truncate text-sm font-semibold text-fg-1 hover:underline">
                         {contactName(p.contact!)}
                       </Link>
                       <span className="text-xs font-bold uppercase tracking-wide text-fg-4">{p.label}</span>

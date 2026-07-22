@@ -370,7 +370,7 @@ export function TasksClient({
             ))}
           </optgroup>
         </Select>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="inline-flex overflow-hidden rounded-md border border-line">
             <button
               type="button"
