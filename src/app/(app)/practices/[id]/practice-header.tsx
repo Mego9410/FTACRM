@@ -119,8 +119,8 @@ export function PracticeHeader({
           </div>
           <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-fg-3">
             <span>{practice.ref}</span>
-            {practice.name ? (
-              <span className="inline-flex items-center gap-1"><Building2 size={13} /> {practice.name}</span>
+            {practice.display_title ? (
+              <span className="inline-flex items-center gap-1"><Building2 size={13} /> {practice.display_title}</span>
             ) : null}
             {(practice.town ?? practice.postcode) ? (
               <span className="inline-flex items-center gap-1">
