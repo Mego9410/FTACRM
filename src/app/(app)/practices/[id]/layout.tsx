@@ -1,10 +1,8 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { getLookupIndex } from "@/lib/lookups";
 import { contactName } from "@/lib/contact-helpers";
 import { LinkTabs } from "@/components/ui/tabs";
-import { PracticeHeadline } from "@/components/practices/practice-headline";
 import { PracticeHeader } from "./practice-header";
 
 export default async function PracticeLayout({
@@ -20,7 +18,7 @@ export default async function PracticeLayout({
     supabase
       .from("practices")
       .select(
-        "id, ref, name, display_title, town, county, postcode, status, asking_price, price_prefix, funding_type_id, tenure_type_id, surgeries, annual_turnover, confidential, owner_id, contract_expiry, lat, lng",
+        "id, ref, name, display_title, town, county, postcode, status, asking_price, price_prefix, funding_type_id, tenure_type_id, surgeries, annual_turnover, confidential, owner_id, contract_expiry",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -42,22 +40,6 @@ export default async function PracticeLayout({
   const { data: warnRow } = await supabase.from("practices").select("warning").eq("id", id).maybeSingle();
   const warning = (warnRow as { warning: string | null } | null)?.warning ?? null;
 
-  // Headline image (tolerant of the column being un-migrated). Signed URL is
-  // regenerated per load; falls back to the generated map when there's no photo.
-  const { data: headlineRow } = await supabase
-    .from("practices")
-    .select("headline_image_path")
-    .eq("id", id)
-    .maybeSingle();
-  const headlinePath = (headlineRow as { headline_image_path: string | null } | null)?.headline_image_path ?? null;
-  let headlineUrl: string | null = null;
-  if (headlinePath) {
-    const { data: signed } = await createAdminClient()
-      .storage.from("documents")
-      .createSignedUrl(headlinePath, 60 * 60);
-    headlineUrl = signed?.signedUrl ?? null;
-  }
-
   const seller = primarySeller?.contacts as unknown as {
     first_name: string | null;
     last_name: string | null;
@@ -67,12 +49,6 @@ export default async function PracticeLayout({
   const base = `/practices/${id}`;
   return (
     <div>
-      <PracticeHeadline
-        practiceId={practice.id}
-        imageUrl={headlineUrl}
-        lat={(practice as { lat: number | null }).lat}
-        lng={(practice as { lng: number | null }).lng}
-      />
       <PracticeHeader
         practice={{
           id: practice.id,

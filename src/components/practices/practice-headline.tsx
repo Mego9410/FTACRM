@@ -49,13 +49,13 @@ export function PracticeHeadline({
   }
 
   return (
-    <div className="relative mb-4 h-44 overflow-hidden rounded-xl border border-line bg-surface-2 sm:h-52">
+    <div className="relative h-64 overflow-hidden rounded-xl border border-line bg-surface-2 sm:h-72 lg:h-auto lg:aspect-[4/5]">
       {imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={imageUrl} alt="Practice headline" className="h-full w-full object-cover" />
       ) : (
-        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-surface via-surface-2 to-gold-tint/40">
-          <PracticeMap lat={lat} lng={lng} className="h-[88%] w-auto py-2" />
+        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-surface via-surface-2 to-gold-tint/40 p-3">
+          <PracticeMap lat={lat} lng={lng} className="max-h-full w-auto" />
         </div>
       )}
 
