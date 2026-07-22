@@ -3,7 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button, Select } from "@/components/ui/primitives";
 
-export function DealFilters({ owners }: { owners: { id: string; full_name: string }[] }) {
+export function DealFilters() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -20,12 +20,6 @@ export function DealFilters({ owners }: { owners: { id: string; full_name: strin
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Select value={params.get("owner") ?? ""} onChange={(e) => apply({ owner: e.target.value })} className="w-44" aria-label="Filter by owner">
-        <option value="">Any owner</option>
-        {owners.map((o) => (
-          <option key={o.id} value={o.id}>{o.full_name}</option>
-        ))}
-      </Select>
       <Select value={params.get("sort") ?? "activity"} onChange={(e) => apply({ sort: e.target.value })} className="w-52" aria-label="Sort deals">
         <option value="activity">Least recent activity first</option>
         <option value="target">Closest to completion</option>

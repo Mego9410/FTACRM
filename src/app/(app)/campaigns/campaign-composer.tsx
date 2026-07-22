@@ -44,14 +44,12 @@ function TogglePills({
 
 export function CampaignComposer({
   lookups,
-  owners,
   templates,
   explicitContactIds,
   practice,
   sendingEnabled,
 }: {
   lookups: { fundings: LookupValue[]; tenures: LookupValue[]; specialisms: LookupValue[] };
-  owners: { id: string; full_name: string }[];
   templates: Template[];
   explicitContactIds: string[];
   practice: { id: string; display_title: string } | null;
@@ -71,7 +69,6 @@ export function CampaignComposer({
   const [specialisms, setSpecialisms] = React.useState<string[]>([]);
   const [minBudget, setMinBudget] = React.useState("");
   const [notContacted, setNotContacted] = React.useState("");
-  const [ownerId, setOwnerId] = React.useState("");
 
   const [evaluation, setEvaluation] = React.useState<SegmentEvaluation | null>(null);
   const [counting, setCounting] = React.useState(false);
@@ -90,10 +87,9 @@ export function CampaignComposer({
             specialism_ids: specialisms.length ? specialisms : undefined,
             min_budget: minBudget ? Number(minBudget.replace(/\D/g, "")) : undefined,
             not_contacted_days: notContacted ? Number(notContacted) : undefined,
-            owner_id: ownerId || undefined,
           },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [usingExplicit, temperature, fundings, tenures, specialisms, minBudget, notContacted, ownerId],
+    [usingExplicit, temperature, fundings, tenures, specialisms, minBudget, notContacted],
   );
 
   React.useEffect(() => {
@@ -206,14 +202,6 @@ export function CampaignComposer({
                 </Field>
                 <Field label="Not contacted in (days)" htmlFor="sg_stale">
                   <Input id="sg_stale" value={notContacted} onChange={(e) => setNotContacted(e.target.value)} type="number" min={0} />
-                </Field>
-                <Field label="Owned by" htmlFor="sg_owner">
-                  <Select id="sg_owner" value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
-                    <option value="">Anyone</option>
-                    {owners.map((o) => (
-                      <option key={o.id} value={o.id}>{o.full_name}</option>
-                    ))}
-                  </Select>
                 </Field>
               </>
             )}

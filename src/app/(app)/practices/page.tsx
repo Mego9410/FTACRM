@@ -27,7 +27,6 @@ const SORT_OPTIONS: SortOptions = {
 type Search = {
   status?: string;
   q?: string;
-  owner?: string;
   funding?: string;
   min?: string;
   max?: string;
@@ -49,26 +48,24 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
     return count ?? 0;
   };
 
-  const [allCount, valuationCount, liveCount, completedCount, withdrawnCount, { data: owners }, lookupIndex] =
+  const [allCount, valuationCount, liveCount, completedCount, withdrawnCount, lookupIndex] =
     await Promise.all([
       countFor(),
       countFor("valuation"),
       countFor("live"),
       countFor("completed"),
       countFor("withdrawn"),
-      supabase.from("profiles").select("id, full_name").eq("is_active", true).order("full_name"),
       getLookupIndex(),
     ]);
 
   let query = supabase
     .from("practices")
     // `*` keeps this tolerant of the headline_image_path column being un-migrated.
-    .select("*, profiles!practices_owner_id_fkey(full_name)", { count: "exact" })
+    .select("*", { count: "exact" })
     .is("archived_at", null);
 
   if (params.status === "live") query = query.in("status", ["available", "under_offer", "sold_stc"]);
   else if (params.status) query = query.eq("status", params.status);
-  if (params.owner) query = query.eq("owner_id", params.owner);
   if (params.funding) query = query.eq("funding_type_id", params.funding);
   if (params.min) query = query.gte("asking_price", Number(params.min));
   if (params.max) query = query.lte("asking_price", Number(params.max));
@@ -129,7 +126,7 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
         ]}
       />
 
-      <PracticeFilters owners={owners ?? []} />
+      <PracticeFilters />
 
       {(practices ?? []).length === 0 ? (
         <EmptyState
@@ -146,7 +143,6 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {anyMap ? <PracticeMapDefs /> : null}
           {(practices ?? []).map((p) => {
-            const owner = p.profiles as unknown as { full_name: string } | null;
             const funding = p.funding_type_id ? lookupIndex.get(p.funding_type_id) : null;
             const tenure = p.tenure_type_id ? lookupIndex.get(p.tenure_type_id) : null;
             const expiring =
@@ -186,13 +182,12 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
                         .filter(Boolean)
                         .join(" · ")}
                     </p>
-                    <div className="mt-auto flex items-end justify-between pt-3">
+                    <div className="mt-auto pt-3">
                       <p className="text-[17px] font-extrabold text-gold-deep">
                         {p.asking_price
                           ? `${p.price_prefix === "offers_over" ? "Offers over " : p.price_prefix === "guide" ? "Guide " : ""}${formatGBP(p.asking_price)}`
                           : "POA"}
                       </p>
-                      <p className="text-xs text-fg-3">{owner?.full_name ?? "Unassigned"}</p>
                     </div>
                   </div>
                 </Card>

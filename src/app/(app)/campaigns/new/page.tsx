@@ -13,12 +13,11 @@ export default async function NewCampaignPage({
 }) {
   const params = await searchParams;
   const supabase = await createClient();
-  const [fundings, tenures, specialisms, { data: owners }, { data: templates }] =
+  const [fundings, tenures, specialisms, { data: templates }] =
     await Promise.all([
       getLookup("funding_type"),
       getLookup("tenure_type"),
       getLookup("specialism"),
-      supabase.from("profiles").select("id, full_name").eq("is_active", true).order("full_name"),
       supabase
         .from("email_templates")
         .select("id, name, subject, body_html, record_context")
@@ -50,7 +49,6 @@ export default async function NewCampaignPage({
       />
       <CampaignComposer
         lookups={{ fundings, tenures, specialisms }}
-        owners={owners ?? []}
         templates={templates ?? []}
         explicitContactIds={explicitIds}
         practice={practice}

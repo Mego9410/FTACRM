@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/shell/page-header";
 import { LinkTabs } from "@/components/ui/tabs";
-import { Avatar, Badge, Button, Card, EmptyState } from "@/components/ui/primitives";
+import { Badge, Button, Card, EmptyState } from "@/components/ui/primitives";
 import { StageTracker } from "@/components/deals/stage-tracker";
 import { contactName } from "@/lib/contact-helpers";
 import { daysSince, formatGBP, relativeTime } from "@/lib/utils";
@@ -13,7 +13,7 @@ export const metadata = { title: "Sales progression" };
 const PAGE_SIZE = 30;
 const STALLED_DAYS = 14;
 
-type Search = { status?: string; owner?: string; q?: string; stalled?: string; sort?: string; page?: string };
+type Search = { status?: string; q?: string; stalled?: string; sort?: string; page?: string };
 
 export default async function DealsPage({ searchParams }: { searchParams: Promise<Search> }) {
   const params = await searchParams;
@@ -26,28 +26,24 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
     const { count } = await q;
     return count ?? 0;
   };
-  const [allCount, liveCount, completedCount, fellCount, { data: stages }, { data: owners }] =
-    await Promise.all([
-      countFor(),
-      countFor("in_progress"),
-      countFor("completed"),
-      countFor("fallen_through"),
-      supabase.from("deal_stages").select("id, label, sort_order").order("sort_order"),
-      supabase.from("profiles").select("id, full_name").eq("is_active", true).order("full_name"),
-    ]);
+  const [allCount, liveCount, completedCount, fellCount, { data: stages }] = await Promise.all([
+    countFor(),
+    countFor("in_progress"),
+    countFor("completed"),
+    countFor("fallen_through"),
+    supabase.from("deal_stages").select("id, label, sort_order").order("sort_order"),
+  ]);
 
   let query = supabase.from("deals").select(
     `id, ref, status, agreed_price, target_completion_date, last_activity_at, completed_at,
      practices!deals_practice_id_fkey(id, display_title, town),
      buyer:contacts!deals_buyer_contact_id_fkey(id, first_name, last_name, company_name),
-     owner:profiles!deals_owner_id_fkey(id, full_name, calendar_color),
      deal_stage_events(stage_id, achieved_on)`,
     { count: "exact" },
   );
 
   const status = params.status ?? "in_progress";
   if (status !== "all") query = query.eq("status", status);
-  if (params.owner) query = query.eq("owner_id", params.owner);
   if (params.stalled === "1") {
     query = query.lt(
       "last_activity_at",
@@ -82,7 +78,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
         ]}
       />
 
-      <DealFilters owners={owners ?? []} />
+      <DealFilters />
 
       {(deals ?? []).length === 0 ? (
         <EmptyState
@@ -95,7 +91,6 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
           {(deals ?? []).map((d) => {
             const practice = d.practices as unknown as { id: string; display_title: string; town: string | null } | null;
             const buyer = d.buyer as unknown as { id: string; first_name: string | null; last_name: string | null; company_name: string | null } | null;
-            const owner = d.owner as unknown as { id: string; full_name: string; calendar_color: string } | null;
             const events = (d.deal_stage_events as { stage_id: string; achieved_on: string }[]) ?? [];
             const stageStates = (stages ?? []).map((s) => ({
               ...s,
@@ -130,9 +125,6 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
                         .join(" · ")}
                     </p>
                   </div>
-                  {owner ? (
-                    <Avatar name={owner.full_name} size={28} color={owner.calendar_color} className="order-2 sm:order-3" />
-                  ) : null}
                   <div className="order-3 w-full sm:order-2 sm:w-56 sm:shrink-0">
                     <StageTracker stages={stageStates} dealStatus={d.status} />
                   </div>

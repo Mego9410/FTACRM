@@ -236,13 +236,13 @@ export function AttentionWidget({ data }: { data: DashboardData }) {
   );
 }
 
-/* ── Pipeline (my deals with mini trackers) ─────────────────────────── */
+/* ── Pipeline (in-progress deals with mini trackers) ─────────────────── */
 
 export function PipelineWidget({ data }: { data: DashboardData }) {
   if (data.pipeline.length === 0) {
     return (
       <div className="flex h-full items-center justify-center p-6">
-        <EmptyState className="border-0 bg-transparent" icon={<Wallet size={20} />} title="No deals in progress" body="Deals you own appear here." />
+        <EmptyState className="border-0 bg-transparent" icon={<Wallet size={20} />} title="No deals in progress" body="Deals in progress appear here." />
       </div>
     );
   }

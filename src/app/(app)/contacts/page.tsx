@@ -17,7 +17,6 @@ const SORT_OPTIONS: SortOptions = {
   name: [{ column: "last_name" }, { column: "first_name" }],
   contact: { column: "email", nullsFirst: false },
   temp: { column: "temperature", nullsFirst: false },
-  owner: { column: "owner_id", nullsFirst: false },
   last_contacted: { column: "last_contacted_at", nullsFirst: false },
   recent: { column: "created_at" },
 };
@@ -25,7 +24,6 @@ const SORT_OPTIONS: SortOptions = {
 type Search = {
   role?: string;
   q?: string;
-  owner?: string;
   temperature?: string;
   stale?: string;
   page?: string;
@@ -45,25 +43,23 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
     const { count } = await q;
     return count ?? 0;
   };
-  const [allCount, buyerCount, sellerCount, solicitorCount, { data: owners }] = await Promise.all([
+  const [allCount, buyerCount, sellerCount, solicitorCount] = await Promise.all([
     countFor(),
     countFor("buyer"),
     countFor("seller"),
     countFor("solicitor"),
-    supabase.from("profiles").select("id, full_name").eq("is_active", true).order("full_name"),
   ]);
 
   let query = supabase
     .from("contacts")
     .select(
-      "id, first_name, last_name, company_name, email, phone, mobile, roles, status, temperature, owner_id, last_contacted_at, created_at, do_not_contact, profiles!contacts_owner_id_fkey(full_name)",
+      "id, first_name, last_name, company_name, email, phone, mobile, roles, status, temperature, last_contacted_at, created_at, do_not_contact",
       { count: "exact" },
     );
 
   if (params.archived === "1") query = query.not("archived_at", "is", null);
   else query = query.is("archived_at", null);
   if (params.role) query = query.contains("roles", [params.role]);
-  if (params.owner) query = query.eq("owner_id", params.owner);
   if (params.temperature) query = query.eq("temperature", params.temperature);
   if (params.stale) {
     const days = Number(params.stale) || 90;
@@ -116,14 +112,14 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         ]}
       />
 
-      <ContactFilters owners={owners ?? []} />
+      <ContactFilters />
 
       <Card className="mt-4 overflow-x-auto">
         {(contacts ?? []).length === 0 ? (
           <EmptyState
             className="m-4"
             title="No contacts match"
-            body={params.q || params.owner ? "Try clearing filters." : "Add your first contact to get going."}
+            body={params.q ? "Try clearing filters." : "Add your first contact to get going."}
             action={
               <Link href="/contacts/new">
                 <Button size="sm">New contact</Button>
@@ -138,13 +134,11 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
                 <th className="px-3 py-2.5">Roles</th>
                 <SortHeader label="Contact" sortKey="contact" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/contacts" />
                 <SortHeader label="Temp" sortKey="temp" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/contacts" />
-                <SortHeader label="Owner" sortKey="owner" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/contacts" />
                 <SortHeader label="Last contacted" sortKey="last_contacted" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/contacts" />
               </tr>
             </thead>
             <tbody>
               {(contacts ?? []).map((c) => {
-                const owner = c.profiles as unknown as { full_name: string } | null;
                 return (
                   <tr key={c.id} className="border-b border-line last:border-0 hover:bg-surface-2/60">
                     <td className="px-4 py-2.5">
@@ -173,7 +167,6 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
                         "—"
                       )}
                     </td>
-                    <td className="px-3 py-2.5">{owner?.full_name ?? "—"}</td>
                     <td className="px-3 py-2.5 text-fg-3">
                       {c.last_contacted_at ? relativeTime(c.last_contacted_at) : "Never"}
                     </td>

@@ -109,7 +109,6 @@ export async function getDashboardData(profileId: string): Promise<DashboardData
       .from("deals")
       .select("id, ref, last_activity_at, practices!deals_practice_id_fkey(display_title)")
       .eq("status", "in_progress")
-      .eq("owner_id", profileId)
       .lt("last_activity_at", stalledCut)
       .order("last_activity_at")
       .limit(6),
@@ -140,7 +139,6 @@ export async function getDashboardData(profileId: string): Promise<DashboardData
         "id, ref, agreed_price, current_stage_id, last_activity_at, practices!deals_practice_id_fkey(display_title)",
       )
       .eq("status", "in_progress")
-      .eq("owner_id", profileId)
       .order("last_activity_at", { ascending: false })
       .limit(8),
     supabase.from("practices").select("id", { count: "exact", head: true }).eq("status", "available"),
@@ -272,7 +270,7 @@ export async function getDashboardData(profileId: string): Promise<DashboardData
     };
   });
 
-  // Pipeline (my deals) with stage position.
+  // Pipeline (in-progress deals) with stage position.
   const stageDefs = stageDefsRes.data ?? [];
   const stageIndexById = new Map(stageDefs.map((s, idx) => [s.id, idx]));
   const stageLabelById = new Map(stageDefs.map((s) => [s.id, s.label]));

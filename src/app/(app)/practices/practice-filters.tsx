@@ -4,7 +4,7 @@ import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button, Input, Select } from "@/components/ui/primitives";
 
-export function PracticeFilters({ owners }: { owners: { id: string; full_name: string }[] }) {
+export function PracticeFilters() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -31,12 +31,6 @@ export function PracticeFilters({ owners }: { owners: { id: string; full_name: s
       >
         <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search title, town, postcode, ref…" aria-label="Search practices" />
       </form>
-      <Select value={params.get("owner") ?? ""} onChange={(e) => apply({ owner: e.target.value })} className="w-44" aria-label="Filter by owner">
-        <option value="">Any owner</option>
-        {owners.map((o) => (
-          <option key={o.id} value={o.id}>{o.full_name}</option>
-        ))}
-      </Select>
       <Input
         className="w-32"
         placeholder="Min £"

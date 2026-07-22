@@ -26,7 +26,6 @@ type Deal = {
   id: string;
   status: string;
   target_completion_date: string | null;
-  owner_id: string | null;
   created_at: string;
   last_activity_at: string;
 };
@@ -35,12 +34,10 @@ export function ProgressionClient({
   deal,
   stages,
   fallThroughReasons,
-  owners,
 }: {
   deal: Deal;
   stages: Stage[];
   fallThroughReasons: LookupValue[];
-  owners: { id: string; full_name: string }[];
 }) {
   const router = useRouter();
   const [marking, setMarking] = React.useState<Stage | null>(null);
@@ -48,8 +45,6 @@ export function ProgressionClient({
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
-
-  const ownerName = owners.find((o) => o.id === deal.owner_id)?.full_name ?? null;
 
   const firstUnachieved = stages.find((s) => !s.achieved_on);
   const live = deal.status === "in_progress";
@@ -184,10 +179,6 @@ export function ProgressionClient({
                 {deal.target_completion_date ? formatDate(deal.target_completion_date) : "Not set"}
               </dd>
             </div>
-            <div>
-              <dt className="text-xs font-semibold tracking-wide text-fg-3">Progression owner</dt>
-              <dd className="mt-0.5 font-medium text-fg-1">{ownerName ?? "Unassigned"}</dd>
-            </div>
           </dl>
         </Card>
 
@@ -240,7 +231,6 @@ export function ProgressionClient({
             await updateDealFields({
               deal_id: deal.id,
               target_completion_date: String(f.get("target") ?? "") || null,
-              owner_id: String(f.get("owner_id") ?? "") || null,
               buyer_solicitor_id: null,
               seller_solicitor_id: null,
             });
@@ -251,14 +241,6 @@ export function ProgressionClient({
         >
           <Field label="Target completion" htmlFor="dp_target">
             <Input id="dp_target" name="target" type="date" defaultValue={deal.target_completion_date ?? ""} />
-          </Field>
-          <Field label="Progression owner" htmlFor="dp_owner">
-            <Select id="dp_owner" name="owner_id" defaultValue={deal.owner_id ?? ""}>
-              <option value="">Unassigned</option>
-              {owners.map((o) => (
-                <option key={o.id} value={o.id}>{o.full_name}</option>
-              ))}
-            </Select>
           </Field>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setSettingsOpen(false)}>Cancel</Button>

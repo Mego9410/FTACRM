@@ -57,7 +57,6 @@ type PracticeJoin = {
   owner_id?: string | null;
 } | null;
 
-type ProfileJoin = { full_name: string | null } | null;
 type StageJoin = { label: string | null } | null;
 type ContactJoin = {
   first_name: string | null;
@@ -78,18 +77,16 @@ const completions: ReportDef = {
     let q = supabase
       .from("deals")
       .select(
-        "ref, agreed_price, completed_at, created_at, practices!deals_practice_id_fkey(display_title, town, fee_percent, fee_fixed), contacts!deals_buyer_contact_id_fkey(first_name, last_name, company_name), profiles!deals_owner_id_fkey(full_name)",
+        "ref, agreed_price, completed_at, created_at, practices!deals_practice_id_fkey(display_title, town, fee_percent, fee_fixed), contacts!deals_buyer_contact_id_fkey(first_name, last_name, company_name)",
       )
       .eq("status", "completed")
       .gte("completed_at", from)
       .lte("completed_at", to);
-    if (filters.owner) q = q.eq("owner_id", filters.owner);
     const { data } = await q;
 
     const rows = (data ?? []).map((d) => {
       const practice = d.practices as unknown as PracticeJoin;
       const buyer = d.contacts as unknown as ContactJoin;
-      const owner = d.profiles as unknown as ProfileJoin;
       const price = Number(d.agreed_price ?? 0);
       const days =
         d.completed_at && d.created_at
@@ -104,7 +101,6 @@ const completions: ReportDef = {
         fee: estimatedFee(practice, price),
         completed: d.completed_at ?? null,
         days_to_complete: days,
-        owner: owner?.full_name ?? null,
       };
     });
 
@@ -118,7 +114,6 @@ const completions: ReportDef = {
         { key: "fee", label: "Fee", type: "money" },
         { key: "completed", label: "Completed", type: "date" },
         { key: "days_to_complete", label: "Days to complete", type: "number" },
-        { key: "owner", label: "Owner", type: "text" },
       ],
       rows,
     };
@@ -135,16 +130,14 @@ const pipeline: ReportDef = {
     let q = supabase
       .from("deals")
       .select(
-        "ref, agreed_price, target_completion_date, last_activity_at, practices!deals_practice_id_fkey(display_title, fee_percent, fee_fixed), deal_stages!deals_current_stage_id_fkey(label), profiles!deals_owner_id_fkey(full_name)",
+        "ref, agreed_price, target_completion_date, last_activity_at, practices!deals_practice_id_fkey(display_title, fee_percent, fee_fixed), deal_stages!deals_current_stage_id_fkey(label)",
       )
       .eq("status", "in_progress");
-    if (filters.owner) q = q.eq("owner_id", filters.owner);
     const { data } = await q;
 
     const rows = (data ?? []).map((d) => {
       const practice = d.practices as unknown as PracticeJoin;
       const stage = d.deal_stages as unknown as StageJoin;
-      const owner = d.profiles as unknown as ProfileJoin;
       const price = Number(d.agreed_price ?? 0);
       return {
         ref: d.ref ?? null,
@@ -154,7 +147,6 @@ const pipeline: ReportDef = {
         est_fee: estimatedFee(practice, price),
         target_completion: d.target_completion_date ?? null,
         last_activity: d.last_activity_at ?? null,
-        owner: owner?.full_name ?? null,
       };
     });
 
@@ -167,7 +159,6 @@ const pipeline: ReportDef = {
         { key: "est_fee", label: "Est. fee", type: "money" },
         { key: "target_completion", label: "Target completion", type: "date" },
         { key: "last_activity", label: "Last activity", type: "date" },
-        { key: "owner", label: "Owner", type: "text" },
       ],
       rows,
     };
@@ -186,16 +177,14 @@ const instructions: ReportDef = {
     let q = supabase
       .from("practices")
       .select(
-        "ref, display_title, town, status, asking_price, funding_type_id, surgeries, fee_percent, instructed_at, profiles!practices_owner_id_fkey(full_name)",
+        "ref, display_title, town, status, asking_price, funding_type_id, surgeries, fee_percent, instructed_at",
       )
       .gte("instructed_at", from)
       .lte("instructed_at", to);
-    if (filters.owner) q = q.eq("owner_id", filters.owner);
     if (filters.branch) q = q.eq("branch_id", filters.branch);
     const { data } = await q;
 
     const rows = (data ?? []).map((p) => {
-      const owner = p.profiles as unknown as ProfileJoin;
       return {
         ref: p.ref ?? null,
         practice: p.display_title ?? null,
@@ -205,7 +194,6 @@ const instructions: ReportDef = {
         funding: p.funding_type_id ? idx.get(p.funding_type_id)?.value ?? null : null,
         surgeries: p.surgeries != null ? Number(p.surgeries) : null,
         fee_percent: p.fee_percent != null ? Number(p.fee_percent) : null,
-        owner: owner?.full_name ?? null,
         instructed: p.instructed_at ?? null,
       };
     });
@@ -220,7 +208,6 @@ const instructions: ReportDef = {
         { key: "funding", label: "Funding", type: "text" },
         { key: "surgeries", label: "Surgeries", type: "number" },
         { key: "fee_percent", label: "Fee %", type: "number" },
-        { key: "owner", label: "Owner", type: "text" },
         { key: "instructed", label: "Instructed", type: "date" },
       ],
       rows,
@@ -335,24 +322,21 @@ const fallThroughs: ReportDef = {
     let q = supabase
       .from("deals")
       .select(
-        "ref, agreed_price, fall_through_reason_id, fell_through_at, practices!deals_practice_id_fkey(display_title), profiles!deals_owner_id_fkey(full_name)",
+        "ref, agreed_price, fall_through_reason_id, fell_through_at, practices!deals_practice_id_fkey(display_title)",
       )
       .eq("status", "fallen_through")
       .gte("fell_through_at", from)
       .lte("fell_through_at", to);
-    if (filters.owner) q = q.eq("owner_id", filters.owner);
     const { data } = await q;
 
     const rows = (data ?? []).map((d) => {
       const practice = d.practices as unknown as PracticeJoin;
-      const owner = d.profiles as unknown as ProfileJoin;
       return {
         ref: d.ref ?? null,
         practice: practice?.display_title ?? null,
         reason: d.fall_through_reason_id ? idx.get(d.fall_through_reason_id)?.value ?? null : null,
         agreed_price: d.agreed_price != null ? Number(d.agreed_price) : null,
         fell_through: d.fell_through_at ?? null,
-        owner: owner?.full_name ?? null,
       };
     });
 
@@ -363,7 +347,6 @@ const fallThroughs: ReportDef = {
         { key: "reason", label: "Reason", type: "text" },
         { key: "agreed_price", label: "Agreed price", type: "money" },
         { key: "fell_through", label: "Fell through", type: "date" },
-        { key: "owner", label: "Owner", type: "text" },
       ],
       rows,
     };
