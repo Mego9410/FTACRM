@@ -4,9 +4,11 @@ import { getLookupIndex } from "@/lib/lookups";
 import { PageHeader } from "@/components/shell/page-header";
 import { LinkTabs } from "@/components/ui/tabs";
 import { Badge, Button, Card, EmptyState, LookupPill } from "@/components/ui/primitives";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { PRACTICE_STATUS_LABELS, PRACTICE_STATUS_TONES } from "@/lib/contact-helpers";
 import { formatGBP } from "@/lib/utils";
 import { resolveSort, applySort, type SortOptions } from "@/lib/sort";
+import { PracticeMapDefs, PracticeMapUse } from "@/components/practices/practice-map";
 import { PracticeFilters } from "./practice-filters";
 
 export const metadata = { title: "Practices" };
@@ -60,10 +62,8 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
 
   let query = supabase
     .from("practices")
-    .select(
-      "id, ref, display_title, town, county, status, asking_price, price_prefix, funding_type_id, tenure_type_id, surgeries, owner_id, contract_expiry, profiles!practices_owner_id_fkey(full_name)",
-      { count: "exact" },
-    )
+    // `*` keeps this tolerant of the headline_image_path column being un-migrated.
+    .select("*, profiles!practices_owner_id_fkey(full_name)", { count: "exact" })
     .is("archived_at", null);
 
   if (params.status === "live") query = query.in("status", ["available", "under_offer", "sold_stc"]);
@@ -83,6 +83,19 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
   const { data: practices, count } = await applySort(query, sort).range(
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE - 1,
+  );
+
+  // One batch of signed URLs for the practices on this page that have a photo.
+  const headlinePaths = (practices ?? [])
+    .map((p) => (p as { headline_image_path?: string | null }).headline_image_path)
+    .filter((x): x is string => Boolean(x));
+  const urlByPath = new Map<string, string>();
+  if (headlinePaths.length > 0) {
+    const { data: signed } = await createAdminClient().storage.from("documents").createSignedUrls(headlinePaths, 60 * 60);
+    for (const s of signed ?? []) if (s.path && s.signedUrl) urlByPath.set(s.path, s.signedUrl);
+  }
+  const anyMap = (practices ?? []).some(
+    (p) => !(p as { headline_image_path?: string | null }).headline_image_path,
   );
 
   const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
@@ -131,6 +144,7 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
         />
       ) : (
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {anyMap ? <PracticeMapDefs /> : null}
           {(practices ?? []).map((p) => {
             const owner = p.profiles as unknown as { full_name: string } | null;
             const funding = p.funding_type_id ? lookupIndex.get(p.funding_type_id) : null;
@@ -139,29 +153,47 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
               p.contract_expiry &&
               !["completed", "withdrawn"].includes(p.status) &&
               new Date(p.contract_expiry) < new Date(Date.now() + 60 * 86_400_000);
+            const headlinePath = (p as { headline_image_path?: string | null }).headline_image_path ?? null;
+            const photoUrl = headlinePath ? urlByPath.get(headlinePath) ?? null : null;
             return (
               <Link key={p.id} href={`/practices/${p.id}`}>
-                <Card className="flex h-full flex-col bg-surface-3 p-4 transition-shadow hover:shadow-md">
-                  <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                    <Badge tone={PRACTICE_STATUS_TONES[p.status] ?? "neutral"}>
-                      {PRACTICE_STATUS_LABELS[p.status] ?? p.status}
-                    </Badge>
-                    {funding ? <LookupPill color={funding.color}>{funding.value}</LookupPill> : null}
-                    {expiring ? <Badge tone="warn">Contract expiring</Badge> : null}
+                <Card className="flex h-full flex-col overflow-hidden bg-surface-3 transition-shadow hover:shadow-md">
+                  <div className="h-32 w-full overflow-hidden border-b border-line bg-surface-2">
+                    {photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={photoUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-surface via-surface-2 to-gold-tint/40">
+                        <PracticeMapUse
+                          lat={(p as { lat?: number | null }).lat ?? null}
+                          lng={(p as { lng?: number | null }).lng ?? null}
+                          className="max-h-[112px] w-auto py-1"
+                        />
+                      </div>
+                    )}
                   </div>
-                  <p className="font-bold leading-snug text-fg-1">{p.display_title}</p>
-                  <p className="mt-0.5 text-xs text-fg-3">
-                    {[p.ref, p.town, tenure?.value, p.surgeries ? `${p.surgeries} surgeries` : null]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                  <div className="mt-auto flex items-end justify-between pt-3">
-                    <p className="text-[17px] font-extrabold text-gold-deep">
-                      {p.asking_price
-                        ? `${p.price_prefix === "offers_over" ? "Offers over " : p.price_prefix === "guide" ? "Guide " : ""}${formatGBP(p.asking_price)}`
-                        : "POA"}
+                  <div className="flex flex-1 flex-col p-4">
+                    <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                      <Badge tone={PRACTICE_STATUS_TONES[p.status] ?? "neutral"}>
+                        {PRACTICE_STATUS_LABELS[p.status] ?? p.status}
+                      </Badge>
+                      {funding ? <LookupPill color={funding.color}>{funding.value}</LookupPill> : null}
+                      {expiring ? <Badge tone="warn">Contract expiring</Badge> : null}
+                    </div>
+                    <p className="font-bold leading-snug text-fg-1">{p.display_title}</p>
+                    <p className="mt-0.5 text-xs text-fg-3">
+                      {[p.ref, p.town, tenure?.value, p.surgeries ? `${p.surgeries} surgeries` : null]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </p>
-                    <p className="text-xs text-fg-3">{owner?.full_name ?? "Unassigned"}</p>
+                    <div className="mt-auto flex items-end justify-between pt-3">
+                      <p className="text-[17px] font-extrabold text-gold-deep">
+                        {p.asking_price
+                          ? `${p.price_prefix === "offers_over" ? "Offers over " : p.price_prefix === "guide" ? "Guide " : ""}${formatGBP(p.asking_price)}`
+                          : "POA"}
+                      </p>
+                      <p className="text-xs text-fg-3">{owner?.full_name ?? "Unassigned"}</p>
+                    </div>
                   </div>
                 </Card>
               </Link>
