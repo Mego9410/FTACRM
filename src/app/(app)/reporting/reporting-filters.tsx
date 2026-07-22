@@ -3,11 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Select } from "@/components/ui/primitives";
 
-export function ReportingFilters({
-  owners,
-}: {
-  owners: { id: string; full_name: string }[];
-}) {
+export function ReportingFilters() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -27,12 +23,6 @@ export function ReportingFilters({
         <option value="month">This month vs last</option>
         <option value="quarter">This quarter vs last</option>
         <option value="year">Year to date vs prior</option>
-      </Select>
-      <Select value={params.get("owner") ?? ""} onChange={(e) => apply({ owner: e.target.value })} className="w-44" aria-label="Filter by agent">
-        <option value="">All agents</option>
-        {owners.map((o) => (
-          <option key={o.id} value={o.id}>{o.full_name}</option>
-        ))}
       </Select>
     </div>
   );

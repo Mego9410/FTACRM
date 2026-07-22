@@ -93,14 +93,6 @@ export function renderLaunchEmail(practice: LaunchPractice): { subject: string; 
         .join("")}</div>`
     : "";
 
-  // Identity block — trading name + address only for non-confidential listings.
-  const identity = practice.confidential
-    ? ""
-    : [practice.name, [practice.address_line1, practice.town, practice.postcode].filter(Boolean).join(", ")]
-        .filter(Boolean)
-        .map((line) => `<p style="margin:2px 0 0;font-size:14px;color:${FG2};">${esc(String(line))}</p>`)
-        .join("");
-
   const description = practice.description
     ? practice.description
         .split(/\n{2,}/)
@@ -123,9 +115,7 @@ export function renderLaunchEmail(practice: LaunchPractice): { subject: string; 
 
       <div style="padding:32px;">
         <p style="margin:0 0 16px;line-height:1.65;">Dear {{contact.salutation|there}},</p>
-        <p style="margin:0 0 20px;line-height:1.65;">A practice matching your registered requirements has just come to market. As a matched buyer you're receiving these details ahead of general release — in strict confidence.</p>
-
-        ${identity ? `<div style="margin:0 0 18px;padding:14px 18px;border-left:3px solid ${GOLD};background:#FBF7EA;border-radius:0 12px 12px 0;"><p style="margin:0;font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a6a1c;">Confidential — do not share</p>${identity}</div>` : ""}
+        <p style="margin:0 0 20px;line-height:1.65;">A practice matching your registered requirements has just come to market. As a matched buyer you're receiving these details ahead of general release — in strict confidence. The name and exact location are withheld at this stage; we'll share them once you register your interest.</p>
 
         <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:separate;border-spacing:0 10px;">
           ${factRows.join("")}

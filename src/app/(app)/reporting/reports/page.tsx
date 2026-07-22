@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
 import { REPORTS } from "@/lib/reports";
 import type { Period } from "@/lib/reporting";
 import { PageHeader } from "@/components/shell/page-header";
@@ -34,13 +33,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const selectedKey = params.report && REPORTS.some((r) => r.key === params.report) ? params.report : REPORTS[0]!.key;
   const def = REPORTS.find((r) => r.key === selectedKey)!;
   const { period, label } = periodFor(params.period ?? "month");
-  const filters = { owner: params.owner, branch: params.branch };
-
-  const supabase = await createClient();
-  const [result, { data: owners }] = await Promise.all([
-    def.run(period, filters),
-    supabase.from("profiles").select("id, full_name").eq("is_active", true).order("full_name"),
-  ]);
+  const result = await def.run(period, {});
 
   const qs = (extra: Record<string, string | undefined>) => {
     const merged = { ...params, ...extra };
@@ -86,7 +79,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         ))}
       </div>
 
-      <ReportingFilters owners={owners ?? []} />
+      <ReportingFilters />
 
       <div className="mt-5">
         <h2 className="text-lg font-extrabold text-fg-1">{def.label}</h2>

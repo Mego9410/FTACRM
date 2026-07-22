@@ -323,120 +323,6 @@ const offers: ReportDef = {
   },
 };
 
-const leaderboard: ReportDef = {
-  key: "leaderboard",
-  label: "Agent leaderboard",
-  description: "Per-agent activity and fees banked within the selected period.",
-  periodic: true,
-  async run(period, filters) {
-    const supabase = await createClient();
-    const dates = dateBounds(period);
-    const ts = tsBounds(period);
-
-    // Active profiles (optionally a single owner).
-    let profilesQ = supabase.from("profiles").select("id, full_name").eq("is_active", true);
-    if (filters.owner) profilesQ = profilesQ.eq("id", filters.owner);
-
-    // Instructions: practices instructed in period, attributed to practice.owner_id.
-    let instructionsQ = supabase
-      .from("practices")
-      .select("owner_id")
-      .gte("instructed_at", dates.from)
-      .lte("instructed_at", dates.to);
-    if (filters.owner) instructionsQ = instructionsQ.eq("owner_id", filters.owner);
-    if (filters.branch) instructionsQ = instructionsQ.eq("branch_id", filters.branch);
-
-    // Valuations: no owner; attribute via the practice's owner_id.
-    const valuationsQ = supabase
-      .from("valuations")
-      .select("practices!valuations_practice_id_fkey(owner_id)")
-      .gte("appointment_at", ts.from)
-      .lte("appointment_at", ts.to);
-
-    // Live deals: in-progress snapshot, ignore period.
-    let liveQ = supabase.from("deals").select("owner_id").eq("status", "in_progress");
-    if (filters.owner) liveQ = liveQ.eq("owner_id", filters.owner);
-
-    // Completions in period, with joined practice fee config.
-    let completedQ = supabase
-      .from("deals")
-      .select("owner_id, agreed_price, practices!deals_practice_id_fkey(fee_percent, fee_fixed)")
-      .eq("status", "completed")
-      .gte("completed_at", dates.from)
-      .lte("completed_at", dates.to);
-    if (filters.owner) completedQ = completedQ.eq("owner_id", filters.owner);
-
-    const [profilesRes, instructionsRes, valuationsRes, liveRes, completedRes] = await Promise.all([
-      profilesQ,
-      instructionsQ,
-      valuationsQ,
-      liveQ,
-      completedQ,
-    ]);
-
-    type Agg = {
-      instructions: number;
-      valuations: number;
-      live_deals: number;
-      completions: number;
-      fees_banked: number;
-    };
-    const agg = new Map<string, Agg>();
-    const ensure = (id: string): Agg => {
-      let a = agg.get(id);
-      if (!a) {
-        a = { instructions: 0, valuations: 0, live_deals: 0, completions: 0, fees_banked: 0 };
-        agg.set(id, a);
-      }
-      return a;
-    };
-
-    for (const p of instructionsRes.data ?? []) {
-      if (p.owner_id) ensure(p.owner_id).instructions += 1;
-    }
-    for (const v of valuationsRes.data ?? []) {
-      const practice = v.practices as unknown as { owner_id: string | null } | null;
-      if (practice?.owner_id) ensure(practice.owner_id).valuations += 1;
-    }
-    for (const d of liveRes.data ?? []) {
-      if (d.owner_id) ensure(d.owner_id).live_deals += 1;
-    }
-    for (const d of completedRes.data ?? []) {
-      if (!d.owner_id) continue;
-      const a = ensure(d.owner_id);
-      a.completions += 1;
-      const practice = d.practices as unknown as PracticeJoin;
-      a.fees_banked += estimatedFee(practice, Number(d.agreed_price ?? 0));
-    }
-
-    const rows = (profilesRes.data ?? [])
-      .map((profile) => {
-        const a = agg.get(profile.id);
-        return {
-          agent: profile.full_name ?? null,
-          instructions: a?.instructions ?? 0,
-          valuations: a?.valuations ?? 0,
-          live_deals: a?.live_deals ?? 0,
-          completions: a?.completions ?? 0,
-          fees_banked: a?.fees_banked ?? 0,
-        };
-      })
-      .sort((x, y) => Number(y.fees_banked) - Number(x.fees_banked));
-
-    return {
-      columns: [
-        { key: "agent", label: "Agent", type: "text" },
-        { key: "instructions", label: "Instructions", type: "number" },
-        { key: "valuations", label: "Valuations", type: "number" },
-        { key: "live_deals", label: "Live deals", type: "number" },
-        { key: "completions", label: "Completions", type: "number" },
-        { key: "fees_banked", label: "Fees banked", type: "money" },
-      ],
-      rows,
-    };
-  },
-};
-
 const fallThroughs: ReportDef = {
   key: "fall_throughs",
   label: "Fall-throughs",
@@ -566,7 +452,6 @@ export const REPORTS: ReportDef[] = [
   instructions,
   valuations,
   offers,
-  leaderboard,
   fallThroughs,
   emailSends,
 ];

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
 import {
   completionsByMonth,
   computeKpis,
@@ -67,16 +66,14 @@ export default async function ReportingPage({ searchParams }: { searchParams: Pr
   const params = await searchParams;
   const preset = params.period ?? "month";
   const { current, previous, label } = resolvePeriods(preset);
-  const filters = { owner: params.owner, branch: params.branch };
+  const filters = {};
 
-  const supabase = await createClient();
-  const [kpisNow, kpisPrev, pipeline, monthly, smartLists, { data: owners }] = await Promise.all([
+  const [kpisNow, kpisPrev, pipeline, monthly, smartLists] = await Promise.all([
     computeKpis(current, filters),
     computeKpis(previous, filters),
     computePipeline(filters),
     completionsByMonth(),
     computeSmartLists(),
-    supabase.from("profiles").select("id, full_name").eq("is_active", true).order("full_name"),
   ]);
 
   const tiles: { label: string; value: string; sub?: string; delta?: React.ReactNode }[] = [
@@ -136,7 +133,7 @@ export default async function ReportingPage({ searchParams }: { searchParams: Pr
           { label: "Activity feed", href: "/reporting/activity" },
         ]}
       />
-      <ReportingFilters owners={owners ?? []} />
+      <ReportingFilters />
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {tiles.map((t) => (
