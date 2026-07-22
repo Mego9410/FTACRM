@@ -8,7 +8,7 @@ import { contactName } from "@/lib/contact-helpers";
 import { daysSince, formatGBP, relativeTime } from "@/lib/utils";
 import { DealFilters } from "./deal-filters";
 
-export const metadata = { title: "Deals" };
+export const metadata = { title: "Sales progression" };
 
 const PAGE_SIZE = 30;
 const STALLED_DAYS = 14;
@@ -70,7 +70,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
 
   return (
     <div>
-      <PageHeader eyebrow="Sales progression" title="Deals" subtitle="Every transaction from accepted offer to completion" />
+      <PageHeader eyebrow="Pipeline" title="Sales progression" subtitle="Every transaction from accepted offer to completion" />
 
       <LinkTabs
         className="mb-4"

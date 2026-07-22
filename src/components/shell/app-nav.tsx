@@ -36,7 +36,7 @@ const NAV = [
   { label: "My tasks", href: "/tasks", icon: ListTodo },
   { label: "Contacts", href: "/contacts", icon: UsersRound },
   { label: "Practices", href: "/practices", icon: Building2 },
-  { label: "Deals", href: "/deals", icon: Handshake },
+  { label: "Sales progression", href: "/deals", icon: Handshake },
   { label: "Launches", href: "/launches", icon: Rocket },
 ];
 
