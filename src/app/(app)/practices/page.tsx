@@ -157,8 +157,8 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
             const photoUrl = headlinePath ? urlByPath.get(headlinePath) ?? null : null;
             return (
               <Link key={p.id} href={`/practices/${p.id}`}>
-                <Card className="flex h-full flex-col overflow-hidden bg-surface-3 transition-shadow hover:shadow-md">
-                  <div className="h-32 w-full overflow-hidden border-b border-line bg-surface-2">
+                <Card className="flex h-full min-h-[168px] overflow-hidden bg-surface-3 transition-shadow hover:shadow-md">
+                  <div className="w-28 shrink-0 self-stretch overflow-hidden border-r border-line bg-surface-2 sm:w-32">
                     {photoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={photoUrl} alt="" className="h-full w-full object-cover" />
@@ -167,7 +167,7 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
                         <PracticeMapUse
                           lat={(p as { lat?: number | null }).lat ?? null}
                           lng={(p as { lng?: number | null }).lng ?? null}
-                          className="max-h-[112px] w-auto py-1"
+                          className="max-h-full w-auto p-1.5"
                         />
                       </div>
                     )}
