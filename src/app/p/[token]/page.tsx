@@ -170,7 +170,7 @@ export default async function PublicPracticePage({ params }: { params: Promise<{
                 <span className="h-px w-8 bg-gold/40" aria-hidden />
                 <span className="text-white/50">Ref {practice.ref}</span>
               </p>
-              <h1 className="mt-5 text-[40px] font-extrabold leading-[1.04] tracking-[-0.03em] sm:text-[54px]">
+              <h1 className="mt-5 text-[40px] font-extrabold leading-[1.04] tracking-[-0.03em] text-white sm:text-[54px]">
                 {practice.display_title}
                 <span className="text-gold">.</span>
               </h1>
