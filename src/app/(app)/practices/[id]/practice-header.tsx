@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Building2, EyeOff, MapPin } from "lucide-react";
+import { Building2, MapPin, Rocket } from "lucide-react";
 import type { LookupValue } from "@/lib/lookups";
 import { Badge, Button, Field, LookupPill, Select } from "@/components/ui/primitives";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
@@ -61,6 +61,22 @@ export function PracticeHeader({
     !["completed", "withdrawn"].includes(practice.status) &&
     new Date(practice.contract_expiry) < new Date(Date.now() + 60 * 86_400_000);
 
+  const launchable = ["preparing", "available"].includes(practice.status);
+
+  async function launch() {
+    setBusy(true);
+    // Preparing → available as it goes to market; already-available stays put.
+    if (practice.status === "preparing") {
+      const res = await changePracticeStatus({ id: practice.id, status: "available", withdrawal_reason_id: null });
+      if (!res.ok) {
+        setBusy(false);
+        window.alert(res.error);
+        return;
+      }
+    }
+    router.push(`/launches/new?practice=${practice.id}`);
+  }
+
   async function applyStatus(status: string) {
     if (status === "withdrawn" && !reasonId) {
       setError("Pick a withdrawal reason.");
@@ -98,9 +114,6 @@ export function PracticeHeader({
             {practice.funding ? (
               <LookupPill color={practice.funding.color}>{practice.funding.value}</LookupPill>
             ) : null}
-            {practice.confidential ? (
-              <Badge className="gap-1"><EyeOff size={11} /> Confidential</Badge>
-            ) : null}
           </div>
           <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-fg-3">
             <span>{practice.ref}</span>
@@ -133,6 +146,11 @@ export function PracticeHeader({
           {NEXT_STATUSES[practice.status]?.length ? (
             <Button variant="outline" size="sm" onClick={() => setStatusOpen(true)}>
               Change status
+            </Button>
+          ) : null}
+          {launchable ? (
+            <Button size="sm" onClick={() => void launch()} disabled={busy} title="Set up a launch to matched buyers">
+              <Rocket size={14} /> Launch
             </Button>
           ) : null}
         </div>
