@@ -54,7 +54,25 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
   }
   if (params.q) {
     const like = `%${params.q.replace(/[%_]/g, "")}%`;
-    query = query.ilike("ref", like);
+    // Match against the deal ref and — via the records the card shows — the
+    // practice (trading name, marketing title, town, county, postcode) and the
+    // buyer/seller names.
+    const [{ data: pracRows }, { data: contactRows }] = await Promise.all([
+      supabase
+        .from("practices")
+        .select("id")
+        .or(`name.ilike.${like},display_title.ilike.${like},town.ilike.${like},county.ilike.${like},postcode.ilike.${like}`),
+      supabase
+        .from("contacts")
+        .select("id")
+        .or(`first_name.ilike.${like},last_name.ilike.${like},company_name.ilike.${like}`),
+    ]);
+    const pids = (pracRows ?? []).map((p) => p.id);
+    const cids = (contactRows ?? []).map((c) => c.id);
+    const orParts = [`ref.ilike.${like}`];
+    if (pids.length) orParts.push(`practice_id.in.(${pids.join(",")})`);
+    if (cids.length) orParts.push(`buyer_contact_id.in.(${cids.join(",")})`, `seller_contact_id.in.(${cids.join(",")})`);
+    query = query.or(orParts.join(","));
   }
 
   const sort = params.sort ?? "activity";
@@ -85,8 +103,12 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
       {(deals ?? []).length === 0 ? (
         <EmptyState
           className="mt-4"
-          title="No deals here"
-          body="Deals are created automatically when an offer is accepted on a practice."
+          title={params.q ? "No deals match your search" : "No deals here"}
+          body={
+            params.q
+              ? "Try a different practice, buyer, seller or reference."
+              : "Deals are created automatically when an offer is accepted on a practice."
+          }
         />
       ) : (
         <div className="mt-4 space-y-3">
