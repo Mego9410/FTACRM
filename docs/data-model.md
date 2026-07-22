@@ -152,6 +152,7 @@ email, owner_id, roles (GIN), postcode.
 | staff_count | int nullable | |
 | description | text | marketing copy (rich text) |
 | confidential | bool default true | gates address/name in outbound comms |
+| headline_image_path | text nullable | uploaded headline photo (Storage `documents` bucket, signed URL per load). When null the UI shows a generated England & Wales map with a pin at lat/lng — `lib/uk-map.ts` (offline-baked paths + shared projection) + `components/practices/practice-map.tsx` |
 | owner_id | uuid fk profiles | assigned agent |
 | branch_id | uuid fk branches | |
 | instructed_at | date | |
