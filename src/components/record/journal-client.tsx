@@ -1,13 +1,16 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Mail, MessageSquare, Phone, Pin, StickyNote, Trash2, Zap } from "lucide-react";
+import { Link2, Mail, MessageSquare, Phone, Pin, StickyNote, Trash2, Zap } from "lucide-react";
 import { cn, formatDateTime, relativeTime } from "@/lib/utils";
 import type { LookupValue } from "@/lib/lookups";
 import { Avatar, Badge, Button, EmptyState, Select, Textarea } from "@/components/ui/primitives";
 import { createJournalEntry, deleteJournalEntry, togglePin } from "@/lib/actions/journal";
 import { CallIntel, type CallInfo, type Suggestion } from "./call-intel";
+
+type EntryOrigin = { kind: string; label: string; href: string };
 
 type Entry = {
   id: string;
@@ -20,6 +23,7 @@ type Entry = {
   call_direction: string | null;
   pinned: boolean;
   occurred_at: string;
+  origin: EntryOrigin | null;
   call: CallInfo | null;
   suggestions: Suggestion[];
 };
@@ -47,9 +51,12 @@ export function JournalClient({
   const router = useRouter();
   const [type, setType] = React.useState<"note" | "call">("note");
   const [filter, setFilter] = React.useState<string>("all");
+  const [showLinked, setShowLinked] = React.useState(true);
   const [body, setBody] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  const linkedCount = entries.filter((e) => e.origin).length;
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -71,7 +78,9 @@ export function JournalClient({
     router.refresh();
   }
 
-  const visible = filter === "all" ? entries : entries.filter((e) => e.entry_type === filter);
+  const visible = entries
+    .filter((e) => filter === "all" || e.entry_type === filter)
+    .filter((e) => showLinked || !e.origin);
 
   return (
     <div>
@@ -119,7 +128,7 @@ export function JournalClient({
         </div>
       </form>
 
-      <div className="mb-3 flex items-center gap-1.5">
+      <div className="mb-3 flex flex-wrap items-center gap-1.5">
         {["all", "call", "note", "email", "system"].map((t) => (
           <button
             key={t}
@@ -133,6 +142,19 @@ export function JournalClient({
             {t}
           </button>
         ))}
+        {linkedCount > 0 ? (
+          <button
+            type="button"
+            onClick={() => setShowLinked((v) => !v)}
+            title="Notes logged on records linked to this one"
+            className={cn(
+              "ml-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
+              showLinked ? "bg-ink text-white" : "text-fg-3 hover:bg-surface-3",
+            )}
+          >
+            <Link2 size={12} /> Linked notes ({linkedCount})
+          </button>
+        ) : null}
       </div>
 
       {visible.length === 0 ? (
@@ -145,6 +167,7 @@ export function JournalClient({
               className={cn(
                 "rounded-lg border border-line bg-surface px-4 py-3",
                 e.entry_type === "system" && "bg-surface-2/60 py-2",
+                e.origin && "border-l-2 border-l-gold bg-surface-2/40",
                 e.pinned && "border-gold",
               )}
             >
@@ -167,13 +190,22 @@ export function JournalClient({
                     </span>
                     {e.pinned ? <Pin size={12} className="text-gold-deep" /> : null}
                   </div>
+                  {e.origin ? (
+                    <Link
+                      href={e.origin.href}
+                      className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-fg-3 hover:text-gold-deep"
+                    >
+                      <Link2 size={11} />
+                      From {e.origin.kind.toLowerCase()} · {e.origin.label}
+                    </Link>
+                  ) : null}
                   {e.subject ? <p className="mt-1 text-sm font-semibold text-fg-1">{e.subject}</p> : null}
                   {e.body ? (
                     <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-fg-2">{e.body}</p>
                   ) : null}
                   <CallIntel call={e.call} suggestions={e.suggestions} path={path} />
                 </div>
-                {e.entry_type !== "system" ? (
+                {e.entry_type !== "system" && !e.origin ? (
                   <div className="flex shrink-0 gap-0.5">
                     <button
                       type="button"

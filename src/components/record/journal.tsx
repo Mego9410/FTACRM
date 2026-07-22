@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getLookup } from "@/lib/lookups";
+import { contactName } from "@/lib/contact-helpers";
+import { originKindForRoles, resolveOrigin, type EntryOrigin } from "@/lib/journal-origin";
 import { JournalClient } from "./journal-client";
 
 export type JournalLink = {
@@ -8,9 +10,77 @@ export type JournalLink = {
   dealId?: string;
 };
 
+export type { EntryOrigin };
+
 /** Server wrapper: loads entries + call intelligence and renders the timeline. */
 export async function Journal({ link, path }: { link: JournalLink; path: string }) {
   const supabase = await createClient();
+
+  // Records one hop out from the one being viewed. A note logged on a practice
+  // should also surface on its linked sellers/buyers (and vice-versa), tagged
+  // with where it came from. The record's own id is always included so its
+  // native entries come back in the same query.
+  const practiceIds = new Set<string>();
+  const contactIds = new Set<string>();
+  const dealIds = new Set<string>();
+  if (link.practiceId) practiceIds.add(link.practiceId);
+  if (link.contactId) contactIds.add(link.contactId);
+  if (link.dealId) dealIds.add(link.dealId);
+
+  if (link.practiceId) {
+    const [{ data: pcs }, { data: dls }] = await Promise.all([
+      supabase.from("practice_contacts").select("contact_id").eq("practice_id", link.practiceId),
+      supabase.from("deals").select("id, buyer_contact_id, seller_contact_id").eq("practice_id", link.practiceId),
+    ]);
+    for (const r of (pcs ?? []) as { contact_id: string | null }[]) if (r.contact_id) contactIds.add(r.contact_id);
+    for (const d of (dls ?? []) as { id: string; buyer_contact_id: string | null; seller_contact_id: string | null }[]) {
+      dealIds.add(d.id);
+      if (d.buyer_contact_id) contactIds.add(d.buyer_contact_id);
+      if (d.seller_contact_id) contactIds.add(d.seller_contact_id);
+    }
+  }
+  if (link.contactId) {
+    const [{ data: pcs }, { data: dls }] = await Promise.all([
+      supabase.from("practice_contacts").select("practice_id").eq("contact_id", link.contactId),
+      supabase
+        .from("deals")
+        .select("id, practice_id")
+        .or(
+          `buyer_contact_id.eq.${link.contactId},seller_contact_id.eq.${link.contactId},buyer_solicitor_id.eq.${link.contactId},seller_solicitor_id.eq.${link.contactId}`,
+        ),
+    ]);
+    for (const r of (pcs ?? []) as { practice_id: string | null }[]) if (r.practice_id) practiceIds.add(r.practice_id);
+    for (const d of (dls ?? []) as { id: string; practice_id: string | null }[]) {
+      dealIds.add(d.id);
+      if (d.practice_id) practiceIds.add(d.practice_id);
+    }
+  }
+  if (link.dealId) {
+    const { data: d } = await supabase
+      .from("deals")
+      .select("practice_id, buyer_contact_id, seller_contact_id, buyer_solicitor_id, seller_solicitor_id")
+      .eq("id", link.dealId)
+      .maybeSingle();
+    const deal = d as {
+      practice_id: string | null;
+      buyer_contact_id: string | null;
+      seller_contact_id: string | null;
+      buyer_solicitor_id: string | null;
+      seller_solicitor_id: string | null;
+    } | null;
+    if (deal) {
+      if (deal.practice_id) practiceIds.add(deal.practice_id);
+      for (const c of [deal.buyer_contact_id, deal.seller_contact_id, deal.buyer_solicitor_id, deal.seller_solicitor_id]) {
+        if (c) contactIds.add(c);
+      }
+    }
+  }
+
+  const orParts: string[] = [];
+  if (practiceIds.size) orParts.push(`practice_id.in.(${[...practiceIds].join(",")})`);
+  if (contactIds.size) orParts.push(`contact_id.in.(${[...contactIds].join(",")})`);
+  if (dealIds.size) orParts.push(`deal_id.in.(${[...dealIds].join(",")})`);
+
   let query = supabase
     .from("journal_entries")
     .select(
@@ -19,12 +89,51 @@ export async function Journal({ link, path }: { link: JournalLink; path: string 
     .order("pinned", { ascending: false })
     .order("occurred_at", { ascending: false })
     .limit(200);
+  if (orParts.length) query = query.or(orParts.join(","));
 
-  if (link.contactId) query = query.eq("contact_id", link.contactId);
-  else if (link.practiceId) query = query.eq("practice_id", link.practiceId);
-  else if (link.dealId) query = query.eq("deal_id", link.dealId);
+  // Names for the origin chips shown on inherited (linked) entries.
+  const relContactIds = [...contactIds].filter((id) => id !== link.contactId);
+  const relPracticeIds = [...practiceIds].filter((id) => id !== link.practiceId);
+  const relDealIds = [...dealIds].filter((id) => id !== link.dealId);
+  const empty = Promise.resolve({ data: [] as never[] });
 
-  const [{ data: entries }, outcomes] = await Promise.all([query, getLookup("call_outcome")]);
+  const [{ data: entries }, outcomes, contactsRes, practicesRes, dealsRes] = await Promise.all([
+    query,
+    getLookup("call_outcome"),
+    relContactIds.length
+      ? supabase.from("contacts").select("id, first_name, last_name, company_name, roles").in("id", relContactIds)
+      : empty,
+    relPracticeIds.length ? supabase.from("practices").select("id, display_title").in("id", relPracticeIds) : empty,
+    relDealIds.length ? supabase.from("deals").select("id, ref").in("id", relDealIds) : empty,
+  ]);
+
+  const contactOrigin = new Map<string, EntryOrigin>();
+  for (const c of (contactsRes.data ?? []) as {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    company_name: string | null;
+    roles: string[] | null;
+  }[]) {
+    const kind = originKindForRoles(c.roles ?? []);
+    contactOrigin.set(c.id, { kind, label: contactName(c), href: `/contacts/${c.id}/journal` });
+  }
+  const practiceOrigin = new Map<string, EntryOrigin>();
+  for (const p of (practicesRes.data ?? []) as { id: string; display_title: string }[]) {
+    practiceOrigin.set(p.id, { kind: "Practice", label: p.display_title, href: `/practices/${p.id}/journal` });
+  }
+  const dealOrigin = new Map<string, EntryOrigin>();
+  for (const d of (dealsRes.data ?? []) as { id: string; ref: string }[]) {
+    dealOrigin.set(d.id, { kind: "Deal", label: d.ref, href: `/deals/${d.id}/journal` });
+  }
+
+  const originMaps = {
+    primary: { contactId: link.contactId ?? null, practiceId: link.practiceId ?? null, dealId: link.dealId ?? null },
+    practices: practiceOrigin,
+    contacts: contactOrigin,
+    deals: dealOrigin,
+  };
+
   const entryIds = (entries ?? []).map((e) => e.id);
 
   // Call intelligence: recordings/transcripts + pending AI suggestions for these entries.
@@ -57,6 +166,7 @@ export async function Journal({ link, path }: { link: JournalLink; path: string 
           call_direction: e.call_direction,
           pinned: e.pinned,
           occurred_at: e.occurred_at,
+          origin: resolveOrigin(e, originMaps),
           call: call
             ? {
                 transcript: call.transcript,
