@@ -21,7 +21,7 @@ export function PageHeader({
             {eyebrow}
           </p>
         ) : null}
-        <h1 className="text-[24px] font-extrabold tracking-tight text-fg-1 sm:text-[26px]">{title}</h1>
+        <h1 className="font-serif text-[28px] font-semibold leading-[1.05] tracking-[-0.01em] text-ink sm:text-[34px]">{title}</h1>
         {subtitle ? <p className="mt-0.5 text-sm text-fg-3">{subtitle}</p> : null}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
