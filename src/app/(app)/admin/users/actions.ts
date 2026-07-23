@@ -7,33 +7,47 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
 import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
-const inviteSchema = z.object({
+const createSchema = z.object({
   email: z.string().email(),
   full_name: z.string().min(1).max(120),
   role: z.enum(["admin", "manager", "agent"]),
+  temp_password: z.string().min(10, "The temporary password needs at least 10 characters.").max(200),
 });
 
-export async function inviteUser(input: unknown): Promise<ActionResult> {
+/**
+ * Create a staff account with a temporary password the admin shares with the
+ * new user. The account is flagged must_change_password, so the app forces a
+ * password change on first sign-in (see the /change-password gate).
+ */
+export async function createUser(input: unknown): Promise<ActionResult> {
   const me = await requireRole("admin");
-  const parsed = inviteSchema.safeParse(input);
-  if (!parsed.success) return fail("Check the form fields.");
-  const { email, full_name, role } = parsed.data;
+  const parsed = createSchema.safeParse(input);
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Check the form fields.");
+  const { email, full_name, role, temp_password } = parsed.data;
 
   const admin = createAdminClient();
-  const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
-    data: { full_name },
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset`,
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    password: temp_password,
+    email_confirm: true, // internal accounts — no email verification step
+    user_metadata: { full_name },
   });
-  if (error) return dbFail(error);
+  if (error) {
+    if ((error as { code?: string }).code === "email_exists" || /already/i.test(error.message)) {
+      return fail("An account with that email already exists.");
+    }
+    return dbFail(error);
+  }
 
+  // The signup trigger provisions the profile row; set its details + force reset.
   const { error: profileError } = await admin
     .from("profiles")
-    .update({ full_name, role })
+    .update({ full_name, role, is_active: true, must_change_password: true })
     .eq("id", data.user.id);
   if (profileError) return dbFail(profileError);
 
   await audit("profiles", data.user.id, me.id, [
-    { field: "invited", oldValue: null, newValue: `${email} as ${role}` },
+    { field: "created", oldValue: null, newValue: `${email} as ${role}` },
   ]);
   revalidatePath("/admin/users");
   return ok();

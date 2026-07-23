@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { SessionProfile } from "@/lib/auth";
 import { Badge, Button, Card, CardHeader, Field, Input, Textarea } from "@/components/ui/primitives";
 import { PageHeader } from "@/components/shell/page-header";
+import { ChangePasswordForm } from "@/components/account/change-password-form";
 import { formatDateTime } from "@/lib/utils";
 import { updateMySettings } from "./actions";
 
@@ -66,6 +67,27 @@ export function SettingsClient({
           {saved ? <p className="text-sm font-medium text-available-fg">Saved.</p> : null}
           <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save"}</Button>
         </form>
+      </Card>
+
+      <Card className="mt-5">
+        <CardHeader title="Account" />
+        <dl className="space-y-2 p-5 text-sm">
+          <div className="flex justify-between gap-3">
+            <dt className="text-fg-3">Email</dt>
+            <dd className="font-semibold text-fg-1">{profile.email}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-fg-3">Role</dt>
+            <dd className="font-semibold capitalize text-fg-1">{profile.role}</dd>
+          </div>
+        </dl>
+      </Card>
+
+      <Card className="mt-5">
+        <CardHeader title="Password" />
+        <div className="p-5">
+          <ChangePasswordForm submitLabel="Update password" />
+        </div>
       </Card>
 
       <Card className="mt-5">

@@ -27,11 +27,13 @@ Extensions: `pg_trgm`, `pgcrypto`, `unaccent`, `citext`.
 | calendar_color | text | hex, for calendar overlays |
 | avatar_url | text | |
 | is_active | bool | deactivated staff keep history, lose access |
+| must_change_password | bool | set when an admin creates the account; the app forces a password change on first sign-in, then clears it |
 | signature_html | text | email signature |
 
-> `role` and `is_active` are privileged columns — a trigger blocks self-service
-> updates to them (see migration 0021); only server-side admin actions
-> (service role) or direct DB connections may change them.
+> `role`, `is_active` and `must_change_password` are privileged columns — a
+> trigger blocks self-service updates to them (migrations 0021 + 0023); only
+> server-side admin actions (service role) or direct DB connections may change
+> them.
 
 ### `role_permissions`
 `role text`, `permission text`, unique(role, permission). Seeded matrix (e.g.

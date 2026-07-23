@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Avatar, Badge, Button, Card, CardHeader, Field, Input, Select } from "@/components/ui/primitives";
 import { SortTh, useClientSort } from "@/components/ui/sortable";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
-import { inviteUser, updateUser } from "./actions";
+import { createUser, updateUser } from "./actions";
 
 type UserRow = {
   id: string;
@@ -15,6 +15,10 @@ type UserRow = {
   calendar_color: string;
   is_active: boolean;
 };
+
+// A shared starting password for new accounts. The admin can change it per user;
+// either way the new user is forced to set their own on first sign-in.
+const DEFAULT_TEMP_PASSWORD = "FTA-Welcome-2026";
 
 export function UsersClient({ users }: { users: UserRow[] }) {
   const router = useRouter();
@@ -27,25 +31,46 @@ export function UsersClient({ users }: { users: UserRow[] }) {
     },
     { key: "name", dir: "asc" },
   );
-  const [inviteOpen, setInviteOpen] = React.useState(false);
+  const [addOpen, setAddOpen] = React.useState(false);
+  const [created, setCreated] = React.useState<{ email: string; password: string } | null>(null);
+  const [copied, setCopied] = React.useState(false);
   const [editing, setEditing] = React.useState<UserRow | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
 
-  async function submitInvite(e: React.FormEvent<HTMLFormElement>) {
+  function openAdd() {
+    setCreated(null);
+    setCopied(false);
+    setError(null);
+    setAddOpen(true);
+  }
+
+  async function submitAdd(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
     setError(null);
     const f = new FormData(e.currentTarget);
-    const res = await inviteUser({
-      email: String(f.get("email")),
+    const email = String(f.get("email"));
+    const password = String(f.get("temp_password"));
+    const res = await createUser({
+      email,
       full_name: String(f.get("full_name")),
       role: String(f.get("role")),
+      temp_password: password,
     });
     setBusy(false);
     if (!res.ok) return setError(res.error);
-    setInviteOpen(false);
+    // Keep the dialog open to show the credentials the admin needs to pass on.
+    setCreated({ email, password });
     router.refresh();
+  }
+
+  async function copyCredentials() {
+    if (!created) return;
+    await navigator.clipboard.writeText(
+      `Aspen sign-in\nEmail: ${created.email}\nTemporary password: ${created.password}\nYou'll be asked to set your own password on first sign-in.`,
+    );
+    setCopied(true);
   }
 
   async function submitEdit(e: React.FormEvent<HTMLFormElement>) {
@@ -71,7 +96,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
     <Card>
       <CardHeader
         title={`Users (${users.length})`}
-        action={<Button size="sm" onClick={() => setInviteOpen(true)}>Invite user</Button>}
+        action={<Button size="sm" onClick={openAdd}>Add user</Button>}
       />
       <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -108,27 +133,59 @@ export function UsersClient({ users }: { users: UserRow[] }) {
       </table>
 </div>
 
-      <Dialog open={inviteOpen} onClose={() => setInviteOpen(false)} title="Invite user">
-        <form onSubmit={submitInvite} className="space-y-4">
-          <Field label="Full name" htmlFor="inv_name">
-            <Input id="inv_name" name="full_name" required />
-          </Field>
-          <Field label="Email" htmlFor="inv_email">
-            <Input id="inv_email" name="email" type="email" required />
-          </Field>
-          <Field label="Role" htmlFor="inv_role">
-            <Select id="inv_role" name="role" defaultValue="agent">
-              <option value="agent">Agent</option>
-              <option value="manager">Manager</option>
-              <option value="admin">Administrator</option>
-            </Select>
-          </Field>
-          {error ? <p className="text-sm font-medium text-danger">{error}</p> : null}
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setInviteOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={busy}>{busy ? "Sending…" : "Send invite"}</Button>
-          </DialogFooter>
-        </form>
+      <Dialog open={addOpen} onClose={() => setAddOpen(false)} title="Add user">
+        {created ? (
+          <div className="space-y-4">
+            <p className="text-sm text-fg-2">
+              Account created for <span className="font-semibold text-fg-1">{created.email}</span>. Share these
+              details with them — they'll be asked to set their own password when they first sign in.
+            </p>
+            <dl className="space-y-2 rounded-md border border-line bg-surface-2 p-3 text-sm">
+              <div className="flex justify-between gap-3">
+                <dt className="text-fg-3">Email</dt>
+                <dd className="font-semibold text-fg-1">{created.email}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-fg-3">Temporary password</dt>
+                <dd className="font-mono font-semibold text-fg-1">{created.password}</dd>
+              </div>
+            </dl>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={copyCredentials}>
+                {copied ? "Copied" : "Copy details"}
+              </Button>
+              <Button type="button" onClick={() => setAddOpen(false)}>Done</Button>
+            </DialogFooter>
+          </div>
+        ) : (
+          <form onSubmit={submitAdd} className="space-y-4">
+            <Field label="Full name" htmlFor="add_name">
+              <Input id="add_name" name="full_name" required />
+            </Field>
+            <Field label="Email" htmlFor="add_email">
+              <Input id="add_email" name="email" type="email" required />
+            </Field>
+            <Field label="Role" htmlFor="add_role">
+              <Select id="add_role" name="role" defaultValue="agent">
+                <option value="agent">Agent</option>
+                <option value="manager">Manager</option>
+                <option value="admin">Administrator</option>
+              </Select>
+            </Field>
+            <Field
+              label="Temporary password"
+              htmlFor="add_pw"
+              hint="Share this with the new user. They'll be required to change it on first sign-in."
+            >
+              <Input id="add_pw" name="temp_password" type="text" defaultValue={DEFAULT_TEMP_PASSWORD} required minLength={10} />
+            </Field>
+            {error ? <p className="text-sm font-medium text-danger">{error}</p> : null}
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setAddOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={busy}>{busy ? "Creating…" : "Create account"}</Button>
+            </DialogFooter>
+          </form>
+        )}
       </Dialog>
 
       <Dialog open={!!editing} onClose={() => setEditing(null)} title={`Edit ${editing?.full_name ?? ""}`}>
