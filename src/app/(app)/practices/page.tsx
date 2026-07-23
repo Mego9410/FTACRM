@@ -141,7 +141,7 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
           }
         />
       ) : (
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {anyMap ? <PracticeMapDefs /> : null}
           {(practices ?? []).map((p) => {
             const funding = p.funding_type_id ? lookupIndex.get(p.funding_type_id) : null;
@@ -152,44 +152,54 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
               new Date(p.contract_expiry) < new Date(Date.now() + 60 * 86_400_000);
             const headlinePath = (p as { headline_image_path?: string | null }).headline_image_path ?? null;
             const photoUrl = headlinePath ? urlByPath.get(headlinePath) ?? null : null;
+            const guide = p.asking_price
+              ? `${p.price_prefix === "offers_over" ? "Offers over " : p.price_prefix === "guide" ? "Guide " : ""}${formatGBP(p.asking_price)}`
+              : "POA";
             return (
-              <Link key={p.id} href={`/practices/${p.id}`}>
-                <Card className="flex h-full min-h-[168px] overflow-hidden bg-surface-3 transition-shadow hover:shadow-md">
-                  <div className="w-28 shrink-0 self-stretch overflow-hidden border-r border-line bg-surface-2 sm:w-32">
-                    {photoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={photoUrl} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-surface via-surface-2 to-gold-tint/40">
-                        <PracticeMapUse
-                          lat={(p as { lat?: number | null }).lat ?? null}
-                          lng={(p as { lng?: number | null }).lng ?? null}
-                          className="max-h-full w-auto p-1.5"
-                        />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-1 flex-col p-4">
-                    <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                      <Badge tone={PRACTICE_STATUS_TONES[p.status] ?? "neutral"}>
-                        {PRACTICE_STATUS_LABELS[p.status] ?? p.status}
-                      </Badge>
-                      {funding ? <LookupPill color={funding.color}>{funding.value}</LookupPill> : null}
-                      {expiring ? <Badge tone="warn">Contract expiring</Badge> : null}
+              <Link key={p.id} href={`/practices/${p.id}`} className="group block h-full">
+                {/* Square instruction card: map panel + details on top, full-width price/footer below. */}
+                <Card className="flex aspect-square flex-col overflow-hidden rounded-[20px] p-0 transition-all group-hover:-translate-y-[3px] group-hover:shadow-md">
+                  <div className="flex min-h-0 flex-1">
+                    <div className="relative w-[132px] shrink-0 self-stretch overflow-hidden border-r border-line bg-surface-3">
+                      {photoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={photoUrl} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <>
+                          <div className="flex h-full w-full items-center justify-center">
+                            <PracticeMapUse
+                              lat={(p as { lat?: number | null }).lat ?? null}
+                              lng={(p as { lng?: number | null }).lng ?? null}
+                              className="max-h-full w-auto p-2"
+                            />
+                          </div>
+                          <span className="pointer-events-none absolute inset-x-0 bottom-2.5 px-2 text-center text-[9px] leading-tight text-fg-4">
+                            Auto-generated map
+                          </span>
+                        </>
+                      )}
                     </div>
-                    <p className="font-bold leading-snug text-fg-1">{practiceLabel(p)}</p>
-                    <p className="mt-0.5 text-xs text-fg-3">
-                      {[p.ref, p.town, tenure?.value, p.surgeries ? `${p.surgeries} surgeries` : null]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                    <div className="mt-auto pt-3">
-                      <p className="text-[17px] font-extrabold text-gold-deep">
-                        {p.asking_price
-                          ? `${p.price_prefix === "offers_over" ? "Offers over " : p.price_prefix === "guide" ? "Guide " : ""}${formatGBP(p.asking_price)}`
-                          : "POA"}
+                    <div className="flex min-w-0 flex-1 flex-col gap-3 p-5">
+                      <div className="flex flex-wrap gap-1.5">
+                        <Badge tone={PRACTICE_STATUS_TONES[p.status] ?? "neutral"}>
+                          {PRACTICE_STATUS_LABELS[p.status] ?? p.status}
+                        </Badge>
+                        {funding ? <LookupPill color={funding.color}>{funding.value}</LookupPill> : null}
+                        {expiring ? <Badge tone="warn">Contract expiring</Badge> : null}
+                      </div>
+                      <p className="text-[16.5px] font-extrabold leading-snug tracking-tight text-fg-1">{practiceLabel(p)}</p>
+                      <p className="text-xs leading-relaxed text-fg-3">
+                        {[p.ref, p.town, tenure?.value, p.surgeries ? `${p.surgeries} surgeries` : null]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </p>
                     </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 border-t border-line px-5 py-4">
+                    <span className="text-[20px] font-extrabold tracking-tight text-gold-deep">{guide}</span>
+                    <span className="inline-flex shrink-0 items-center gap-1 text-[12.5px] font-bold text-gold-deep">
+                      Details <span aria-hidden>→</span>
+                    </span>
                   </div>
                 </Card>
               </Link>

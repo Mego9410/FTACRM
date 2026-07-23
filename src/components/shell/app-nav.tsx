@@ -74,7 +74,7 @@ export function AppNav({
     } catch {
       /* ignore */
     }
-    prefRef.current = stored === null ? true : stored === "1";
+    prefRef.current = stored === null ? false : stored === "1";
     const apply = () => setCollapsed(window.innerWidth < 1280 ? true : prefRef.current);
     apply();
     window.addEventListener("resize", apply);
