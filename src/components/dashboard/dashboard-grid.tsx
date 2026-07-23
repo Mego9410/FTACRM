@@ -254,32 +254,30 @@ export function DashboardGrid({
           {config.widgets.map((id) => {
             const def = REGISTRY[id];
             if (!def) return null;
-            const Icon = def.icon;
+            // Clean editorial chrome per the Aspen comp: hairline card, plain
+            // bold title, no icon disc or coloured top-border. "Key numbers"
+            // gets the gold top rule and an "Updated just now" note.
+            const isStats = id === "stats";
             return (
               <div
                 key={id}
-                className="overflow-hidden rounded-lg border border-t-2 border-line bg-surface shadow-xs"
-                style={{ borderTopColor: def.accent }}
+                className={cn(
+                  "flex flex-col overflow-hidden rounded-[18px] border border-line bg-surface shadow-xs",
+                  isStats && "border-t-2 border-t-gold",
+                )}
               >
-                <div
-                  className={cn("flex items-center justify-between border-b border-line px-3.5 py-2.5", editing && "bg-surface-2")}
-                  style={editing ? undefined : { background: `linear-gradient(90deg, ${def.accent}12, transparent 65%)` }}
-                >
+                <div className={cn("flex shrink-0 items-center justify-between gap-2 border-b border-line px-5 py-3.5", editing && "bg-surface-2")}>
                   <div className="flex min-w-0 items-center gap-2">
                     {editing ? (
                       <span className="widget-drag cursor-grab text-fg-4 hover:text-fg-2 active:cursor-grabbing">
                         <GripVertical size={15} />
                       </span>
-                    ) : (
-                      <span
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
-                        style={{ backgroundColor: `${def.accent}1f`, color: def.accent }}
-                      >
-                        <Icon size={14} />
-                      </span>
-                    )}
-                    <h3 className="truncate text-[13px] font-bold text-fg-1">{def.title}</h3>
+                    ) : null}
+                    <h3 className="truncate text-[15px] font-extrabold tracking-tight text-fg-1">{def.title}</h3>
                   </div>
+                  {!editing && isStats ? (
+                    <span className="shrink-0 text-[12px] text-fg-3">Updated just now</span>
+                  ) : null}
                   {editing ? (
                     <button
                       type="button"
@@ -291,7 +289,7 @@ export function DashboardGrid({
                     </button>
                   ) : null}
                 </div>
-                <div className="h-[calc(100%-47px)]">{def.render({ data, ai })}</div>
+                <div className="min-h-0 flex-1">{def.render({ data, ai })}</div>
               </div>
             );
           })}
