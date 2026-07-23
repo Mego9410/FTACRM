@@ -9,11 +9,33 @@ import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 const MAX_BYTES = 20 * 1024 * 1024;
 
+// [SEV-MED-01] Allow-list of document types. Excludes HTML/SVG and executables,
+// which could render/execute when opened from the storage domain.
+const ALLOWED_MIME = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/heic",
+  "text/plain",
+  "text/csv",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+]);
+
 export async function uploadDocument(formData: FormData): Promise<ActionResult> {
   const me = await requireProfile();
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return fail("Choose a file.");
   if (file.size > MAX_BYTES) return fail("Files are limited to 20 MB.");
+  if (!ALLOWED_MIME.has(file.type)) {
+    return fail("That file type isn't supported. Use PDF, an image, or an Office/CSV document.");
+  }
 
   const link = {
     contact_id: (formData.get("contact_id") as string) || null,
@@ -31,9 +53,9 @@ export async function uploadDocument(formData: FormData): Promise<ActionResult> 
   const { error: uploadError } = await admin.storage
     .from("documents")
     .upload(storagePath, Buffer.from(await file.arrayBuffer()), {
-      contentType: file.type || "application/octet-stream",
+      contentType: file.type,
     });
-  if (uploadError) return fail(`Upload failed: ${uploadError.message}`);
+  if (uploadError) return dbFail(uploadError, "uploadDocument");
 
   const supabase = await createClient();
   const { error } = await supabase.from("documents").insert({

@@ -18,11 +18,23 @@ function lookupPath(ctx: MergeContext, path: string): unknown {
   }, ctx);
 }
 
-export function renderMergeTags(template: string, ctx: MergeContext): string {
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/**
+ * [SEV-LOW-01] Pass `{ escapeHtml: true }` when rendering into an HTML body so a
+ * hostile contact/company name can't inject markup. Leave it off for plain-text
+ * contexts (e.g. subject lines).
+ */
+export function renderMergeTags(
+  template: string,
+  ctx: MergeContext,
+  opts?: { escapeHtml?: boolean },
+): string {
   return template.replace(TAG_RE, (_m, path: string, fallback?: string) => {
     const value = lookupPath(ctx, path);
-    if (value === undefined || value === null || value === "") return fallback?.trim() ?? "";
-    return String(value);
+    const out = value === undefined || value === null || value === "" ? (fallback?.trim() ?? "") : String(value);
+    return opts?.escapeHtml ? escapeHtml(out) : out;
   });
 }
 

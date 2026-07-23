@@ -42,11 +42,16 @@ export async function createJournalEntry(input: unknown): Promise<ActionResult> 
   return ok();
 }
 
-/** System journal entry — used by workflow actions (status changes etc.). */
+/**
+ * System journal entry — used by workflow actions (status changes etc.).
+ * [SEV-LOW-02] This is an exported server action, so it must assert a session
+ * itself; all real callers are already authenticated.
+ */
 export async function systemJournal(
   link: { contact_id?: string | null; practice_id?: string | null; deal_id?: string | null },
   body: string,
 ) {
+  await requireProfile();
   const supabase = await createClient();
   await supabase.from("journal_entries").insert({ ...link, entry_type: "system", body });
 }

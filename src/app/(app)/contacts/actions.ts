@@ -198,11 +198,26 @@ export async function eraseContact(input: unknown): Promise<ActionResult> {
   const id = parsed.data.id;
   const admin = createAdminClient();
 
+  // [SEV-MED-03] Capture the email before anonymising so we can also erase
+  // public enquiries that carry it.
+  const { data: pre } = await admin.from("contacts").select("email").eq("id", id).maybeSingle();
+  const email = (pre as { email: string | null } | null)?.email?.toLowerCase() ?? null;
+
   const { data: docs } = await admin.from("documents").select("id, storage_path").eq("contact_id", id);
   if (docs && docs.length > 0) {
     await admin.storage.from("documents").remove(docs.map((d) => d.storage_path));
     await admin.from("documents").delete().eq("contact_id", id);
   }
+
+  // [SEV-MED-03] Scrub PII that survived in the call/AI/enquiry tables.
+  const { data: recs } = await admin.from("call_recordings").select("id").eq("contact_id", id);
+  const recIds = (recs ?? []).map((r) => r.id);
+  await admin.from("call_recordings").update({ transcript: null, summary: null }).eq("contact_id", id);
+  if (recIds.length > 0) {
+    await admin.from("ai_jobs").update({ input: {}, output: null }).in("call_recording_id", recIds);
+  }
+  await admin.from("ai_suggestions").delete().eq("contact_id", id);
+  if (email) await admin.from("practice_enquiries").delete().eq("email", email);
   await admin
     .from("journal_entries")
     .update({ body: "[erased]", subject: null })

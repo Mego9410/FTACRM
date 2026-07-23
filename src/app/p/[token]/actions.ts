@@ -1,7 +1,9 @@
 "use server";
 
+import { headers } from "next/headers";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { rateLimit } from "@/lib/http/rate-limit";
 import { ok, fail, type ActionResult } from "@/lib/action-result";
 
 const schema = z.object({
@@ -24,13 +26,33 @@ export async function submitPracticeEnquiry(input: unknown): Promise<ActionResul
   const d = parsed.data;
   if (d.website !== "") return ok(); // bot filled the honeypot — pretend success, store nothing
 
+  // [SEV-MED-06] Rate limit: process-local per-IP burst guard, plus a durable
+  // per-practice DB throttle that holds across serverless instances.
+  const ip =
+    (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (!rateLimit(`enquiry:${ip}`, 5, 10 * 60_000)) {
+    return fail("Too many requests. Please try again shortly.");
+  }
+
   const admin = createAdminClient();
+
   const { data: practice } = await admin
     .from("practices")
     .select("id, ref, display_title")
     .eq("public_token", d.token)
     .maybeSingle();
   if (!practice) return fail("This page is no longer active.");
+
+  // Durable throttle: cap enquiries per practice per 10-minute window across
+  // all instances (complements the per-IP in-memory guard above).
+  const { count: recentForPractice } = await admin
+    .from("practice_enquiries")
+    .select("id", { count: "exact", head: true })
+    .eq("practice_id", practice.id)
+    .gte("created_at", new Date(Date.now() - 10 * 60_000).toISOString());
+  if ((recentForPractice ?? 0) >= 20) {
+    return fail("Too many requests. Please try again shortly.");
+  }
 
   const { error } = await admin.from("practice_enquiries").insert({
     practice_id: practice.id,
