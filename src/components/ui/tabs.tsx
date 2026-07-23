@@ -37,8 +37,8 @@ export function LinkTabs({ tabs, className }: { tabs: TabDef[]; className?: stri
             {t.count !== undefined && t.count !== null ? (
               <span
                 className={cn(
-                  "ml-1.5 rounded-full px-1.5 py-0.5 text-[11px] font-bold",
-                  active ? "bg-gold-tint text-gold-deep" : "bg-surface-3 text-fg-3",
+                  "ml-1.5 text-sm font-bold",
+                  active ? "text-gold-deep" : "text-fg-4",
                 )}
               >
                 {t.count}

@@ -35,8 +35,8 @@ export function StageChevrons({ stages, dealStatus }: { stages: ChevronStage[]; 
           ? "bg-available-fg text-white"
           : isCurrent
             ? "bg-gold text-ink"
-            : "bg-danger text-white";
-        const glyphColor = achieved ? "text-available-fg" : isCurrent ? "text-gold-deep" : "text-danger";
+            : "bg-surface-2 text-fg-3";
+        const glyphColor = achieved ? "text-available-fg" : isCurrent ? "text-gold-deep" : "text-fg-3";
         return (
           <div
             key={s.id}
@@ -66,6 +66,8 @@ export function StageChevrons({ stages, dealStatus }: { stages: ChevronStage[]; 
               <span className="block break-words text-[12px] font-semibold">{s.label}</span>
               {s.achieved_on ? (
                 <span className="block text-[11px] opacity-90">{formatDate(s.achieved_on)}</span>
+              ) : isCurrent ? (
+                <span className="block text-[11px] opacity-90">Current</span>
               ) : null}
             </span>
           </div>

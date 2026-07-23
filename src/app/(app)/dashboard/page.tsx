@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 import { getDashboardData } from "@/lib/dashboard";
 import { contactName } from "@/lib/contact-helpers";
 import { DashboardGrid } from "@/components/dashboard/dashboard-grid";
-import { DashboardSearch } from "./dashboard-search";
 import type { AiWidgetRow } from "@/components/dashboard/ai-widget";
 
 const QUICK_ACTIONS = [
@@ -70,46 +69,34 @@ export default async function DashboardPage() {
   const summary = [
     `${openTasks} open ${openTasks === 1 ? "task" : "tasks"}`,
     `${eventsToday} ${eventsToday === 1 ? "event" : "events"} today`,
-  ].join("  ·  ");
+  ].join(" · ");
 
   return (
     <div>
-      {/* No overflow-hidden here — it would clip the search results dropdown.
-          The decorative blurs are clipped by their own inset layer instead. */}
-      <div className="relative mb-6 rounded-xl border border-line bg-gradient-to-br from-gold-tint/70 via-surface to-surface px-6 py-6 shadow-xs sm:px-8 sm:py-7">
-        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl">
-          <div className="absolute -right-10 -top-12 h-44 w-44 rounded-full bg-gold/15 blur-2xl" />
-          <div className="absolute -bottom-16 right-24 h-36 w-36 rounded-full bg-nhs-fg/10 blur-2xl" />
-        </div>
-        <div className="relative">
-          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-gold-deep">
-            {new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date())}
-          </p>
-          <h1 className="text-[24px] font-extrabold tracking-tight text-fg-1 sm:text-[30px]">
-            Good {hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening"},{" "}
-            <span className="text-gold-deep">{firstName}</span>
-          </h1>
-          <p className="mt-1.5 text-sm font-semibold text-fg-2">{summary}</p>
+      <div className="mb-8">
+        <p className="mb-3 text-[12px] font-bold uppercase tracking-[0.08em] text-gold-deep">
+          {new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date())}
+        </p>
+        <h1 className="font-serif text-[32px] font-semibold leading-[1.05] tracking-[-0.01em] text-ink sm:text-[44px]">
+          Good {hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening"},{" "}
+          <span className="italic text-gold-deep">{firstName}</span>
+        </h1>
+        <p className="mt-3 text-[15px] text-fg-2">{summary}</p>
 
-          <div className="mt-5 max-w-2xl">
-            <DashboardSearch />
-          </div>
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            {QUICK_ACTIONS.map((a) => {
-              const Icon = a.icon;
-              return (
-                <Link
-                  key={a.href}
-                  href={a.href}
-                  className="inline-flex items-center gap-2 rounded-lg border border-line bg-surface/80 px-3.5 py-2 text-[13px] font-semibold text-fg-1 shadow-xs backdrop-blur transition-colors hover:border-gold/60 hover:bg-surface"
-                >
-                  <Icon size={15} className="text-gold-deep" />
-                  {a.label}
-                </Link>
-              );
-            })}
-          </div>
+        <div className="mt-5 flex flex-wrap gap-2.5">
+          {QUICK_ACTIONS.map((a) => {
+            const Icon = a.icon;
+            return (
+              <Link
+                key={a.href}
+                href={a.href}
+                className="inline-flex items-center gap-2 rounded-[11px] border border-line bg-surface px-4 py-2.5 text-[13.5px] font-semibold text-fg-1 transition-colors hover:border-gold hover:bg-gold-tint"
+              >
+                <Icon size={15} className="text-gold-deep" />
+                {a.label}
+              </Link>
+            );
+          })}
         </div>
       </div>
       <DashboardGrid data={data} ai={ai} initialConfig={layoutRow?.dashboard_layout ?? null} />

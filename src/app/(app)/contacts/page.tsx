@@ -129,7 +129,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-line text-left text-xs font-bold uppercase tracking-wide text-fg-3">
+              <tr className="border-b border-line bg-surface-2 text-left text-[10.5px] font-bold uppercase tracking-[0.08em] text-fg-4">
                 <SortHeader label="Name" sortKey="name" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/contacts" className="px-4" />
                 <th className="px-3 py-2.5">Roles</th>
                 <SortHeader label="Contact" sortKey="contact" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/contacts" />
@@ -140,10 +140,10 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
             <tbody>
               {(contacts ?? []).map((c) => {
                 return (
-                  <tr key={c.id} className="border-b border-line last:border-0 hover:bg-surface-2/60">
-                    <td className="px-4 py-2.5">
-                      <Link href={`/contacts/${c.id}`} className="flex items-center gap-2.5">
-                        <Avatar name={contactName(c)} size={28} />
+                  <tr key={c.id} className="cursor-pointer border-b border-line last:border-0 hover:bg-gold-tint">
+                    <td className="px-4 py-3">
+                      <Link href={`/contacts/${c.id}`} className="flex items-center gap-3">
+                        <Avatar name={contactName(c)} size={34} />
                         <span className="font-semibold text-fg-1 hover:underline">{contactName(c)}</span>
                         {c.do_not_contact ? <Badge tone="danger">DNC</Badge> : null}
                       </Link>

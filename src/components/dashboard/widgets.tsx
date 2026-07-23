@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Activity,
-  Building2,
   CalendarClock,
   CheckCircle2,
   Clock,
@@ -13,7 +12,6 @@ import {
   ShieldCheck,
   Sparkles,
   TrendingUp,
-  UsersRound,
   Wallet,
 } from "lucide-react";
 import type { DashboardData } from "@/lib/dashboard";
@@ -27,67 +25,34 @@ function fmtTime(iso: string) {
   return new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 }
 
-/* ── Key numbers (stat tiles with a progress ring) ──────────────────── */
-
-function Ring({ value, max, color }: { value: number; max: number; color: string }) {
-  const pct = max > 0 ? Math.min(1, value / max) : 0;
-  const r = 15;
-  const c = 2 * Math.PI * r;
-  return (
-    <svg width={40} height={40} viewBox="0 0 40 40" className="shrink-0">
-      <circle cx={20} cy={20} r={r} fill="none" stroke="var(--color-line)" strokeWidth={4} />
-      <circle
-        cx={20}
-        cy={20}
-        r={r}
-        fill="none"
-        stroke={color}
-        strokeWidth={4}
-        strokeLinecap="round"
-        strokeDasharray={c}
-        strokeDashoffset={c * (1 - pct)}
-        transform="rotate(-90 20 20)"
-      />
-    </svg>
-  );
-}
+/* ── Key numbers (borderless figures with hairline dividers) ────────── */
 
 export function StatsWidget({ data }: { data: DashboardData }) {
   const s = data.stats;
   const tiles = [
-    { label: "Open tasks", value: s.openTasks, sub: `${s.overdueTasks} overdue`, icon: ListTodo, ring: [s.openTasks - s.overdueTasks, Math.max(1, s.openTasks)], color: "#B4862A", href: "/tasks" },
-    { label: "My live deals", value: s.myLiveDeals, sub: formatGBP(s.myPipelineValue, { compact: true }), icon: TrendingUp, ring: [s.myLiveDeals, Math.max(1, s.myLiveDeals)], color: "#2F77BE", href: "/deals" },
-    { label: "Valuations this week", value: s.valuationsThisWeek, sub: "booked", icon: CalendarClock, ring: [s.valuationsThisWeek, Math.max(5, s.valuationsThisWeek)], color: "#A23B9E", href: "/practices?status=valuation" },
-    { label: "Completions this month", value: s.completionsThisMonth, sub: "so far", icon: CheckCircle2, ring: [s.completionsThisMonth, Math.max(5, s.completionsThisMonth)], color: "#1F9D4D", href: "/deals?status=completed" },
-    { label: "Practices available", value: s.availablePractices, sub: "on the market", icon: Building2, ring: [s.availablePractices, Math.max(1, s.availablePractices)], color: "#B4862A", href: "/practices?status=live" },
-    { label: "Buyer pool", value: s.buyerPool.toLocaleString("en-GB"), sub: "registered", icon: UsersRound, ring: [1, 1], color: "#0E7490", href: "/contacts?role=buyer" },
+    { label: "Open tasks", value: s.openTasks, sub: `${s.overdueTasks} overdue`, subClass: s.overdueTasks > 0 ? "text-danger" : "text-fg-3", href: "/tasks" },
+    { label: "My live deals", value: s.myLiveDeals, sub: formatGBP(s.myPipelineValue, { compact: true }), subClass: "text-gold-deep", href: "/deals" },
+    { label: "Valuations this week", value: s.valuationsThisWeek, sub: "booked", subClass: "text-fg-3", href: "/practices?status=valuation" },
+    { label: "Completions this month", value: s.completionsThisMonth, sub: "this month", subClass: "text-available-fg", href: "/deals?status=completed" },
+    { label: "Practices available", value: s.availablePractices, sub: "on the market", subClass: "text-fg-3", href: "/practices?status=live" },
+    { label: "Buyer pool", value: s.buyerPool.toLocaleString("en-GB"), sub: "registered", subClass: "text-fg-3", href: "/contacts?role=buyer" },
   ];
   return (
-    <div className="flex h-full items-stretch gap-3 overflow-x-auto p-4">
-      {tiles.map((t) => {
-        const Icon = t.icon;
-        return (
-          <Link
-            key={t.label}
-            href={t.href}
-            className="group flex min-w-[158px] flex-1 items-center gap-3 rounded-md border bg-surface px-4 py-3.5 transition-all hover:-translate-y-0.5 hover:shadow-sm"
-            style={{ borderColor: `${t.color}33` }}
-          >
-            <div
-              className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
-              style={{ backgroundColor: `${t.color}14` }}
-            >
-              <Ring value={t.ring[0]!} max={t.ring[1]!} color={t.color} />
-              <Icon size={14} className="absolute" style={{ color: t.color }} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[22px] font-extrabold leading-none text-fg-1">{t.value}</p>
-              <p className="mt-0.5 truncate text-[11px] font-semibold text-fg-3">{t.label}</p>
-              <p className="truncate text-[11px] text-fg-4">{t.sub}</p>
-            </div>
-          </Link>
-        );
-      })}
+    <div className="flex h-full items-stretch overflow-x-auto px-5 py-4">
+      {tiles.map((t, i) => (
+        <Link
+          key={t.label}
+          href={t.href}
+          className={cn(
+            "group flex min-w-[150px] flex-1 flex-col justify-center px-5 first:pl-0 last:pr-0",
+            i < tiles.length - 1 && "border-r border-line",
+          )}
+        >
+          <p className="text-[30px] font-extrabold leading-none tracking-tight text-ink sm:text-[34px]">{t.value}</p>
+          <p className="mt-2 truncate text-[13px] font-semibold text-fg-1 transition-colors group-hover:text-gold-deep">{t.label}</p>
+          <p className={cn("mt-0.5 truncate text-[12px]", t.subClass)}>{t.sub}</p>
+        </Link>
+      ))}
     </div>
   );
 }
