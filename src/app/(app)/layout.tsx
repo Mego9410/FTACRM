@@ -8,7 +8,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const profile = await requireProfile();
   const sidebar = await getSidebarData(profile.id).catch(() => null);
   return (
-    <div className="min-h-screen bg-surface-2">
+    <div className="min-h-screen bg-surface">
       <AppNav profile={profile} sidebar={sidebar}>
         {children}
       </AppNav>
