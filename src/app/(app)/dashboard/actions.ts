@@ -17,6 +17,7 @@ const layoutItem = z.object({
 const configSchema = z.object({
   version: z.literal(1),
   widgets: z.array(z.string().max(40)).max(30),
+  keyNumbers: z.array(z.string().max(40)).max(6).optional(),
   layouts: z.object({
     lg: z.array(layoutItem).max(30),
     md: z.array(layoutItem).max(30),

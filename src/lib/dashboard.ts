@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { contactName } from "@/lib/contact-helpers";
+import type { Metrics } from "@/lib/dashboard-metrics";
 
 /** Everything My Day widgets need, fetched in one parallel pass. */
 export type DashboardData = {
@@ -13,6 +14,8 @@ export type DashboardData = {
     valuationsThisWeek: number;
     completionsThisMonth: number;
   };
+  /** All 15 selectable key numbers, keyed by MetricId. */
+  metrics: Metrics;
   todayEvents: {
     id: string;
     title: string;
@@ -160,6 +163,48 @@ export async function getDashboardData(profileId: string): Promise<DashboardData
     supabase.from("deal_stages").select("id, label, sort_order").order("sort_order"),
   ]);
 
+  // Extra counts backing the optional key-number tiles the user can choose.
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const [
+    compYearRes,
+    underOfferRes,
+    newInstructionsRes,
+    hotBuyersRes,
+    viewingsWeekRes,
+    offersPendingRes,
+    contractsExpiringRes,
+  ] = await Promise.all([
+    supabase
+      .from("deals")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "completed")
+      .gte("completed_at", startOfYear.toISOString().slice(0, 10)),
+    supabase.from("practices").select("id", { count: "exact", head: true }).eq("status", "under_offer"),
+    supabase
+      .from("practices")
+      .select("id", { count: "exact", head: true })
+      .is("archived_at", null)
+      .gte("created_at", startOfMonth.toISOString()),
+    supabase
+      .from("contacts")
+      .select("id", { count: "exact", head: true })
+      .contains("roles", ["buyer"])
+      .eq("temperature", "hot")
+      .is("archived_at", null),
+    supabase
+      .from("viewings")
+      .select("id", { count: "exact", head: true })
+      .gte("scheduled_at", startOfDay.toISOString())
+      .lte("scheduled_at", weekAhead.toISOString()),
+    supabase.from("offers").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    supabase
+      .from("practices")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["available", "under_offer", "sold_stc"])
+      .not("contract_expiry", "is", null)
+      .lte("contract_expiry", soon),
+  ]);
+
   // Today's events the user is on.
   const todayEvents = (eventsRes.data ?? [])
     .filter(
@@ -300,6 +345,23 @@ export async function getDashboardData(profileId: string): Promise<DashboardData
       buyerPool: buyersRes.count ?? 0,
       valuationsThisWeek: valWeekRes.count ?? 0,
       completionsThisMonth: compMonthRes.count ?? 0,
+    },
+    metrics: {
+      open_tasks: openTasks.length,
+      overdue_tasks: overdue.length,
+      live_deals: pipeline.length,
+      pipeline_value: myPipelineValue,
+      valuations_week: valWeekRes.count ?? 0,
+      completions_month: compMonthRes.count ?? 0,
+      completions_year: compYearRes.count ?? 0,
+      available_practices: availRes.count ?? 0,
+      under_offer: underOfferRes.count ?? 0,
+      new_instructions_month: newInstructionsRes.count ?? 0,
+      buyer_pool: buyersRes.count ?? 0,
+      hot_buyers: hotBuyersRes.count ?? 0,
+      viewings_week: viewingsWeekRes.count ?? 0,
+      offers_pending: offersPendingRes.count ?? 0,
+      contracts_expiring: contractsExpiringRes.count ?? 0,
     },
     todayEvents,
     tasks: { overdue, today: todayTasks, upcoming, doneCount },

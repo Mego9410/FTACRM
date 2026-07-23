@@ -11,6 +11,7 @@ import {
   ListTodo,
   Plus,
   RotateCcw,
+  SlidersHorizontal,
   Sparkles,
   TrendingUp,
   Wallet,
@@ -32,9 +33,13 @@ import {
   TodayWidget,
 } from "./widgets";
 import { AiWidget, type AiWidgetRow } from "./ai-widget";
+import { KeyNumbersPicker } from "./key-numbers-picker";
+import { normaliseKeyNumbers, type MetricId } from "@/lib/dashboard-metrics";
 import { saveDashboardLayout, resetDashboardLayout } from "@/app/(app)/dashboard/actions";
 
 type WidgetId = "stats" | "today" | "tasks" | "ai" | "pipeline" | "activity" | "attention";
+
+type RenderCtx = { data: DashboardData; ai: AiWidgetRow[]; keyNumbers: MetricId[] };
 
 type WidgetDef = {
   title: string;
@@ -43,11 +48,11 @@ type WidgetDef = {
   accent: string;
   icon: LucideIcon;
   lg: { w: number; h: number };
-  render: (ctx: { data: DashboardData; ai: AiWidgetRow[] }) => React.ReactNode;
+  render: (ctx: RenderCtx) => React.ReactNode;
 };
 
 const REGISTRY: Record<WidgetId, WidgetDef> = {
-  stats: { title: "Key numbers", minW: 4, minH: 3, accent: "#B4862A", icon: TrendingUp, lg: { w: 12, h: 3 }, render: ({ data }) => <StatsWidget data={data} /> },
+  stats: { title: "Key numbers", minW: 4, minH: 3, accent: "#B4862A", icon: TrendingUp, lg: { w: 12, h: 3 }, render: ({ data, keyNumbers }) => <StatsWidget data={data} keyNumbers={keyNumbers} /> },
   today: { title: "Today's schedule", minW: 3, minH: 3, accent: "#2F77BE", icon: CalendarClock, lg: { w: 4, h: 5 }, render: ({ data }) => <TodayWidget data={data} /> },
   tasks: { title: "My tasks", minW: 3, minH: 3, accent: "#1F9D4D", icon: ListTodo, lg: { w: 4, h: 5 }, render: ({ data }) => <TasksWidget data={data} /> },
   ai: { title: "AI assistant", minW: 3, minH: 3, accent: "#A23B9E", icon: Sparkles, lg: { w: 4, h: 5 }, render: ({ ai }) => <AiWidget rows={ai} /> },
@@ -81,15 +86,22 @@ const DEFAULT_LAYOUTS: Layouts = {
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
-type Config = { version: 1; widgets: WidgetId[]; layouts: { lg: Layout[]; md: Layout[] } };
+type Config = {
+  version: 1;
+  widgets: WidgetId[];
+  keyNumbers: MetricId[];
+  layouts: { lg: Layout[]; md: Layout[] };
+};
 
 function normalise(input: unknown): Config {
-  const cfg = input as Partial<Config> | null;
+  const cfg = input as (Partial<Config> & { keyNumbers?: unknown }) | null;
+  const keyNumbers = normaliseKeyNumbers(cfg?.keyNumbers);
   if (cfg && cfg.version === 1 && cfg.layouts?.lg?.length) {
     const widgets = cfg.layouts.lg.map((l) => l.i).filter((i): i is WidgetId => i in REGISTRY);
     return {
       version: 1,
       widgets,
+      keyNumbers,
       layouts: {
         lg: cfg.layouts.lg.filter((l) => l.i in REGISTRY),
         md: (cfg.layouts.md ?? cfg.layouts.lg).filter((l) => l.i in REGISTRY),
@@ -99,6 +111,7 @@ function normalise(input: unknown): Config {
   return {
     version: 1,
     widgets: DEFAULT_LAYOUTS.lg.map((l) => l.i as WidgetId),
+    keyNumbers,
     layouts: { lg: DEFAULT_LAYOUTS.lg, md: DEFAULT_LAYOUTS.md },
   };
 }
@@ -116,6 +129,7 @@ export function DashboardGrid({
   const [editing, setEditing] = React.useState(false);
   const [bp, setBp] = React.useState("lg");
   const [config, setConfig] = React.useState<Config>(() => normalise(initialConfig));
+  const [pickerOpen, setPickerOpen] = React.useState(false);
   const saveTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => setMounted(true), []);
@@ -144,7 +158,7 @@ export function DashboardGrid({
     if (!all.lg) return;
     const clean = (arr: Layout[] | undefined) =>
       (arr ?? []).filter((l) => config.widgets.includes(l.i as WidgetId)).map(({ i, x, y, w, h }) => ({ i, x, y, w, h }));
-    persist({ version: 1, widgets: config.widgets, layouts: { lg: clean(all.lg), md: clean(all.md ?? all.lg) } });
+    persist({ version: 1, widgets: config.widgets, keyNumbers: config.keyNumbers, layouts: { lg: clean(all.lg), md: clean(all.md ?? all.lg) } });
   }
 
   function addWidget(id: WidgetId) {
@@ -154,6 +168,7 @@ export function DashboardGrid({
     persist({
       version: 1,
       widgets: [...config.widgets, id],
+      keyNumbers: config.keyNumbers,
       layouts: { lg: [...config.layouts.lg, item], md: [...config.layouts.md, { ...item, w: Math.min(def.lg.w, 8) }] },
     });
   }
@@ -162,6 +177,7 @@ export function DashboardGrid({
     persist({
       version: 1,
       widgets: config.widgets.filter((w) => w !== id),
+      keyNumbers: config.keyNumbers,
       layouts: {
         lg: config.layouts.lg.filter((l) => l.i !== id),
         md: config.layouts.md.filter((l) => l.i !== id),
@@ -289,6 +305,15 @@ export function DashboardGrid({
                   {!editing && isStats ? (
                     <span className="shrink-0 text-[12px] text-fg-3">Updated just now</span>
                   ) : null}
+                  {editing && isStats ? (
+                    <button
+                      type="button"
+                      onClick={() => setPickerOpen(true)}
+                      className="shrink-0 rounded-md border border-line bg-surface px-2.5 py-1 text-[12px] font-semibold text-fg-2 hover:border-gold hover:text-fg-1"
+                    >
+                      <SlidersHorizontal size={13} className="mr-1 inline" /> Choose numbers
+                    </button>
+                  ) : null}
                   {editing ? (
                     <button
                       type="button"
@@ -300,7 +325,7 @@ export function DashboardGrid({
                     </button>
                   ) : null}
                 </div>
-                <div className="min-h-0 flex-1">{def.render({ data, ai })}</div>
+                <div className="min-h-0 flex-1">{def.render({ data, ai, keyNumbers: config.keyNumbers })}</div>
               </div>
             );
           })}
@@ -311,6 +336,16 @@ export function DashboardGrid({
           Drag the handle to move a module, drag its bottom-right corner to resize. Changes save automatically.
         </p>
       ) : null}
+
+      <KeyNumbersPicker
+        open={pickerOpen}
+        value={config.keyNumbers}
+        onClose={() => setPickerOpen(false)}
+        onSave={(next) => {
+          persist({ ...config, keyNumbers: next });
+          setPickerOpen(false);
+        }}
+      />
     </div>
   );
 }

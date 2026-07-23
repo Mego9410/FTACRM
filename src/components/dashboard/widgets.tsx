@@ -15,6 +15,7 @@ import {
   Wallet,
 } from "lucide-react";
 import type { DashboardData } from "@/lib/dashboard";
+import { DEFAULT_KEY_NUMBERS, METRIC_BY_ID, type MetricId } from "@/lib/dashboard-metrics";
 import { cn, formatGBP, relativeTime } from "@/lib/utils";
 import { Badge, EmptyState } from "@/components/ui/primitives";
 import { setTaskStatus } from "@/app/(app)/tasks/actions";
@@ -25,34 +26,40 @@ function fmtTime(iso: string) {
   return new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 }
 
-/* ── Key numbers (borderless figures with hairline dividers) ────────── */
+/* ── Key numbers (user-chosen figures with hairline dividers) ────────── */
 
-export function StatsWidget({ data }: { data: DashboardData }) {
-  const s = data.stats;
-  const tiles = [
-    { label: "Open tasks", value: s.openTasks, sub: `${s.overdueTasks} overdue`, subClass: s.overdueTasks > 0 ? "text-danger" : "text-fg-3", href: "/tasks" },
-    { label: "My live deals", value: s.myLiveDeals, sub: formatGBP(s.myPipelineValue, { compact: true }), subClass: "text-gold-deep", href: "/deals" },
-    { label: "Valuations this week", value: s.valuationsThisWeek, sub: "booked", subClass: "text-fg-3", href: "/practices?status=valuation" },
-    { label: "Completions", value: s.completionsThisMonth, sub: "this month", subClass: "text-available-fg", href: "/deals?status=completed" },
-    { label: "Practices available", value: s.availablePractices, sub: "on the market", subClass: "text-fg-3", href: "/practices?status=live" },
-    { label: "Buyer pool", value: s.buyerPool.toLocaleString("en-GB"), sub: "registered", subClass: "text-fg-3", href: "/contacts?role=buyer" },
-  ];
+const SUB_TONE: Record<string, string> = {
+  muted: "text-fg-3",
+  gold: "text-gold-deep",
+  green: "text-available-fg",
+  danger: "text-danger",
+};
+
+export function StatsWidget({ data, keyNumbers }: { data: DashboardData; keyNumbers: MetricId[] }) {
+  const selected = (keyNumbers.length ? keyNumbers : DEFAULT_KEY_NUMBERS)
+    .map((id) => METRIC_BY_ID[id])
+    .filter(Boolean);
   return (
     <div className="flex h-full items-stretch overflow-x-auto px-0.5 py-4">
-      {tiles.map((t, i) => (
-        <Link
-          key={t.label}
-          href={t.href}
-          className={cn(
-            "group flex min-w-[150px] flex-1 flex-col justify-center px-5 first:pl-0 last:pr-0",
-            i < tiles.length - 1 && "border-r border-line",
-          )}
-        >
-          <p className="text-[30px] font-extrabold leading-none tracking-tight text-ink sm:text-[34px]">{t.value}</p>
-          <p className="mt-2 truncate text-[13px] font-semibold text-fg-1 transition-colors group-hover:text-gold-deep">{t.label}</p>
-          <p className={cn("mt-0.5 truncate text-[12px]", t.subClass)}>{t.sub}</p>
-        </Link>
-      ))}
+      {selected.map((m, i) => {
+        const sub = m.sub(data.metrics);
+        return (
+          <Link
+            key={m.id}
+            href={m.href}
+            className={cn(
+              "group flex min-w-[150px] flex-1 flex-col justify-center px-5 first:pl-0 last:pr-0",
+              i < selected.length - 1 && "border-r border-line",
+            )}
+          >
+            <p className="text-[30px] font-extrabold leading-none tracking-tight text-ink sm:text-[34px]">
+              {m.value(data.metrics)}
+            </p>
+            <p className="mt-2 truncate text-[13px] font-semibold text-fg-1 transition-colors group-hover:text-gold-deep">{m.label}</p>
+            <p className={cn("mt-0.5 truncate text-[12px]", SUB_TONE[sub.tone])}>{sub.text}</p>
+          </Link>
+        );
+      })}
     </div>
   );
 }
