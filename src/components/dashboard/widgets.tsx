@@ -38,7 +38,7 @@ export function StatsWidget({ data }: { data: DashboardData }) {
     { label: "Buyer pool", value: s.buyerPool.toLocaleString("en-GB"), sub: "registered", subClass: "text-fg-3", href: "/contacts?role=buyer" },
   ];
   return (
-    <div className="flex h-full items-stretch overflow-x-auto px-5 py-4">
+    <div className="flex h-full items-stretch overflow-x-auto px-0.5 py-4">
       {tiles.map((t, i) => (
         <Link
           key={t.label}

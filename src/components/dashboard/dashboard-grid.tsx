@@ -58,34 +58,37 @@ const REGISTRY: Record<WidgetId, WidgetDef> = {
 
 const ORDER: WidgetId[] = ["stats", "today", "tasks", "ai", "pipeline", "activity", "attention"];
 
-// The comp's dashboard is exactly: Key numbers ledger + three panels
-// (Today's schedule / My tasks / AI assistant). Extra modules (pipeline,
-// activity, attention) remain available via Customise → Add module.
 const DEFAULT_LAYOUTS: Layouts = {
   lg: [
     { i: "stats", x: 0, y: 0, w: 12, h: 3 },
-    { i: "today", x: 0, y: 3, w: 4, h: 6 },
-    { i: "tasks", x: 4, y: 3, w: 4, h: 6 },
-    { i: "ai", x: 8, y: 3, w: 4, h: 6 },
+    { i: "today", x: 0, y: 3, w: 4, h: 5 },
+    { i: "tasks", x: 4, y: 3, w: 4, h: 5 },
+    { i: "ai", x: 8, y: 3, w: 4, h: 5 },
+    { i: "pipeline", x: 0, y: 8, w: 6, h: 5 },
+    { i: "activity", x: 6, y: 8, w: 3, h: 5 },
+    { i: "attention", x: 9, y: 8, w: 3, h: 5 },
   ],
   md: [
     { i: "stats", x: 0, y: 0, w: 8, h: 3 },
-    { i: "today", x: 0, y: 3, w: 4, h: 6 },
-    { i: "tasks", x: 4, y: 3, w: 4, h: 6 },
-    { i: "ai", x: 0, y: 9, w: 8, h: 5 },
+    { i: "today", x: 0, y: 3, w: 4, h: 5 },
+    { i: "tasks", x: 4, y: 3, w: 4, h: 5 },
+    { i: "ai", x: 0, y: 8, w: 4, h: 5 },
+    { i: "attention", x: 4, y: 8, w: 4, h: 5 },
+    { i: "pipeline", x: 0, y: 13, w: 8, h: 5 },
+    { i: "activity", x: 0, y: 18, w: 8, h: 4 },
   ],
 };
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
-type Config = { version: 2; widgets: WidgetId[]; layouts: { lg: Layout[]; md: Layout[] } };
+type Config = { version: 1; widgets: WidgetId[]; layouts: { lg: Layout[]; md: Layout[] } };
 
 function normalise(input: unknown): Config {
   const cfg = input as Partial<Config> | null;
-  if (cfg && cfg.version === 2 && cfg.layouts?.lg?.length) {
+  if (cfg && cfg.version === 1 && cfg.layouts?.lg?.length) {
     const widgets = cfg.layouts.lg.map((l) => l.i).filter((i): i is WidgetId => i in REGISTRY);
     return {
-      version: 2,
+      version: 1,
       widgets,
       layouts: {
         lg: cfg.layouts.lg.filter((l) => l.i in REGISTRY),
@@ -94,7 +97,7 @@ function normalise(input: unknown): Config {
     };
   }
   return {
-    version: 2,
+    version: 1,
     widgets: DEFAULT_LAYOUTS.lg.map((l) => l.i as WidgetId),
     layouts: { lg: DEFAULT_LAYOUTS.lg, md: DEFAULT_LAYOUTS.md },
   };
@@ -127,7 +130,7 @@ export function DashboardGrid({
   const persist = React.useCallback((next: Config) => {
     setConfig(next);
     try {
-      window.localStorage.setItem("fta-dashboard-v2", JSON.stringify(next));
+      window.localStorage.setItem("fta-dashboard-v1", JSON.stringify(next));
     } catch {
       /* ignore quota */
     }
@@ -141,7 +144,7 @@ export function DashboardGrid({
     if (!all.lg) return;
     const clean = (arr: Layout[] | undefined) =>
       (arr ?? []).filter((l) => config.widgets.includes(l.i as WidgetId)).map(({ i, x, y, w, h }) => ({ i, x, y, w, h }));
-    persist({ version: 2, widgets: config.widgets, layouts: { lg: clean(all.lg), md: clean(all.md ?? all.lg) } });
+    persist({ version: 1, widgets: config.widgets, layouts: { lg: clean(all.lg), md: clean(all.md ?? all.lg) } });
   }
 
   function addWidget(id: WidgetId) {
@@ -149,7 +152,7 @@ export function DashboardGrid({
     const def = REGISTRY[id];
     const item = { i: id, x: 0, y: Infinity, w: def.lg.w, h: def.lg.h };
     persist({
-      version: 2,
+      version: 1,
       widgets: [...config.widgets, id],
       layouts: { lg: [...config.layouts.lg, item], md: [...config.layouts.md, { ...item, w: Math.min(def.lg.w, 8) }] },
     });
@@ -157,7 +160,7 @@ export function DashboardGrid({
 
   function removeWidget(id: WidgetId) {
     persist({
-      version: 2,
+      version: 1,
       widgets: config.widgets.filter((w) => w !== id),
       layouts: {
         lg: config.layouts.lg.filter((l) => l.i !== id),
@@ -169,7 +172,7 @@ export function DashboardGrid({
   async function reset() {
     setConfig(normalise(null));
     try {
-      window.localStorage.removeItem("fta-dashboard-v2");
+      window.localStorage.removeItem("fta-dashboard-v1");
     } catch {
       /* ignore */
     }
@@ -259,11 +262,22 @@ export function DashboardGrid({
               <div
                 key={id}
                 className={cn(
-                  "flex flex-col overflow-hidden rounded-[18px] border border-line bg-surface shadow-xs",
-                  isStats && "border-t-2 border-t-gold",
+                  "flex flex-col",
+                  // "Key numbers" floats on the page: a 2px gold top rule, no
+                  // card border/background/shadow. Every other module is a
+                  // hairline white card.
+                  isStats
+                    ? "border-t-2 border-t-gold"
+                    : "overflow-hidden rounded-[18px] border border-line bg-surface shadow-xs",
                 )}
               >
-                <div className={cn("flex shrink-0 items-center justify-between gap-2 border-b border-line px-5 py-3.5", editing && "bg-surface-2")}>
+                <div
+                  className={cn(
+                    "flex shrink-0 items-center justify-between gap-2 py-3.5",
+                    isStats ? "px-0.5" : "border-b border-line px-5",
+                    editing && !isStats && "bg-surface-2",
+                  )}
+                >
                   <div className="flex min-w-0 items-center gap-2">
                     {editing ? (
                       <span className="widget-drag cursor-grab text-fg-4 hover:text-fg-2 active:cursor-grabbing">

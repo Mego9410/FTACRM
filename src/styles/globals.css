@@ -97,13 +97,9 @@ body {
 body {
   font-family: var(--font-sans);
   color: var(--color-fg-2);
-  /* Soft warm depth instead of flat grey — a faint gold glow top-right and a
-     cool wash bottom-left so cards lift off the page. */
-  background:
-    radial-gradient(1100px 620px at 100% -8%, rgba(228, 173, 37, 0.07), transparent 60%),
-    radial-gradient(900px 560px at -6% 108%, rgba(47, 119, 190, 0.05), transparent 60%),
-    var(--color-surface-2);
-  background-attachment: fixed;
+  /* Flat white app frame, per the Aspen comp — panels lift off it with a
+     hairline border + soft shadow rather than a grey backdrop. */
+  background: var(--color-surface);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   font-size: 15px;
