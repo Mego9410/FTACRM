@@ -1,13 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { cronUnauthorized } from "@/lib/http/verify-secret";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const STALLED_DAYS = 14;
 
 /** Daily: flag in-progress deals with no activity and notify their owners. */
 export async function GET(request: NextRequest) {
-  if (request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "unauthorised" }, { status: 401 });
-  }
+  const unauth = cronUnauthorized(request);
+  if (unauth) return unauth;
   const admin = createAdminClient();
   const cutoff = new Date(Date.now() - STALLED_DAYS * 86_400_000).toISOString();
 

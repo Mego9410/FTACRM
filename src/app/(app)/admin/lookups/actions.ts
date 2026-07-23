@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 const valueSchema = z.object({
   id: z.string().uuid().optional(),
@@ -28,7 +28,7 @@ export async function saveLookupValue(input: unknown): Promise<ActionResult> {
   if (id) {
     const { data: before } = await admin.from("lookup_values").select("*").eq("id", id).single();
     const { error } = await admin.from("lookup_values").update(fields).eq("id", id);
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
     await audit("lookup_values", id, me.id, [
       { field: "value", oldValue: before?.value, newValue: fields.value },
       { field: "color", oldValue: before?.color, newValue: fields.color },

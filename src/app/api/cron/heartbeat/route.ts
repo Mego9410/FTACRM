@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { cronUnauthorized } from "@/lib/http/verify-secret";
 import { dispatchCampaigns } from "@/lib/email/dispatch";
 import {
   analysePendingCalls,
@@ -16,9 +17,8 @@ export const maxDuration = 60;
  * suggestion expiry. On Pro, schedule this every few minutes.
  */
 export async function GET(request: NextRequest) {
-  if (request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "unauthorised" }, { status: 401 });
-  }
+  const unauth = cronUnauthorized(request);
+  if (unauth) return unauth;
   const [campaigns, transcribed, analysed] = await Promise.all([
     dispatchCampaigns().catch((e) => ({ error: String(e) })),
     transcribePendingCalls().catch(() => 0),

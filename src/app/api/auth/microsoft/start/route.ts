@@ -13,6 +13,12 @@ export async function GET() {
   }
   const state = crypto.randomBytes(16).toString("hex");
   const cookieStore = await cookies();
-  cookieStore.set("ms_oauth_state", state, { httpOnly: true, maxAge: 600, path: "/" });
+  cookieStore.set("ms_oauth_state", state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 600,
+    path: "/",
+  });
   return NextResponse.redirect(authorizeUrl(state));
 }

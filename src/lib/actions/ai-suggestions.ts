@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 /**
  * Human-in-the-loop resolution of AI suggestions. Accepting a task suggestion
@@ -48,7 +48,7 @@ export async function acceptSuggestion(input: unknown): Promise<ActionResult> {
       practice_id: suggestion.practice_id,
       deal_id: suggestion.deal_id,
     });
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
   }
   // 'note' / 'email_draft' / 'outreach': accepting just marks them handled —
   // the content itself is copied/used by the person reviewing.
@@ -57,7 +57,7 @@ export async function acceptSuggestion(input: unknown): Promise<ActionResult> {
     .from("ai_suggestions")
     .update({ status: "accepted", resolved_by: me.id, resolved_at: new Date().toISOString() })
     .eq("id", parsed.data.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   revalidatePath(parsed.data.path);
   revalidatePath("/dashboard");
   return ok();
@@ -73,7 +73,7 @@ export async function dismissSuggestion(input: unknown): Promise<ActionResult> {
     .update({ status: "dismissed", resolved_by: me.id, resolved_at: new Date().toISOString() })
     .eq("id", parsed.data.id)
     .eq("status", "proposed");
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   revalidatePath(parsed.data.path);
   revalidatePath("/dashboard");
   return ok();
