@@ -242,7 +242,7 @@ export function DashboardGrid({
           breakpoints={{ lg: 1024, md: 640, sm: 0 }}
           cols={{ lg: 12, md: 8, sm: 1 }}
           rowHeight={58}
-          margin={[16, 16]}
+          margin={[20, 20]}
           containerPadding={[4, 4]}
           isDraggable={editing && !isMobile}
           isResizable={editing && !isMobile}

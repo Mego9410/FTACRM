@@ -33,7 +33,7 @@ export function StatsWidget({ data }: { data: DashboardData }) {
     { label: "Open tasks", value: s.openTasks, sub: `${s.overdueTasks} overdue`, subClass: s.overdueTasks > 0 ? "text-danger" : "text-fg-3", href: "/tasks" },
     { label: "My live deals", value: s.myLiveDeals, sub: formatGBP(s.myPipelineValue, { compact: true }), subClass: "text-gold-deep", href: "/deals" },
     { label: "Valuations this week", value: s.valuationsThisWeek, sub: "booked", subClass: "text-fg-3", href: "/practices?status=valuation" },
-    { label: "Completions this month", value: s.completionsThisMonth, sub: "this month", subClass: "text-available-fg", href: "/deals?status=completed" },
+    { label: "Completions", value: s.completionsThisMonth, sub: "this month", subClass: "text-available-fg", href: "/deals?status=completed" },
     { label: "Practices available", value: s.availablePractices, sub: "on the market", subClass: "text-fg-3", href: "/practices?status=live" },
     { label: "Buyer pool", value: s.buyerPool.toLocaleString("en-GB"), sub: "registered", subClass: "text-fg-3", href: "/contacts?role=buyer" },
   ];

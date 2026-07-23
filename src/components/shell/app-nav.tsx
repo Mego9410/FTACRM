@@ -255,7 +255,7 @@ export function AppNav({
 
       {/* Main content — reflows with the sidebar width */}
       <main className={cn("transition-[padding] duration-200", contentPad)}>
-        <div className="mx-auto w-full max-w-[1400px] overflow-x-clip px-4 py-6 sm:px-6">{children}</div>
+        <div className="mx-auto w-full max-w-[1400px] overflow-x-clip px-5 py-7 sm:px-10 sm:py-9">{children}</div>
       </main>
 
       {/* Mobile drawer */}
