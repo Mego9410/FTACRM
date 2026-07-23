@@ -5,16 +5,17 @@ import { PracticeForm } from "../practice-form";
 export const metadata = { title: "New practice" };
 
 export default async function NewPracticePage() {
-  const [fundings, tenures, specialisms] = await Promise.all([
+  const [fundings, tenures, entities, specialisms] = await Promise.all([
     getLookup("funding_type"),
     getLookup("tenure_type"),
+    getLookup("trading_entity"),
     getLookup("specialism"),
   ]);
 
   return (
     <div className="mx-auto max-w-3xl">
       <PageHeader title="New practice" subtitle="Starts in Valuation — move it through the lifecycle from the record" />
-      <PracticeForm lookups={{ fundings, tenures, specialisms }} />
+      <PracticeForm lookups={{ fundings, tenures, entities, specialisms }} />
     </div>
   );
 }

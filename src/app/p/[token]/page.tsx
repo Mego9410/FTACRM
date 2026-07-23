@@ -28,13 +28,16 @@ type PublicPractice = {
   price_prefix: string;
   funding_type_id: string | null;
   tenure_type_id: string | null;
+  trading_entity_id: string | null;
   specialism_ids: string[];
   surgeries: number | null;
   annual_turnover: number | null;
   ebitda: number | null;
+  reconstituted_profit: number | null;
   nhs_contract_value: number | null;
   udas: number | null;
   staff_count: number | null;
+  established_year: number | null;
   description: string | null;
   archived_at: string | null;
 };
@@ -45,7 +48,7 @@ async function loadPractice(token: string): Promise<PublicPractice | null> {
   const { data } = await admin
     .from("practices")
     .select(
-      "id, ref, display_title, town, county, lat, lng, status, asking_price, price_prefix, funding_type_id, tenure_type_id, specialism_ids, surgeries, annual_turnover, ebitda, nhs_contract_value, udas, staff_count, description, archived_at",
+      "id, ref, display_title, town, county, lat, lng, status, asking_price, price_prefix, funding_type_id, tenure_type_id, trading_entity_id, specialism_ids, surgeries, annual_turnover, ebitda, reconstituted_profit, nhs_contract_value, udas, staff_count, established_year, description, archived_at",
     )
     .eq("public_token", token)
     .maybeSingle();
@@ -105,9 +108,12 @@ export default async function PublicPracticePage({ params }: { params: Promise<{
   }
 
   const admin = createAdminClient();
-  const lookupIds = [practice.funding_type_id, practice.tenure_type_id, ...(practice.specialism_ids ?? [])].filter(
-    (x): x is string => Boolean(x),
-  );
+  const lookupIds = [
+    practice.funding_type_id,
+    practice.tenure_type_id,
+    practice.trading_entity_id,
+    ...(practice.specialism_ids ?? []),
+  ].filter((x): x is string => Boolean(x));
   const [{ data: lookups }, { data: photoRow }] = await Promise.all([
     lookupIds.length
       ? admin.from("lookup_values").select("id, value").in("id", lookupIds)
@@ -117,7 +123,16 @@ export default async function PublicPracticePage({ params }: { params: Promise<{
   const lookupById = new Map((lookups ?? []).map((l) => [l.id, l.value]));
   const funding = practice.funding_type_id ? (lookupById.get(practice.funding_type_id) ?? null) : null;
   const tenure = practice.tenure_type_id ? (lookupById.get(practice.tenure_type_id) ?? null) : null;
+  const entity = practice.trading_entity_id ? (lookupById.get(practice.trading_entity_id) ?? null) : null;
   const specialisms = (practice.specialism_ids ?? []).map((id) => lookupById.get(id)).filter((x): x is string => Boolean(x));
+  const reconProfit =
+    practice.reconstituted_profit != null
+      ? `${gbp(practice.reconstituted_profit)}${
+          practice.annual_turnover
+            ? ` (${Math.round((practice.reconstituted_profit / practice.annual_turnover) * 1000) / 10}%)`
+            : ""
+        }`
+      : null;
 
   let photoUrl: string | null = null;
   const headlinePath = (photoRow as { headline_image_path?: string | null } | null)?.headline_image_path ?? null;
@@ -143,12 +158,15 @@ export default async function PublicPracticePage({ params }: { params: Promise<{
     { label: "Asking price", value: price },
     { label: "Funding", value: funding },
     { label: "Tenure", value: tenure },
+    { label: "Trading entity", value: entity },
     { label: "Surgeries", value: practice.surgeries != null ? String(practice.surgeries) : null },
     { label: "Annual turnover", value: gbp(practice.annual_turnover) },
     { label: "EBITDA", value: gbp(practice.ebitda) },
+    { label: "Reconstituted profit", value: reconProfit },
     { label: "NHS contract value", value: gbp(practice.nhs_contract_value) },
     { label: "UDAs", value: practice.udas != null ? practice.udas.toLocaleString("en-GB") : null },
     { label: "Team size", value: practice.staff_count != null ? String(practice.staff_count) : null },
+    { label: "Established", value: practice.established_year != null ? String(practice.established_year) : null },
     { label: "Location", value: location || null },
     { label: "Reference", value: practice.ref },
   ].filter((f): f is { label: string; value: string } => Boolean(f.value));

@@ -9,10 +9,11 @@ import type { PracticeFormValues } from "../practice-form";
 export default async function PracticeDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [{ data: practice }, fundings, tenures, specialisms] = await Promise.all([
+  const [{ data: practice }, fundings, tenures, entities, specialisms] = await Promise.all([
     supabase.from("practices").select("*").eq("id", id).maybeSingle(),
     getLookup("funding_type"),
     getLookup("tenure_type"),
+    getLookup("trading_entity"),
     getLookup("specialism"),
   ]);
   if (!practice) notFound();
@@ -40,7 +41,7 @@ export default async function PracticeDetailsPage({ params }: { params: Promise<
       <div className="min-w-0">
         <PracticeRecord
           practice={practice as unknown as PracticeFormValues & { id: string }}
-          lookups={{ fundings, tenures, specialisms }}
+          lookups={{ fundings, tenures, entities, specialisms }}
         />
       </div>
     </div>

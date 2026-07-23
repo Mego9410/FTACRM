@@ -20,13 +20,16 @@ export type PracticeFormValues = {
   price_prefix: string;
   funding_type_id: string | null;
   tenure_type_id: string | null;
+  trading_entity_id: string | null;
   specialism_ids: string[];
   surgeries: number | null;
   annual_turnover: number | null;
   ebitda: number | null;
+  reconstituted_profit: number | null;
   nhs_contract_value: number | null;
   udas: number | null;
   staff_count: number | null;
+  established_year: number | null;
   description: string | null;
   instructed_at: string | null;
   contract_expiry: string | null;
@@ -80,6 +83,7 @@ export function PracticeForm({
   lookups: {
     fundings: LookupValue[];
     tenures: LookupValue[];
+    entities: LookupValue[];
     specialisms: LookupValue[];
   };
   /** When set, only this section is shown (the rest stay in the DOM so nothing is lost on save). */
@@ -123,13 +127,16 @@ export function PracticeForm({
       price_prefix: String(f.get("price_prefix")) as "guide" | "offers_over" | "fixed" | "poa",
       funding_type_id: String(f.get("funding_type_id") ?? "") || null,
       tenure_type_id: String(f.get("tenure_type_id") ?? "") || null,
+      trading_entity_id: String(f.get("trading_entity_id") ?? "") || null,
       specialism_ids: specialisms,
       surgeries: intOrNull(f.get("surgeries")),
       annual_turnover: num(f.get("annual_turnover")),
       ebitda: num(f.get("ebitda")),
+      reconstituted_profit: num(f.get("reconstituted_profit")),
       nhs_contract_value: num(f.get("nhs_contract_value")),
       udas: intOrNull(f.get("udas")),
       staff_count: intOrNull(f.get("staff_count")),
+      established_year: intOrNull(f.get("established_year")),
       description: String(f.get("description") ?? ""),
       instructed_at: String(f.get("instructed_at") ?? "") || null,
       contract_expiry: String(f.get("contract_expiry") ?? "") || null,
@@ -214,6 +221,14 @@ export function PracticeForm({
                 ))}
               </Select>
             </Field>
+            <Field label="Trading entity" htmlFor="pf_entity">
+              <Select id="pf_entity" name="trading_entity_id" defaultValue={initial?.trading_entity_id ?? ""}>
+                <option value="">Not set</option>
+                {lookups.entities.map((v) => (
+                  <option key={v.id} value={v.id}>{v.value}</option>
+                ))}
+              </Select>
+            </Field>
             <Field label="Lease expiry" htmlFor="pf_lease" hint="Leasehold practices — when the lease runs out">
               <Input id="pf_lease" name="lease_expiry" type="date" defaultValue={initial?.lease_expiry ?? ""} />
             </Field>
@@ -232,11 +247,17 @@ export function PracticeForm({
             <Field label="Staff" htmlFor="pf_staff">
               <Input id="pf_staff" name="staff_count" type="number" min={0} defaultValue={initial?.staff_count ?? ""} />
             </Field>
+            <Field label="Established (year)" htmlFor="pf_established" hint="Year the practice was founded">
+              <Input id="pf_established" name="established_year" type="number" min={1800} max={2100} placeholder="1895" defaultValue={initial?.established_year ?? ""} />
+            </Field>
             <Field label="Annual turnover (£)" htmlFor="pf_turnover">
               <Input id="pf_turnover" name="annual_turnover" inputMode="numeric" defaultValue={initial?.annual_turnover ?? ""} />
             </Field>
             <Field label="EBITDA (£)" htmlFor="pf_ebitda">
               <Input id="pf_ebitda" name="ebitda" inputMode="numeric" defaultValue={initial?.ebitda ?? ""} />
+            </Field>
+            <Field label="Reconstituted profit (£)" htmlFor="pf_recon" hint="Adjusted net profit — % of turnover shown automatically">
+              <Input id="pf_recon" name="reconstituted_profit" inputMode="numeric" defaultValue={initial?.reconstituted_profit ?? ""} />
             </Field>
             <Field label="NHS contract value (£)" htmlFor="pf_nhs">
               <Input id="pf_nhs" name="nhs_contract_value" inputMode="numeric" defaultValue={initial?.nhs_contract_value ?? ""} />

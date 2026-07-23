@@ -27,9 +27,12 @@ export type LaunchPractice = {
   staff_count: number | null;
   annual_turnover: number | null;
   ebitda: number | null;
+  reconstituted_profit: number | null;
   nhs_contract_value: number | null;
+  established_year: number | null;
   funding: string | null;
   tenure: string | null;
+  trading_entity: string | null;
   specialisms: string[];
   description: string | null;
 };
@@ -74,15 +77,27 @@ export function renderLaunchEmail(
   const heroPrice = priceLabel(practice.asking_price, practice.price_prefix);
 
   // Asking price now headlines the hero, so it's dropped from the fact grid.
+  const reconProfit =
+    practice.reconstituted_profit != null
+      ? `${gbp(practice.reconstituted_profit)}${
+          practice.annual_turnover
+            ? ` (${Math.round((practice.reconstituted_profit / practice.annual_turnover) * 1000) / 10}%)`
+            : ""
+        }`
+      : null;
+
   const facts: [string, string | null][] = [
     ["Surgeries", practice.surgeries != null ? String(practice.surgeries) : null],
     ["Funding", practice.funding],
     ["Tenure", practice.tenure],
+    ["Trading entity", practice.trading_entity],
     ["Annual turnover", gbp(practice.annual_turnover)],
     ["EBITDA", gbp(practice.ebitda)],
+    ["Reconstituted profit", reconProfit],
     ["NHS contract value", gbp(practice.nhs_contract_value)],
     ["UDAs", practice.udas != null ? practice.udas.toLocaleString("en-GB") : null],
     ["Staff", practice.staff_count != null ? String(practice.staff_count) : null],
+    ["Established", practice.established_year != null ? String(practice.established_year) : null],
   ];
   const present = facts.filter((f): f is [string, string] => f[1] !== null && f[1] !== "");
   const factRows: string[] = [];

@@ -674,3 +674,17 @@ begin
 
   raise notice 'demo data loaded: staff, contacts, practices, calls, and per-person tasks + calendar';
 end $$;
+
+-- ── Extra financial facts on demo practices (reconstituted profit, year
+-- established, trading entity) — mirrors migration 0020's backfill so the demo
+-- set shows the new fields. Scoped to DEMO rows; real records untouched.
+update public.practices
+set reconstituted_profit = round((annual_turnover * 0.28)::numeric, -3),
+    established_year = 1900 + (abs(hashtext(id::text)) % 116),
+    trading_entity_id = (
+      select lv.id from public.lookup_values lv
+      join public.lookup_types lt on lt.id = lv.lookup_type_id
+      where lt.key = 'trading_entity'
+        and lv.system_key = (array['limited_company','sole_trader','partnership'])[1 + (abs(hashtext(practices.id::text)) % 3)]
+    )
+where legacy_ref like 'DEMO-PRACTICE-%';

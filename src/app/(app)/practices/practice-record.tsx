@@ -35,6 +35,7 @@ export function PracticeRecord({
   lookups: {
     fundings: LookupValue[];
     tenures: LookupValue[];
+    entities: LookupValue[];
     specialisms: LookupValue[];
   };
 }) {
@@ -84,12 +85,23 @@ export function PracticeRecord({
           <dl className="grid gap-4 sm:grid-cols-3">
             <Row label="Funding">{dash(lookupName(lookups.fundings, practice.funding_type_id))}</Row>
             <Row label="Tenure">{dash(lookupName(lookups.tenures, practice.tenure_type_id))}</Row>
+            <Row label="Trading entity">{dash(lookupName(lookups.entities, practice.trading_entity_id))}</Row>
             <Row label="Lease expiry">{practice.lease_expiry ? formatDate(practice.lease_expiry) : "—"}</Row>
+            <Row label="Established">{practice.established_year ?? "—"}</Row>
             <Row label="Surgeries">{dash(practice.surgeries)}</Row>
             <Row label="UDAs">{practice.udas === null ? "—" : practice.udas.toLocaleString("en-GB")}</Row>
             <Row label="Staff">{dash(practice.staff_count)}</Row>
             <Row label="Annual turnover">{formatGBP(practice.annual_turnover)}</Row>
             <Row label="EBITDA">{formatGBP(practice.ebitda)}</Row>
+            <Row label="Reconstituted profit">
+              {practice.reconstituted_profit === null
+                ? "—"
+                : `${formatGBP(practice.reconstituted_profit)}${
+                    practice.annual_turnover
+                      ? ` (${Math.round((practice.reconstituted_profit / practice.annual_turnover) * 1000) / 10}%)`
+                      : ""
+                  }`}
+            </Row>
             <Row label="NHS contract value">{formatGBP(practice.nhs_contract_value)}</Row>
           </dl>
           <div>
