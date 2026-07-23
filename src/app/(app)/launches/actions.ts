@@ -9,7 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { loadLaunchPractice } from "@/lib/email/launch-data";
 import { renderLaunchEmail } from "@/lib/email/launch-template";
 import { audit } from "@/lib/audit";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 const createLaunchSchema = z.object({
   practice_id: z.string().uuid(),
@@ -99,12 +99,12 @@ export async function createLaunch(input: unknown): Promise<ActionResult<{ id: s
     })
     .select("id")
     .single();
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
 
   const { error: recipientsError } = await supabase.from("campaign_recipients").insert(
     eligible.map((c) => ({ campaign_id: campaign.id, contact_id: c.id, email: c.email as string })),
   );
-  if (recipientsError) return fail(recipientsError.message);
+  if (recipientsError) return dbFail(recipientsError);
 
   await audit("campaigns", campaign.id, me.id, [
     {

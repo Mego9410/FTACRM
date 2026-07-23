@@ -6,7 +6,7 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { audit } from "@/lib/audit";
 import { geocodePlace } from "@/lib/geo";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 const criteriaSchema = z.object({
   contact_id: z.string().uuid(),
@@ -35,7 +35,7 @@ export async function saveBuyerCriteria(input: unknown): Promise<ActionResult> {
   const { error } = await supabase
     .from("buyer_criteria")
     .upsert({ contact_id, ...fields }, { onConflict: "contact_id" });
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   await audit("contacts", contact_id, me.id, [
     { field: "buyer_criteria", oldValue: null, newValue: "updated" },
   ]);
@@ -63,7 +63,7 @@ export async function addSearchArea(input: unknown): Promise<ActionResult> {
     const { error } = await supabase
       .from("buyer_search_areas")
       .insert({ contact_id, label: region, region });
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
   } else {
     if (!place || !radius_miles) return fail("Enter a place and radius.");
     const hit = await geocodePlace(place);
@@ -75,7 +75,7 @@ export async function addSearchArea(input: unknown): Promise<ActionResult> {
       lng: hit.lng,
       radius_miles,
     });
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
   }
   revalidatePath(`/contacts/${contact_id}/buyer`);
   return ok();
@@ -87,7 +87,7 @@ export async function removeSearchArea(input: unknown): Promise<ActionResult> {
   if (!parsed.success) return fail("Invalid.");
   const supabase = await createClient();
   const { error } = await supabase.from("buyer_search_areas").delete().eq("id", parsed.data.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   revalidatePath(`/contacts/${parsed.data.contact_id}/buyer`);
   return ok();
 }

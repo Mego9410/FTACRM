@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 const instantiateSchema = z.object({
   template_id: z.string().uuid(),
@@ -37,13 +37,13 @@ export async function instantiateChecklist(input: unknown): Promise<ActionResult
     .insert({ template_id, name: template.name, created_by: me.id, ...link })
     .select("id")
     .single();
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
 
   if ((items ?? []).length > 0) {
     const { error: itemsError } = await supabase.from("checklist_items").insert(
       (items ?? []).map((it) => ({ instance_id: instance.id, label: it.label, sort_order: it.sort_order })),
     );
-    if (itemsError) return fail(itemsError.message);
+    if (itemsError) return dbFail(itemsError);
   }
   revalidatePath(path);
   return ok();
@@ -73,7 +73,7 @@ export async function toggleChecklistItem(input: unknown): Promise<ActionResult>
       checked_at: parsed.data.checked ? doneAt : null,
     })
     .eq("id", parsed.data.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   revalidatePath(parsed.data.path);
   return ok();
 }
@@ -109,7 +109,7 @@ export async function updateChecklistItem(input: unknown): Promise<ActionResult>
   if (Object.keys(fields).length === 0) return ok();
 
   const { error } = await supabase.from("checklist_items").update(fields).eq("id", parsed.data.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   revalidatePath(parsed.data.path);
   return ok();
 }
@@ -120,7 +120,7 @@ export async function deleteChecklistInstance(input: unknown): Promise<ActionRes
   if (!parsed.success) return fail("Invalid.");
   const supabase = await createClient();
   const { error } = await supabase.from("checklist_instances").delete().eq("id", parsed.data.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   revalidatePath(parsed.data.path);
   return ok();
 }

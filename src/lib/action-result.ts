@@ -14,6 +14,17 @@ export function fail<T = undefined>(
   return { ok: false, error, fieldErrors };
 }
 
+/**
+ * [SEV-MED-02] Return a generic failure for an unexpected DB/driver error while
+ * logging the real detail server-side. Prevents leaking table/column/constraint/
+ * RLS-policy names to the client. Use for `catch`/`if (error)` paths that would
+ * otherwise surface `error.message`.
+ */
+export function dbFail<T = undefined>(error: unknown, context?: string): ActionResult<T> {
+  console.error(`[action]${context ? ` ${context}` : ""}`, error);
+  return { ok: false, error: "Something went wrong. Please try again." };
+}
+
 /** Zod-style flatten → per-field error map. */
 export function zodFieldErrors(flat: {
   fieldErrors: Record<string, string[] | undefined>;

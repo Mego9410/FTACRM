@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 const templateSchema = z.object({
   id: z.string().uuid().optional(),
@@ -24,10 +24,10 @@ export async function saveChecklistTemplate(input: unknown): Promise<ActionResul
   let templateId = id;
   if (templateId) {
     const { error } = await admin.from("checklist_templates").update(fields).eq("id", templateId);
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
   } else {
     const { data, error } = await admin.from("checklist_templates").insert(fields).select("id").single();
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
     templateId = data.id;
   }
 
@@ -37,7 +37,7 @@ export async function saveChecklistTemplate(input: unknown): Promise<ActionResul
     const { error } = await admin.from("checklist_template_items").insert(
       items.map((it, i) => ({ template_id: templateId, label: it.label, sort_order: i })),
     );
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
   }
   revalidatePath("/admin/checklists");
   return ok();

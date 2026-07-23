@@ -7,7 +7,7 @@ import { requirePermission } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { audit } from "@/lib/audit";
 import { systemJournal } from "@/lib/actions/journal";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 /** Recompute deals.current_stage_id = first stage (by sort order) without an achieved event. */
 async function refreshCurrentStage(dealId: string) {
@@ -105,7 +105,7 @@ export async function unmarkStage(input: unknown): Promise<ActionResult> {
     .delete()
     .eq("deal_id", parsed.data.deal_id)
     .eq("stage_id", parsed.data.stage_id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
 
   if (stage?.is_terminal) {
     const { data: deal } = await supabase
@@ -205,7 +205,7 @@ export async function updateDealFields(input: unknown): Promise<ActionResult> {
   const supabase = await createClient();
   const { data: before } = await supabase.from("deals").select("*").eq("id", deal_id).single();
   const { error } = await supabase.from("deals").update(fields).eq("id", deal_id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   await audit(
     "deals",
     deal_id,

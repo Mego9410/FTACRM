@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 export async function excludeMatch(input: unknown): Promise<ActionResult> {
   const me = await requireProfile();
@@ -24,7 +24,7 @@ export async function excludeMatch(input: unknown): Promise<ActionResult> {
     reason: parsed.data.reason ?? null,
     created_by: me.id,
   });
-  if (error && error.code !== "23505") return fail(error.message);
+  if (error && error.code !== "23505") return dbFail(error);
   revalidatePath(parsed.data.path);
   return ok();
 }
@@ -41,7 +41,7 @@ export async function unexcludeMatch(input: unknown): Promise<ActionResult> {
     .delete()
     .eq("practice_id", parsed.data.practice_id)
     .eq("contact_id", parsed.data.contact_id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   revalidatePath(parsed.data.path);
   return ok();
 }
@@ -69,6 +69,6 @@ export async function bulkAddTasks(input: unknown): Promise<ActionResult> {
       practice_id: parsed.data.practice_id,
     })),
   );
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   return ok();
 }

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 /**
  * Introduction-block library management, available to every signed-in user
@@ -27,11 +27,11 @@ export async function saveIntroBlockShared(input: unknown): Promise<ActionResult
 
   if (id) {
     const { error } = await supabase.from("intro_email_blocks").update(fields).eq("id", id);
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
   } else {
     const { count } = await supabase.from("intro_email_blocks").select("id", { count: "exact", head: true });
     const { error } = await supabase.from("intro_email_blocks").insert({ ...fields, sort_order: count ?? 0 });
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
   }
   revalidatePath("/contacts", "layout");
   revalidatePath("/admin/intro-blocks");
@@ -44,7 +44,7 @@ export async function deleteIntroBlockShared(input: unknown): Promise<ActionResu
   if (!parsed.success) return fail("Invalid.");
   const supabase = await createClient();
   const { error } = await supabase.from("intro_email_blocks").delete().eq("id", parsed.data.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   revalidatePath("/contacts", "layout");
   revalidatePath("/admin/intro-blocks");
   return ok();

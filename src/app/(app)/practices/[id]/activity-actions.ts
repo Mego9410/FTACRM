@@ -9,7 +9,7 @@ import { audit } from "@/lib/audit";
 import { systemJournal } from "@/lib/actions/journal";
 import { getLookup } from "@/lib/lookups";
 import { formatGBP } from "@/lib/utils";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 /* ── Valuations ─────────────────────────────────────────────────────── */
 
@@ -39,14 +39,14 @@ export async function saveValuation(input: unknown): Promise<ActionResult> {
   let valuationId = id;
   if (valuationId) {
     const { error } = await supabase.from("valuations").update(fields).eq("id", valuationId);
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
   } else {
     const { data, error } = await supabase
       .from("valuations")
       .insert({ ...fields, created_by: me.id })
       .select("id")
       .single();
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
     valuationId = data.id;
   }
 
@@ -127,14 +127,14 @@ export async function saveViewing(input: unknown): Promise<ActionResult> {
       .single();
     eventId = existing?.calendar_event_id ?? null;
     const { error } = await supabase.from("viewings").update(fields).eq("id", viewingId);
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
   } else {
     const { data, error } = await supabase
       .from("viewings")
       .insert({ ...fields, created_by: me.id })
       .select("id")
       .single();
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
     viewingId = data.id;
     // First viewing interest links the buyer to the practice.
     await supabase
@@ -199,7 +199,7 @@ export async function addOffer(input: unknown): Promise<ActionResult> {
   if (!parsed.success) return fail("Check the offer fields.");
   const supabase = await createClient();
   const { error } = await supabase.from("offers").insert({ ...parsed.data, created_by: me.id });
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
 
   await supabase
     .from("practice_contacts")
@@ -233,7 +233,7 @@ export async function updateOfferStatus(input: unknown): Promise<ActionResult> {
     .from("offers")
     .update({ status: parsed.data.status })
     .eq("id", parsed.data.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   await audit("practices", parsed.data.practice_id, me.id, [
     { field: "offer_status", oldValue: null, newValue: parsed.data.status },
   ]);

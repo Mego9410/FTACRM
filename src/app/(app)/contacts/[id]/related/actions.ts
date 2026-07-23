@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 export async function addContactLink(input: unknown): Promise<ActionResult> {
   await requireProfile();
@@ -32,7 +32,7 @@ export async function removeContactLink(input: unknown): Promise<ActionResult> {
   if (!parsed.success) return fail("Invalid.");
   const supabase = await createClient();
   const { error } = await supabase.from("contact_links").delete().eq("id", parsed.data.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   revalidatePath(`/contacts/${parsed.data.contact_id}/related`);
   return ok();
 }

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 const blockSchema = z.object({
   id: z.string().uuid().optional(),
@@ -22,11 +22,11 @@ export async function saveIntroBlock(input: unknown): Promise<ActionResult> {
 
   if (id) {
     const { error } = await admin.from("intro_email_blocks").update(fields).eq("id", id);
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
   } else {
     const { count } = await admin.from("intro_email_blocks").select("id", { count: "exact", head: true });
     const { error } = await admin.from("intro_email_blocks").insert({ ...fields, sort_order: count ?? 0 });
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
   }
   revalidatePath("/admin/intro-blocks");
   return ok();
@@ -38,7 +38,7 @@ export async function deleteIntroBlock(input: unknown): Promise<ActionResult> {
   if (!parsed.success) return fail("Invalid.");
   const admin = createAdminClient();
   const { error } = await admin.from("intro_email_blocks").delete().eq("id", parsed.data.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   revalidatePath("/admin/intro-blocks");
   return ok();
 }

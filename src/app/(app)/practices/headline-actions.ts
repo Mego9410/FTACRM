@@ -6,7 +6,7 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -44,7 +44,7 @@ export async function uploadPracticeHeadline(formData: FormData): Promise<Action
     .from("practices")
     .update({ headline_image_path: storagePath })
     .eq("id", practiceId);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
 
   // Best-effort tidy of the previous file.
   const prev = (existing as { headline_image_path: string | null } | null)?.headline_image_path;
@@ -73,7 +73,7 @@ export async function removePracticeHeadline(input: unknown): Promise<ActionResu
     .from("practices")
     .update({ headline_image_path: null })
     .eq("id", parsed.data.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   if (path) await createAdminClient().storage.from("documents").remove([path]);
 
   await audit("practices", parsed.data.id, me.id, [{ field: "headline_image", oldValue: "photo", newValue: null }]);

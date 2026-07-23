@@ -9,7 +9,7 @@ import { audit, diffChanges } from "@/lib/audit";
 import { geocodePostcode } from "@/lib/geo";
 import { systemJournal } from "@/lib/actions/journal";
 import { PRACTICE_STATUS_LABELS } from "@/lib/contact-helpers";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 const optional = (max = 200) =>
   z
@@ -70,7 +70,7 @@ export async function createPractice(input: unknown): Promise<ActionResult<{ id:
     .insert({ ...parsed.data, ...(await geoFields(parsed.data.postcode)), created_by: me.id })
     .select("id")
     .single();
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   await audit("practices", data.id, me.id, [{ field: "created", oldValue: null, newValue: parsed.data.display_title }]);
   await attachLaunchPrep(supabase, data.id, me.id);
   return ok({ id: data.id });
@@ -122,7 +122,7 @@ export async function updatePractice(input: unknown): Promise<ActionResult> {
     .from("practices")
     .update({ ...fields, ...(await geoFields(fields.postcode)) })
     .eq("id", id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   await audit("practices", id, me.id, diffChanges(before, fields as Record<string, unknown>));
   revalidatePath(`/practices/${id}`);
   return ok();
@@ -154,7 +154,7 @@ export async function changePracticeStatus(input: unknown): Promise<ActionResult
         : {}),
     })
     .eq("id", id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
 
   await audit("practices", id, me.id, [{ field: "status", oldValue: before.status, newValue: status }]);
   await systemJournal(
@@ -265,7 +265,7 @@ export async function removePracticeContact(input: unknown): Promise<ActionResul
   if (!parsed.success) return fail("Invalid.");
   const supabase = await createClient();
   const { error } = await supabase.from("practice_contacts").delete().eq("id", parsed.data.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   revalidatePath(`/practices/${parsed.data.practice_id}/people`);
   return ok();
 }
@@ -284,7 +284,7 @@ export async function setPrimarySeller(input: unknown): Promise<ActionResult> {
     .from("practice_contacts")
     .update({ is_primary: true })
     .eq("id", parsed.data.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   revalidatePath(`/practices/${parsed.data.practice_id}/people`);
   return ok();
 }

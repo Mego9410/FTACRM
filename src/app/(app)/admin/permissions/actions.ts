@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 const schema = z.object({
   role: z.enum(["manager", "agent"]), // admin's grants are implicit and not editable
@@ -24,14 +24,14 @@ export async function setPermission(input: unknown): Promise<ActionResult> {
     const { error } = await admin
       .from("role_permissions")
       .upsert({ role, permission }, { onConflict: "role,permission" });
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
   } else {
     const { error } = await admin
       .from("role_permissions")
       .delete()
       .eq("role", role)
       .eq("permission", permission);
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
   }
   await audit("role_permissions", me.id, me.id, [
     { field: `${role}:${permission}`, oldValue: !granted, newValue: granted },

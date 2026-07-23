@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 const MAX_BYTES = 20 * 1024 * 1024;
 
@@ -45,7 +45,7 @@ export async function uploadDocument(formData: FormData): Promise<ActionResult> 
     ...link,
     uploaded_by: me.id,
   });
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   revalidatePath(path);
   return ok();
 }
@@ -86,7 +86,7 @@ export async function deleteDocument(input: unknown): Promise<ActionResult> {
   const admin = createAdminClient();
   await admin.storage.from("documents").remove([doc.storage_path]);
   const { error } = await supabase.from("documents").delete().eq("id", parsed.data.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   revalidatePath(parsed.data.path);
   return ok();
 }

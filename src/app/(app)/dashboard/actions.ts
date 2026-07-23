@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 // A grid item = one widget's position/size at a breakpoint.
 const layoutItem = z.object({
@@ -32,7 +32,7 @@ export async function saveDashboardLayout(input: unknown): Promise<ActionResult>
     .from("profiles")
     .update({ dashboard_layout: parsed.data })
     .eq("id", me.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   return ok();
 }
 
@@ -43,6 +43,6 @@ export async function resetDashboardLayout(): Promise<ActionResult> {
     .from("profiles")
     .update({ dashboard_layout: null })
     .eq("id", me.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   return ok();
 }
