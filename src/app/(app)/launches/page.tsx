@@ -7,9 +7,9 @@ import { LaunchPicker } from "./launch-picker";
 
 export const metadata = { title: "Launches" };
 
-const STATUS_TONE: Record<string, "gold" | "green" | "danger" | "warn" | "neutral"> = {
+const STATUS_TONE: Record<string, "gold" | "green" | "danger" | "warn" | "neutral" | "nhs"> = {
   draft: "neutral",
-  scheduled: "warn",
+  scheduled: "nhs",
   sending: "gold",
   sent: "green",
   cancelled: "danger",
@@ -55,20 +55,20 @@ export default async function LaunchesPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-line text-left text-xs font-bold uppercase tracking-wide text-fg-3">
-                  <th className="px-5 py-2.5">Launch</th>
-                  <th className="px-3 py-2.5">Status</th>
-                  <th className="px-3 py-2.5">Recipients</th>
-                  <th className="px-3 py-2.5">Sent</th>
-                  <th className="px-3 py-2.5">Scheduled for</th>
-                  <th className="px-3 py-2.5">Created</th>
+                <tr className="border-b border-line bg-surface-2 text-left text-[10.5px] font-bold uppercase tracking-[0.08em] text-fg-4">
+                  <th className="px-5 py-3">Launch</th>
+                  <th className="px-3 py-3">Status</th>
+                  <th className="px-3 py-3">Recipients</th>
+                  <th className="px-3 py-3">Sent</th>
+                  <th className="px-3 py-3">Scheduled for</th>
+                  <th className="px-3 py-3">Created</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
                 {(launches ?? []).map((l) => {
                   const practice = l.practices as unknown as { display_title: string; ref: string } | null;
                   return (
-                    <tr key={l.id} className="hover:bg-surface-2">
+                    <tr key={l.id} className="cursor-pointer hover:bg-gold-tint">
                       <td className="px-5 py-3">
                         <Link href={`/campaigns/${l.id}`} className="font-semibold text-fg-1 hover:text-gold-deep">
                           {l.name}

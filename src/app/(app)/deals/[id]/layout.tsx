@@ -49,7 +49,7 @@ export default async function DealLayout({
     <div>
       <div className="mb-5">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-[24px] font-extrabold tracking-tight text-fg-1">
+          <h1 className="text-[30px] font-extrabold tracking-tight text-fg-1">
             {practice ? practiceLabel(practice) : deal.ref}
           </h1>
           {deal.status === "in_progress" ? <Badge tone="gold">In progress</Badge> : null}

@@ -6,7 +6,7 @@ import { Badge, Button, Card, EmptyState } from "@/components/ui/primitives";
 import { StageChevrons } from "@/components/deals/stage-chevrons";
 import { contactName } from "@/lib/contact-helpers";
 import { practiceLabel } from "@/lib/practice-helpers";
-import { cn, daysSince, formatDate, formatGBP } from "@/lib/utils";
+import { daysSince, formatDate, formatGBP } from "@/lib/utils";
 import { DealFilters } from "./deal-filters";
 
 export const metadata = { title: "Sales progression" };
@@ -133,24 +133,23 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
               d.agreed_price != null ? formatGBP(d.agreed_price) : null,
               practice ? practiceLabel(practice) : d.ref,
             ].filter(Boolean);
-            const partyBits = [
-              buyer ? `Buyer: ${contactName(buyer)}` : null,
-              seller ? `Seller: ${contactName(seller)}` : null,
-            ].filter(Boolean);
             const completed = d.status === "completed";
             return (
               <Link key={d.id} href={`/deals/${d.id}`} className="block">
-                <Card className="overflow-hidden p-0 transition-shadow hover:shadow-md">
-                  <div
-                    className={cn(
-                      "flex items-center justify-between gap-3 border-b border-line px-4 py-2.5",
-                      completed ? "bg-available-fg/8" : "bg-surface-2/50",
-                    )}
-                  >
+                <Card className="overflow-hidden rounded-[18px] p-0 transition-all hover:-translate-y-[2px] hover:shadow-md">
+                  <div className="flex items-start justify-between gap-3 px-6 pt-5">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-fg-1">{headerBits.join(" – ")}</p>
-                      {partyBits.length ? (
-                        <p className="mt-0.5 truncate text-xs text-fg-3">{partyBits.join(" · ")}</p>
+                      <p className="truncate text-[16px] font-extrabold tracking-tight text-fg-1">{headerBits.join(" – ")}</p>
+                      {buyer || seller ? (
+                        <p className="mt-1 truncate text-[13px] text-fg-3">
+                          {buyer ? (
+                            <>Buyer: <span className="font-semibold text-gold-deep">{contactName(buyer)}</span></>
+                          ) : null}
+                          {buyer && seller ? " · " : null}
+                          {seller ? (
+                            <>Seller: <span className="font-semibold text-gold-deep">{contactName(seller)}</span></>
+                          ) : null}
+                        </p>
                       ) : null}
                     </div>
                     <div className="shrink-0">
@@ -173,7 +172,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
                       )}
                     </div>
                   </div>
-                  <div className="overflow-x-auto p-3">
+                  <div className="overflow-x-auto px-6 pb-5 pt-4">
                     <div className="min-w-[720px]">
                       <StageChevrons stages={stageStates} dealStatus={d.status} />
                     </div>

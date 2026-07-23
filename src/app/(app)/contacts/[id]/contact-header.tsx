@@ -83,7 +83,7 @@ export function ContactHeader({
         <Avatar name={contact.name} size={52} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-[24px] font-extrabold tracking-tight text-fg-1">{contact.name}</h1>
+            <h1 className="text-[30px] font-extrabold tracking-tight text-fg-1">{contact.name}</h1>
             {contact.roles.map((r) => (
               <Badge key={r} className="capitalize">{r}</Badge>
             ))}

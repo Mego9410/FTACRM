@@ -110,7 +110,7 @@ export function PracticeHeader({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-[24px] font-extrabold tracking-tight text-fg-1">{practiceLabel(practice)}</h1>
+            <h1 className="text-[30px] font-extrabold tracking-tight text-fg-1">{practiceLabel(practice)}</h1>
             <Badge tone={PRACTICE_STATUS_TONES[practice.status] ?? "neutral"}>
               {PRACTICE_STATUS_LABELS[practice.status] ?? practice.status}
             </Badge>
@@ -141,7 +141,7 @@ export function PracticeHeader({
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-3">
-          <p className="text-[22px] font-extrabold text-gold-deep">
+          <p className="text-[24px] font-extrabold tracking-tight text-gold-deep">
             {practice.asking_price
               ? `${practice.price_prefix === "offers_over" ? "Offers over " : ""}${formatGBP(practice.asking_price)}`
               : "POA"}
