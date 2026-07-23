@@ -158,7 +158,7 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
             return (
               <Link key={p.id} href={`/practices/${p.id}`} className="group block h-full">
                 {/* Square instruction card: map panel + details on top, full-width price/footer below. */}
-                <Card className="flex aspect-square flex-col overflow-hidden rounded-[20px] p-0 transition-all group-hover:-translate-y-[3px] group-hover:shadow-md">
+                <Card className="flex aspect-[3/2] flex-col overflow-hidden rounded-[20px] p-0 transition-all group-hover:-translate-y-[3px] group-hover:shadow-md">
                   <div className="flex min-h-0 flex-1">
                     <div className="relative w-[132px] shrink-0 self-stretch overflow-hidden border-r border-line bg-surface-3">
                       {photoUrl ? (
