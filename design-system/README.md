@@ -6,7 +6,7 @@ consultancy** for dental practice principals across England and Wales — guidin
 confidentially from first valuation to final signature.
 
 > "The UK's leading independent dental practice sales agency. Guiding practice owners with integrity
-> since 1990." — site footer
+> since 1988." — site footer
 
 The brand voice is **reassuring, expert and seller-first**: confidential, premium and human, with a
 warm editorial feel anchored by a single signature **gold (#E4AD25)** against near-black ink and
@@ -79,7 +79,7 @@ Practices · View Details → · Read Article → · Claim Your FREE Guide → �
 · Call Now · Start Your Journey Today*. Arrows (→) trail most CTAs and links.
 
 **Numbers & proof** — Used sparingly and concretely: "5,000+ vetted buyers", "Over thirty years",
-"4.8 ★ 119 Google reviews", "since 1990", real reference numbers (Ref. 14-01-3449) and prices
+"4.8 ★ 119 Google reviews", "since 1988", real reference numbers (Ref. 14-01-3449) and prices
 (£1,371,947). Trademark flourish appears once: "owner fatigue™".
 
 **Emoji** — **None.** Never use emoji. Iconography does all the visual-shorthand work.

@@ -354,12 +354,12 @@ export default async function PublicPracticePage({ params }: { params: Promise<{
           <div className="mx-auto w-full max-w-6xl px-6 py-16 lg:py-20">
             <p className="max-w-3xl text-[24px] font-extrabold leading-snug tracking-[-0.02em] sm:text-[28px]">
               Requesting details commits you to nothing<span className="text-gold">.</span> It simply opens a
-              conversation with the team that has guided practice sales since 1990.
+              conversation with the team that has guided practice sales since 1988.
             </p>
             <div className="mt-10 grid gap-8 border-t border-white/10 pt-10 sm:grid-cols-3">
               {[
                 [ShieldCheck, "In strict confidence", "Your enquiry is never shared. Sellers' identities are protected the same way yours is."],
-                [Landmark, "Independent since 1990", "The UK's leading independent dental practice sales agency — no corporate ties, no conflicts."],
+                [Landmark, "Independent since 1988", "The UK's leading independent dental practice sales agency — no corporate ties, no conflicts."],
                 [KeyRound, "First-hand knowledge", "We know this practice, its numbers and its seller personally — ask us anything."],
               ].map(([Icon, title, body]) => {
                 const I = Icon as typeof ShieldCheck;
@@ -458,7 +458,7 @@ function Shell({ children, stickyCta = false }: { children: React.ReactNode; sti
       <footer className="bg-ink">
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-start justify-between gap-6 px-6 py-10 pb-24 text-[12.5px] leading-relaxed text-white/50 sm:pb-10">
           <p className="max-w-xl">
-            Frank Taylor &amp; Associates — guiding practice owners with integrity since 1990. All details are
+            Frank Taylor &amp; Associates — guiding practice owners with integrity since 1988. All details are
             provided in strict confidence and do not form part of any contract.
           </p>
           <p className="font-semibold text-white/70">0330 088 1156</p>

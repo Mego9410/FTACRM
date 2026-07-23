@@ -32,7 +32,7 @@ export function renderEmailShell({
         <p style="margin:24px 0 0;line-height:1.5;color:#1A1A17;font-weight:600;">${escapeHtml(senderName)}<br/><span style="font-weight:400;color:#8C8C88;font-size:14px;">Frank Taylor &amp; Associates</span></p>
       </div>
       <div style="background:#090909;color:#B6B6B2;padding:24px 32px;font-size:12.5px;line-height:1.6;">
-        <p style="margin:0 0 8px;">Frank Taylor &amp; Associates — the UK's leading independent dental practice sales agency. Guiding practice owners with integrity since 1990.</p>
+        <p style="margin:0 0 8px;">Frank Taylor &amp; Associates — the UK's leading independent dental practice sales agency. Guiding practice owners with integrity since 1988.</p>
         <p style="margin:0;">You're receiving this because you registered your interest with us.
         <a href="${unsubscribeUrl}" style="color:#E4AD25;">Unsubscribe</a></p>
       </div>

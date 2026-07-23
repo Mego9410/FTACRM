@@ -141,7 +141,7 @@ export function renderLaunchEmail(
       </div>
 
       <div style="background:#090909;color:#B6B6B2;padding:24px 32px;font-size:12.5px;line-height:1.6;">
-        <p style="margin:0 0 8px;">Frank Taylor &amp; Associates — the UK's leading independent dental practice sales agency. Guiding practice owners with integrity since 1990.</p>
+        <p style="margin:0 0 8px;">Frank Taylor &amp; Associates — the UK's leading independent dental practice sales agency. Guiding practice owners with integrity since 1988.</p>
         <p style="margin:0;">These details are confidential and shared with you as a registered buyer. You're receiving this because you registered your interest with us.
         <a href="{{unsubscribe_url}}" style="color:${GOLD};">Unsubscribe</a></p>
       </div>

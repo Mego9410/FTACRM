@@ -17,7 +17,7 @@ function Footer() {
       <div className="container footer-inner">
         <div className="footer-brand">
           <div className="footer-plate"><img src="../../assets/logo.png" alt="Frank Taylor & Associates" /></div>
-          <p>The UK's leading independent dental practice sales agency. Guiding practice owners with integrity since 1990.</p>
+          <p>The UK's leading independent dental practice sales agency. Guiding practice owners with integrity since 1988.</p>
           <div className="socials">
             {SOCIAL.map((s) => (
               <a className="social" href="#" key={s} aria-label={s}>

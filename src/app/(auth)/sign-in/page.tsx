@@ -27,7 +27,7 @@ export default function SignInPage() {
           <p className="mt-6 text-center text-xs leading-relaxed text-fg-3">
             Internal system — accounts are created by an administrator.
             <br />
-            Guiding practice owners with integrity since 1990.
+            Guiding practice owners with integrity since 1988.
           </p>
         </div>
       </div>
