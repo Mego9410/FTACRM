@@ -191,9 +191,6 @@ export async function setDealStatus(input: unknown): Promise<ActionResult> {
 const dealFieldsSchema = z.object({
   deal_id: z.string().uuid(),
   target_completion_date: z.string().nullable(),
-  owner_id: z.string().uuid().nullable().optional(),
-  buyer_solicitor_id: z.string().uuid().nullable(),
-  seller_solicitor_id: z.string().uuid().nullable(),
 });
 
 export async function updateDealFields(input: unknown): Promise<ActionResult> {

@@ -231,8 +231,6 @@ export function ProgressionClient({
             await updateDealFields({
               deal_id: deal.id,
               target_completion_date: String(f.get("target") ?? "") || null,
-              buyer_solicitor_id: null,
-              seller_solicitor_id: null,
             });
             setBusy(false);
             setSettingsOpen(false);

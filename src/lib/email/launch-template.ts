@@ -19,7 +19,6 @@ export type LaunchPractice = {
   town: string | null;
   county: string | null;
   postcode: string | null;
-  confidential: boolean;
   asking_price: number | null;
   price_prefix: string;
   surgeries: number | null;

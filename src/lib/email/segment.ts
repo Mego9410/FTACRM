@@ -10,11 +10,9 @@ export type SegmentDefinition = {
   funding_type_ids?: string[];
   tenure_type_ids?: string[];
   specialism_ids?: string[];
-  deal_structure_ids?: string[];
   min_budget?: number | null; // buyer max_price >= this
   max_budget?: number | null; // buyer min_price <= this (their range overlaps)
   not_contacted_days?: number | null;
-  owner_id?: string | null;
   explicit_contact_ids?: string[]; // from matching bulk-select
 };
 
@@ -49,13 +47,12 @@ export async function evaluateSegment(def: SegmentDefinition): Promise<SegmentEv
     let query = supabase
       .from("contacts")
       .select(
-        "id, email, first_name, last_name, company_name, do_not_contact, consent_email, temperature, last_contacted_at, owner_id",
+        "id, email, first_name, last_name, company_name, do_not_contact, consent_email, temperature, last_contacted_at",
       )
       .is("archived_at", null)
       .limit(50000);
     query = query.overlaps("roles", def.roles && def.roles.length > 0 ? def.roles : ["buyer"]);
     if (def.temperature && def.temperature.length > 0) query = query.in("temperature", def.temperature);
-    if (def.owner_id) query = query.eq("owner_id", def.owner_id);
     if (def.not_contacted_days) {
       query = query.or(
         `last_contacted_at.is.null,last_contacted_at.lt.${new Date(Date.now() - def.not_contacted_days * 86_400_000).toISOString()}`,
@@ -69,13 +66,12 @@ export async function evaluateSegment(def: SegmentDefinition): Promise<SegmentEv
       (def.funding_type_ids?.length ?? 0) > 0 ||
       (def.tenure_type_ids?.length ?? 0) > 0 ||
       (def.specialism_ids?.length ?? 0) > 0 ||
-      (def.deal_structure_ids?.length ?? 0) > 0 ||
       def.min_budget != null ||
       def.max_budget != null;
     if (needsCriteria) {
       const { data: criteria } = await supabase
         .from("buyer_criteria")
-        .select("contact_id, funding_type_ids, tenure_type_ids, specialism_ids, deal_structure_ids, min_price, max_price");
+        .select("contact_id, funding_type_ids, tenure_type_ids, specialism_ids, min_price, max_price");
       const byContact = new Map((criteria ?? []).map((c) => [c.contact_id, c]));
       const overlaps = (a: string[] | null | undefined, b: string[] | undefined) =>
         !b || b.length === 0 || (a ?? []).some((x) => b.includes(x));
@@ -85,7 +81,6 @@ export async function evaluateSegment(def: SegmentDefinition): Promise<SegmentEv
         if (!overlaps(crit.funding_type_ids, def.funding_type_ids)) return false;
         if (!overlaps(crit.tenure_type_ids, def.tenure_type_ids)) return false;
         if (!overlaps(crit.specialism_ids, def.specialism_ids)) return false;
-        if (!overlaps(crit.deal_structure_ids, def.deal_structure_ids)) return false;
         if (def.min_budget != null && !(crit.max_price == null || Number(crit.max_price) >= def.min_budget))
           return false;
         if (def.max_budget != null && !(crit.min_price == null || Number(crit.min_price) <= def.max_budget))

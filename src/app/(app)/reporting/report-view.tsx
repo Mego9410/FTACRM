@@ -71,7 +71,7 @@ export function ReportView({
 
       <Card className="overflow-x-auto">
         {rows.length === 0 ? (
-          <EmptyState className="m-4" title="No data for this report" body="Try a different period, agent or branch." />
+          <EmptyState className="m-4" title="No data for this report" body="Try a different period." />
         ) : (
           <table className="w-full text-sm">
             <thead>

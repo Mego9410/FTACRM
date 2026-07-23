@@ -11,14 +11,13 @@ const inviteSchema = z.object({
   email: z.string().email(),
   full_name: z.string().min(1).max(120),
   role: z.enum(["admin", "manager", "agent"]),
-  branch_id: z.string().uuid().nullable(),
 });
 
 export async function inviteUser(input: unknown): Promise<ActionResult> {
   const me = await requireRole("admin");
   const parsed = inviteSchema.safeParse(input);
   if (!parsed.success) return fail("Check the form fields.");
-  const { email, full_name, role, branch_id } = parsed.data;
+  const { email, full_name, role } = parsed.data;
 
   const admin = createAdminClient();
   const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
@@ -29,7 +28,7 @@ export async function inviteUser(input: unknown): Promise<ActionResult> {
 
   const { error: profileError } = await admin
     .from("profiles")
-    .update({ full_name, role, branch_id })
+    .update({ full_name, role })
     .eq("id", data.user.id);
   if (profileError) return dbFail(profileError);
 
@@ -44,7 +43,6 @@ const updateSchema = z.object({
   id: z.string().uuid(),
   full_name: z.string().min(1).max(120),
   role: z.enum(["admin", "manager", "agent"]),
-  branch_id: z.string().uuid().nullable(),
   calendar_color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   is_active: z.boolean(),
 });
@@ -66,7 +64,6 @@ export async function updateUser(input: unknown): Promise<ActionResult> {
   await audit("profiles", id, me.id, [
     { field: "full_name", oldValue: before?.full_name, newValue: fields.full_name },
     { field: "role", oldValue: before?.role, newValue: fields.role },
-    { field: "branch_id", oldValue: before?.branch_id, newValue: fields.branch_id },
     { field: "is_active", oldValue: before?.is_active, newValue: fields.is_active },
   ]);
   revalidatePath("/admin/users");

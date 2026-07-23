@@ -9,7 +9,7 @@ export default async function DealProgressionPage({ params }: { params: Promise<
   const [{ data: deal }, { data: stages }, { data: events }, reasons] = await Promise.all([
     supabase
       .from("deals")
-      .select("id, status, target_completion_date, created_at, agreed_price, buyer_solicitor_id, seller_solicitor_id, last_activity_at")
+      .select("id, status, target_completion_date, created_at, agreed_price, last_activity_at")
       .eq("id", id)
       .maybeSingle(),
     supabase.from("deal_stages").select("id, key, label, sort_order, is_terminal").order("sort_order"),

@@ -12,7 +12,6 @@ const basePractice: MatchPractice = {
   funding_type_id: "nhs",
   tenure_type_id: "freehold",
   specialism_ids: ["general"],
-  deal_structure_ids: ["associate"],
   surgeries: 4,
   annual_turnover: 900_000,
 };
@@ -22,7 +21,6 @@ const openBuyer: MatchBuyer = {
   min_price: null,
   max_price: null,
   specialism_ids: [],
-  deal_structure_ids: [],
   funding_type_ids: [],
   tenure_type_ids: [],
   min_surgeries: null,
@@ -158,7 +156,6 @@ describe("matchBuyerToPractice", () => {
       funding_type_ids: ["nhs"],
       tenure_type_ids: ["freehold"],
       specialism_ids: ["general"],
-      deal_structure_ids: ["associate"],
       temperature: "hot",
       last_contacted_at: new Date().toISOString(),
       areas: [{ lat: 53.48, lng: -2.24, radius_miles: 50, region: null, label: "Manchester +50mi" }],

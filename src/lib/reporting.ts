@@ -29,26 +29,23 @@ function overlaps(fromCol: string, period: Period) {
   return { gte: period.from.toISOString(), lte: period.to.toISOString() };
 }
 
-export async function computeKpis(period: Period, filters: { owner?: string; branch?: string }): Promise<KpiSet> {
+export async function computeKpis(period: Period): Promise<KpiSet> {
   const supabase = await createClient();
   const range = overlaps("", period);
   const dateOnly = { gte: range.gte.slice(0, 10), lte: range.lte.slice(0, 10) };
 
-  let instructionsQ = supabase
+  const instructionsQ = supabase
     .from("practices")
     .select("asking_price")
     .gte("instructed_at", dateOnly.gte)
     .lte("instructed_at", dateOnly.lte);
-  if (filters.owner) instructionsQ = instructionsQ.eq("owner_id", filters.owner);
-  if (filters.branch) instructionsQ = instructionsQ.eq("branch_id", filters.branch);
 
-  let completionsQ = supabase
+  const completionsQ = supabase
     .from("deals")
-    .select("agreed_price, completed_at, created_at, practices!deals_practice_id_fkey(fee_percent, fee_fixed, branch_id)")
+    .select("agreed_price, completed_at, created_at, practices!deals_practice_id_fkey(fee_percent, fee_fixed)")
     .eq("status", "completed")
     .gte("completed_at", dateOnly.gte)
     .lte("completed_at", dateOnly.lte);
-  if (filters.owner) completionsQ = completionsQ.eq("owner_id", filters.owner);
 
   const [instructionsRes, valuationsRes, completionsRes, offersRes, fellRes, buyersRes] = await Promise.all([
     instructionsQ,
@@ -104,13 +101,12 @@ export async function computeKpis(period: Period, filters: { owner?: string; bra
   };
 }
 
-export async function computePipeline(filters: { owner?: string; branch?: string }): Promise<PipelineSnapshot> {
+export async function computePipeline(): Promise<PipelineSnapshot> {
   const supabase = await createClient();
-  let dealsQ = supabase
+  const dealsQ = supabase
     .from("deals")
     .select("agreed_price, practices!deals_practice_id_fkey(fee_percent, fee_fixed)")
     .eq("status", "in_progress");
-  if (filters.owner) dealsQ = dealsQ.eq("owner_id", filters.owner);
 
   const [dealsRes, availableRes, buyersRes] = await Promise.all([
     dealsQ,

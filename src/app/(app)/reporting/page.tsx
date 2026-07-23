@@ -16,7 +16,7 @@ import { CompletionsChart } from "./completions-chart";
 
 export const metadata = { title: "Reporting" };
 
-type Search = { period?: string; owner?: string; branch?: string };
+type Search = { period?: string };
 
 function resolvePeriods(preset: string): { current: Period; previous: Period; label: string } {
   const now = new Date();
@@ -66,12 +66,11 @@ export default async function ReportingPage({ searchParams }: { searchParams: Pr
   const params = await searchParams;
   const preset = params.period ?? "month";
   const { current, previous, label } = resolvePeriods(preset);
-  const filters = {};
 
   const [kpisNow, kpisPrev, pipeline, monthly, smartLists] = await Promise.all([
-    computeKpis(current, filters),
-    computeKpis(previous, filters),
-    computePipeline(filters),
+    computeKpis(current),
+    computeKpis(previous),
+    computePipeline(),
     completionsByMonth(),
     computeSmartLists(),
   ]);

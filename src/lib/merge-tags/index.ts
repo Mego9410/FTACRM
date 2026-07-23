@@ -78,7 +78,6 @@ type PracticeRow = {
   name?: string | null;
   address_line1?: string | null;
   postcode?: string | null;
-  confidential?: boolean;
   public_token?: string | null;
 };
 

@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
 import { systemJournal } from "@/lib/actions/journal";
 import { getLookup } from "@/lib/lookups";
@@ -269,7 +268,7 @@ export async function acceptOffer(input: unknown): Promise<ActionResult<{ dealId
 
   const { data: practice } = await supabase
     .from("practices")
-    .select("id, display_title, owner_id")
+    .select("id, display_title")
     .eq("id", parsed.data.practice_id)
     .single();
   if (!practice) return fail("Practice not found.");
@@ -308,7 +307,6 @@ export async function acceptOffer(input: unknown): Promise<ActionResult<{ dealId
       seller_contact_id: primarySeller?.contact_id ?? null,
       agreed_price: offer.amount,
       current_stage_id: stage1?.id ?? null,
-      owner_id: practice.owner_id ?? me.id,
     })
     .select("id")
     .single();
@@ -330,17 +328,6 @@ export async function acceptOffer(input: unknown): Promise<ActionResult<{ dealId
   await audit("practices", practice.id, me.id, [
     { field: "offer_accepted", oldValue: null, newValue: formatGBP(offer.amount) },
   ]);
-
-  if (practice.owner_id && practice.owner_id !== me.id) {
-    const admin = createAdminClient();
-    await admin.from("notifications").insert({
-      profile_id: practice.owner_id,
-      kind: "deal_created",
-      title: "Offer accepted",
-      body: `${practice.display_title} — ${formatGBP(offer.amount)}`,
-      link_url: `/deals/${deal.id}`,
-    });
-  }
 
   revalidatePath(`/practices/${practice.id}`);
   return ok({ dealId: deal.id });

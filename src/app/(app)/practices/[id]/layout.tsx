@@ -18,7 +18,7 @@ export default async function PracticeLayout({
     supabase
       .from("practices")
       .select(
-        "id, ref, name, display_title, town, county, postcode, status, asking_price, price_prefix, funding_type_id, tenure_type_id, surgeries, annual_turnover, confidential, owner_id, contract_expiry",
+        "id, ref, name, display_title, town, county, postcode, status, asking_price, price_prefix, funding_type_id, tenure_type_id, surgeries, annual_turnover, contract_expiry",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -68,7 +68,6 @@ export default async function PracticeLayout({
           funding: practice.funding_type_id ? (lookupIndex.get(practice.funding_type_id) ?? null) : null,
           tenure: practice.tenure_type_id ? (lookupIndex.get(practice.tenure_type_id)?.value ?? null) : null,
           surgeries: practice.surgeries,
-          confidential: practice.confidential,
           contract_expiry: practice.contract_expiry,
           warning,
           seller: seller

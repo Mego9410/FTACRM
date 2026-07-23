@@ -62,7 +62,6 @@ describe("context builders", () => {
       name: "SECRET Dental Ltd",
       address_line1: "1 Secret Street",
       postcode: "CH1 1AA",
-      confidential: true,
     });
     const flat = JSON.stringify(ctx);
     expect(flat).not.toContain("SECRET Dental");

@@ -17,11 +17,9 @@ const segmentSchema = z.object({
   funding_type_ids: z.array(z.string().uuid()).optional(),
   tenure_type_ids: z.array(z.string().uuid()).optional(),
   specialism_ids: z.array(z.string().uuid()).optional(),
-  deal_structure_ids: z.array(z.string().uuid()).optional(),
   min_budget: z.number().nullable().optional(),
   max_budget: z.number().nullable().optional(),
   not_contacted_days: z.number().nullable().optional(),
-  owner_id: z.string().uuid().nullable().optional(),
   explicit_contact_ids: z.array(z.string().uuid()).optional(),
 });
 

@@ -16,7 +16,7 @@ export default async function ContactLayout({
   const { data: contact } = await supabase
     .from("contacts")
     .select(
-      "id, ref, kind, first_name, last_name, company_name, email, phone, mobile, roles, status, temperature, owner_id, branch_id, do_not_contact, consent_email, consent_updated_at, identity_verified, address_verified, last_contacted_at, archived_at, organisation_id",
+      "id, ref, kind, first_name, last_name, company_name, email, phone, mobile, roles, status, temperature, do_not_contact, consent_email, consent_updated_at, identity_verified, address_verified, last_contacted_at, archived_at, organisation_id",
     )
     .eq("id", id)
     .maybeSingle();

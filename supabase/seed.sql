@@ -4,7 +4,6 @@
 -- ── Lookup types ─────────────────────────────────────────────────────
 insert into public.lookup_types (key, label, is_system) values
   ('specialism', 'Specialisms', true),
-  ('deal_structure', 'Deal structures', true),
   ('funding_type', 'Funding types', true),
   ('tenure_type', 'Tenure types', true),
   ('trading_entity', 'Trading entities', true),
@@ -35,10 +34,6 @@ join (values
   ('specialism', 'Periodontist', 6, null, null),
   ('specialism', 'Prosthodontist', 7, null, null),
   ('specialism', 'Paediatric', 8, null, null),
-  ('deal_structure', 'Affiliate', 0, null, null),
-  ('deal_structure', 'Associate', 1, null, null),
-  ('deal_structure', 'Associate – Practice only', 2, null, null),
-  ('deal_structure', 'Associate Plus', 3, null, null),
   ('funding_type', 'NHS', 0, '#2F77BE', 'nhs'),
   ('funding_type', 'Private', 1, '#1F9D4D', 'private'),
   ('funding_type', 'Mixed', 2, '#A23B9E', 'mixed'),

@@ -12,20 +12,17 @@ type UserRow = {
   full_name: string;
   email: string;
   role: string;
-  branch_id: string | null;
   calendar_color: string;
   is_active: boolean;
 };
-type Branch = { id: string; name: string };
 
-export function UsersClient({ users, branches }: { users: UserRow[]; branches: Branch[] }) {
+export function UsersClient({ users }: { users: UserRow[] }) {
   const router = useRouter();
   const { sorted, toggle, stateFor } = useClientSort(
     users,
     {
       name: (u) => u.full_name,
       role: (u) => u.role,
-      branch: (u) => branches.find((b) => b.id === u.branch_id)?.name ?? "",
       status: (u) => u.is_active,
     },
     { key: "name", dir: "asc" },
@@ -44,7 +41,6 @@ export function UsersClient({ users, branches }: { users: UserRow[]; branches: B
       email: String(f.get("email")),
       full_name: String(f.get("full_name")),
       role: String(f.get("role")),
-      branch_id: f.get("branch_id") ? String(f.get("branch_id")) : null,
     });
     setBusy(false);
     if (!res.ok) return setError(res.error);
@@ -62,7 +58,6 @@ export function UsersClient({ users, branches }: { users: UserRow[]; branches: B
       id: editing.id,
       full_name: String(f.get("full_name")),
       role: String(f.get("role")),
-      branch_id: f.get("branch_id") ? String(f.get("branch_id")) : null,
       calendar_color: String(f.get("calendar_color")),
       is_active: f.get("is_active") === "on",
     });
@@ -84,7 +79,6 @@ export function UsersClient({ users, branches }: { users: UserRow[]; branches: B
           <tr className="border-b border-line text-left text-xs font-bold uppercase tracking-wide text-fg-3">
             <SortTh label="Name" sortKey="name" state={stateFor("name")} onSort={toggle} className="px-5" />
             <SortTh label="Role" sortKey="role" state={stateFor("role")} onSort={toggle} />
-            <SortTh label="Branch" sortKey="branch" state={stateFor("branch")} onSort={toggle} />
             <SortTh label="Status" sortKey="status" state={stateFor("status")} onSort={toggle} />
             <th className="px-3 py-2.5" />
           </tr>
@@ -102,7 +96,6 @@ export function UsersClient({ users, branches }: { users: UserRow[]; branches: B
                 </span>
               </td>
               <td className="px-3 py-2.5 capitalize">{u.role}</td>
-              <td className="px-3 py-2.5">{branches.find((b) => b.id === u.branch_id)?.name ?? "—"}</td>
               <td className="px-3 py-2.5">
                 <Badge tone={u.is_active ? "green" : "neutral"}>{u.is_active ? "Active" : "Deactivated"}</Badge>
               </td>
@@ -123,23 +116,13 @@ export function UsersClient({ users, branches }: { users: UserRow[]; branches: B
           <Field label="Email" htmlFor="inv_email">
             <Input id="inv_email" name="email" type="email" required />
           </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Role" htmlFor="inv_role">
-              <Select id="inv_role" name="role" defaultValue="agent">
-                <option value="agent">Agent</option>
-                <option value="manager">Manager</option>
-                <option value="admin">Administrator</option>
-              </Select>
-            </Field>
-            <Field label="Branch" htmlFor="inv_branch">
-              <Select id="inv_branch" name="branch_id" defaultValue="">
-                <option value="">No branch</option>
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </Select>
-            </Field>
-          </div>
+          <Field label="Role" htmlFor="inv_role">
+            <Select id="inv_role" name="role" defaultValue="agent">
+              <option value="agent">Agent</option>
+              <option value="manager">Manager</option>
+              <option value="admin">Administrator</option>
+            </Select>
+          </Field>
           {error ? <p className="text-sm font-medium text-danger">{error}</p> : null}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setInviteOpen(false)}>Cancel</Button>
@@ -154,23 +137,13 @@ export function UsersClient({ users, branches }: { users: UserRow[]; branches: B
             <Field label="Full name" htmlFor="ed_name">
               <Input id="ed_name" name="full_name" defaultValue={editing.full_name} required />
             </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Role" htmlFor="ed_role">
-                <Select id="ed_role" name="role" defaultValue={editing.role}>
-                  <option value="agent">Agent</option>
-                  <option value="manager">Manager</option>
-                  <option value="admin">Administrator</option>
-                </Select>
-              </Field>
-              <Field label="Branch" htmlFor="ed_branch">
-                <Select id="ed_branch" name="branch_id" defaultValue={editing.branch_id ?? ""}>
-                  <option value="">No branch</option>
-                  {branches.map((b) => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </Select>
-              </Field>
-            </div>
+            <Field label="Role" htmlFor="ed_role">
+              <Select id="ed_role" name="role" defaultValue={editing.role}>
+                <option value="agent">Agent</option>
+                <option value="manager">Manager</option>
+                <option value="admin">Administrator</option>
+              </Select>
+            </Field>
             <div className="grid grid-cols-2 items-end gap-3">
               <Field label="Calendar colour" htmlFor="ed_color">
                 <Input id="ed_color" name="calendar_color" type="color" defaultValue={editing.calendar_color} className="h-9.5 p-1" />

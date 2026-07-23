@@ -24,15 +24,14 @@ Extensions: `pg_trgm`, `pgcrypto`, `unaccent`, `citext`.
 | full_name | text | |
 | email | text | |
 | role | text | `admin` \| `manager` \| `agent` |
-| branch_id | uuid fk branches | |
 | calendar_color | text | hex, for calendar overlays |
 | avatar_url | text | |
 | is_active | bool | deactivated staff keep history, lose access |
 | signature_html | text | email signature |
 
-### `branches`
-`name`, `address fields`, `phone`, `email`, `is_active`. FTA is effectively one firm; branches
-kept for org structure + reporting slice.
+> `role` and `is_active` are privileged columns — a trigger blocks self-service
+> updates to them (see migration 0021); only server-side admin actions
+> (service role) or direct DB connections may change them.
 
 ### `role_permissions`
 `role text`, `permission text`, unique(role, permission). Seeded matrix (e.g.
@@ -58,7 +57,6 @@ deleted, values still editable).
 
 Seeded lookup types + starting values:
 - `specialism` — General, Endodontist, Hygienist, Implantologist, Oral Surgeon, Orthodontist, Periodontist, Prosthodontist, Paediatric
-- `deal_structure` — Affiliate, Associate, Associate – Practice only, Associate Plus
 - `funding_type` — NHS, Private, Mixed  (pill colours: blue / green / magenta per design system)
 - `tenure_type` — Freehold, Leasehold, Freehold or Leasehold, Mixed
 - `contact_source` — Website, Referral, Event, Cold call, Portal, Other
@@ -91,8 +89,6 @@ Seeded lookup types + starting values:
 | roles | text[] | any of `buyer`, `seller`, `solicitor`, `other` — a person can be several |
 | status | text | per-role status via lookups; primary status shown in header |
 | source_id | uuid fk lookup_values | |
-| owner_id | uuid fk profiles | assigned agent |
-| branch_id | uuid fk branches | |
 | temperature | text | `hot` \| `warm` \| `cold` (buyers) |
 | notes | text | rich-text contact notes |
 | organisation_id | uuid fk contacts nullable | person → parent org (e.g. solicitor → firm) |
@@ -102,7 +98,7 @@ Seeded lookup types + starting values:
 | archived_at | timestamptz | |
 
 Indexes: trigram on (first_name, last_name, company_name) for search-as-you-type; btree on
-email, owner_id, roles (GIN), postcode.
+email, roles (GIN), postcode.
 
 ### `buyer_criteria` — 1:1 with contact (buyers), drives matching
 | column | type | notes |
@@ -110,7 +106,6 @@ email, owner_id, roles (GIN), postcode.
 | contact_id | uuid fk unique | |
 | min_price, max_price | numeric(12,2) | |
 | specialism_ids | uuid[] | lookup refs (OR) |
-| deal_structure_ids | uuid[] | |
 | funding_type_ids | uuid[] | |
 | tenure_type_ids | uuid[] | |
 | buyer_position_id | uuid fk lookup_values | |
@@ -136,7 +131,7 @@ email, owner_id, roles (GIN), postcode.
 | column | type | notes |
 |---|---|---|
 | ref | text unique | `P-2026-0142` |
-| name | text | trading name; confidentiality: public listings may hide it |
+| name | text | trading name; the public listing page hard-hides it regardless |
 | display_title | text | anonymised marketing title, e.g. "4-surgery mixed practice, Cheshire" |
 | address fields + location geography(point) | | |
 | status | text | `valuation` \| `preparing` \| `available` \| `under_offer` \| `sold_stc` \| `completed` \| `withdrawn` — system lookup |
@@ -144,17 +139,13 @@ email, owner_id, roles (GIN), postcode.
 | price_prefix | text | `guide`, `offers_over`, `fixed`, `poa` |
 | funding_type_id | uuid fk lookup_values | NHS / Private / Mixed |
 | tenure_type_id | uuid fk lookup_values | |
-| deal_structure_ids | uuid[] | structures the seller will entertain |
 | specialism_ids | uuid[] | |
 | surgeries | int | number of surgeries/chairs |
 | annual_turnover, ebitda, nhs_contract_value | numeric(12,2) nullable | financials for marketing + matching |
 | udas | int nullable | NHS UDA count |
 | staff_count | int nullable | |
 | description | text | marketing copy (rich text) |
-| confidential | bool default true | gates address/name in outbound comms |
 | headline_image_path | text nullable | uploaded headline photo (Storage `documents` bucket, signed URL per load). When null the UI shows a generated England & Wales map with a pin at lat/lng — `lib/uk-map.ts` (offline-baked paths + shared projection) + `components/practices/practice-map.tsx` |
-| owner_id | uuid fk profiles | assigned agent |
-| branch_id | uuid fk branches | |
 | instructed_at | date | |
 | contract_expiry | date | agency agreement expiry (drives "contracts expiring" smart list) |
 | lease_expiry | date | leasehold practices — when the lease runs out (0010) |
@@ -218,16 +209,18 @@ interest from website/portals; convertible into a buyer + criteria.
 | ref | text unique | `D-2026-0091` |
 | practice_id | uuid fk | |
 | offer_id | uuid fk | the accepted offer |
-| buyer_contact_id, seller_contact_id | uuid fk | denormalised for list speed |
-| buyer_solicitor_id, seller_solicitor_id | uuid fk contacts | |
+| buyer_contact_id, seller_contact_id | uuid fk | **snapshot** — the parties at the moment the deal formed (copied from the accepted offer / primary seller by `acceptOffer`). Intentionally frozen, not kept in step with the live contact links. |
 | agreed_price | numeric(12,2) | |
 | status | text | `in_progress` \| `completed` \| `fallen_through` \| `on_hold` |
 | current_stage_id | uuid fk deal_stages | |
 | target_completion_date | date | |
-| owner_id | uuid fk profiles | progression owner |
 | fall_through_reason_id, fell_through_at | | on fall-through: practice back to `available` |
 | completed_at | date | |
 | last_activity_at | timestamptz | journal-trigger maintained; drives stalled-deal scan |
+
+> Solicitors and other advisers are **not** stored on the deal. They live once on
+> `practice_contacts` (roles `buyer_solicitor` / `seller_solicitor` / `accountant`);
+> the deal's People tab reads them from there so there is a single home per fact.
 
 ### `deal_stage_events`
 `deal_id`, `stage_id`, `achieved_on date`, `recorded_by`, `note`. Insert-only history — the
@@ -420,8 +413,8 @@ expiring, Buyers not contacted, Valuations awaiting outcome, Viewings needing fe
 Pending offers, Stalled deals, Unmatched new buyers.
 
 ### `report_snapshots` (optional, phase 7)
-Nightly aggregates for fast period-vs-period KPI queries: `date`, `branch_id`, `agent_id`,
-`metric`, `value`. Rebuildable from source tables.
+Nightly aggregates for fast period-vs-period KPI queries: `date`, `metric`, `value`.
+Rebuildable from source tables. (Not built — reporting computes live.)
 
 ### `ai_jobs`
 `kind` (`summarise_record`, `summarise_call`, `draft_email`, `draft_campaign`, `nl_search`,
@@ -449,7 +442,7 @@ staging → write production tables; validation report queries compare counts/sp
 ## 11. Entity relationship sketch
 
 ```
-branches ──< profiles ──< (owner of) contacts, practices, deals, campaigns
+profiles (staff)
 contacts >──< practices  via practice_contacts (role: seller/buyer/solicitor…)
 contacts 1─1 buyer_criteria ──< buyer_search_areas
 practices ──< valuations / viewings / offers / practice_media / enquiries

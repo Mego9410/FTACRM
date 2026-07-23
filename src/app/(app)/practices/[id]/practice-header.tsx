@@ -27,7 +27,6 @@ type HeaderPractice = {
   funding: { value: string; color: string | null } | null;
   tenure: string | null;
   surgeries: number | null;
-  confidential: boolean;
   contract_expiry: string | null;
   seller: { id: string; name: string } | null;
   warning: string | null;

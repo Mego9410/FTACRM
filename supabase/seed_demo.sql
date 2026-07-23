@@ -56,7 +56,6 @@ declare
   fund_labels  text[] := array['NHS', 'Private', 'Mixed'];
   tenure       uuid[];
   specialisms  uuid[];
-  structures   uuid[];
   sources      uuid[];
   positions    uuid[];
   outcomes     uuid[];
@@ -138,7 +137,6 @@ begin
   select array_agg(lv.id order by lv.sort_order) into funding     from public.lookup_values lv join public.lookup_types lt on lt.id=lv.lookup_type_id where lt.key='funding_type';
   select array_agg(lv.id order by lv.sort_order) into tenure      from public.lookup_values lv join public.lookup_types lt on lt.id=lv.lookup_type_id where lt.key='tenure_type';
   select array_agg(lv.id order by lv.sort_order) into specialisms from public.lookup_values lv join public.lookup_types lt on lt.id=lv.lookup_type_id where lt.key='specialism';
-  select array_agg(lv.id order by lv.sort_order) into structures  from public.lookup_values lv join public.lookup_types lt on lt.id=lv.lookup_type_id where lt.key='deal_structure';
   select array_agg(lv.id order by lv.sort_order) into sources     from public.lookup_values lv join public.lookup_types lt on lt.id=lv.lookup_type_id where lt.key='contact_source';
   select array_agg(lv.id order by lv.sort_order) into positions   from public.lookup_values lv join public.lookup_types lt on lt.id=lv.lookup_type_id where lt.key='buyer_position';
   select array_agg(lv.id order by lv.sort_order) into outcomes    from public.lookup_values lv join public.lookup_types lt on lt.id=lv.lookup_type_id where lt.key='call_outcome';
@@ -146,10 +144,10 @@ begin
     into ev_types, ev_keys
     from public.lookup_values lv join public.lookup_types lt on lt.id=lv.lookup_type_id where lt.key='event_type';
 
-  -- ── 1. 100 buyers (owners spread across the team) ─────────────────────
+  -- ── 1. 100 buyers ─────────────────────────────────────────────────────
   insert into public.contacts
     (kind, first_name, last_name, email, mobile, town, county, lat, lng, roles, status, temperature,
-     source_id, owner_id, consent_email, consent_sms, consent_updated_at, identity_verified, address_verified, legacy_ref)
+     source_id, consent_email, consent_sms, consent_updated_at, identity_verified, address_verified, legacy_ref)
   select 'person', firstn[idx.fi], lastn[idx.li],
     'buyer' || g || '.' || lower(lastn[idx.li]) || '@example.com',
     '07700' || lpad((900000 + g)::text, 6, '0'),
@@ -158,7 +156,6 @@ begin
     (array['Active','Active','Active','Passive','Under offer'])[1 + (g % 5)],
     (array['hot','warm','cold','warm'])[1 + (g % 4)],
     sources[1 + (g % array_length(sources,1))],
-    staff[1 + (g % 10)],
     true, (g % 2 = 0), now() - (g || ' days')::interval, (g % 3 = 0), (g % 4 = 0),
     'DEMO-BUYER-' || g
   from generate_series(1,100) g
@@ -189,14 +186,13 @@ begin
   -- ── 2. 100 sellers ─────────────────────────────────────────────────────
   insert into public.contacts
     (kind, title, first_name, last_name, email, mobile, town, county, lat, lng, roles, status,
-     source_id, owner_id, consent_email, consent_phone, consent_updated_at, identity_verified, address_verified, legacy_ref)
+     source_id, consent_email, consent_phone, consent_updated_at, identity_verified, address_verified, legacy_ref)
   select 'person', (array['Dr','Dr','Dr','Mr','Mrs','Ms'])[1 + (g % 6)], firstn[idx.fi], lastn[idx.li],
     'seller' || g || '.' || lower(lastn[idx.li]) || '@example.com',
     '07800' || lpad((100000 + g)::text, 6, '0'),
     towns[idx.ti], counties[idx.ti], lats[idx.ti], lngs[idx.ti],
     array['seller'], 'Active',
     sources[1 + (g % array_length(sources,1))],
-    staff[1 + ((g + 4) % 10)],
     (g % 5 <> 0), true, now() - (g || ' days')::interval, (g % 2 = 0), (g % 3 = 0),
     'DEMO-SELLER-' || g
   from generate_series(1,100) g
@@ -204,11 +200,11 @@ begin
                              1 + ((g*11) % array_length(firstn,1)) fi,
                              1 + ((g*3)  % array_length(lastn,1)) li) idx;
 
-  -- ── 3. 50 practices, owned round-robin ────────────────────────────────
+  -- ── 3. 50 practices ───────────────────────────────────────────────────
   insert into public.practices
     (name, display_title, address_line1, town, county, lat, lng, status, asking_price, price_prefix,
-     funding_type_id, tenure_type_id, specialism_ids, deal_structure_ids, surgeries, annual_turnover,
-     ebitda, nhs_contract_value, udas, staff_count, description, confidential, owner_id,
+     funding_type_id, tenure_type_id, specialism_ids, surgeries, annual_turnover,
+     ebitda, nhs_contract_value, udas, staff_count, description,
      instructed_at, contract_expiry, fee_percent, legacy_ref)
   select
     towns[idx.ti] || ' ' || (array['Dental Practice','Dental Care','Dental Surgery','Family Dental','Smile Clinic'])[1 + (g % 5)],
@@ -219,7 +215,6 @@ begin
     round((250000 + surg*150000 + floor(random()*8)*25000)::numeric, -3), 'guide',
     funding[idx.fi], tenure[1 + (g % array_length(tenure,1))],
     case when random() < 0.6 then array[specialisms[1 + floor(random()*array_length(specialisms,1))::int]] else '{}'::uuid[] end,
-    array[structures[1 + (g % array_length(structures,1))]],
     surg, round((surg*150000*(0.9 + random()*0.7))::numeric, -3),
     round((surg*150000*0.3)::numeric, -3),
     case when idx.fi in (1,3) then round((surg*90000)::numeric, -3) else null end,
@@ -227,7 +222,6 @@ begin
     4 + surg + floor(random()*6)::int,
     'A well-established ' || fund_labels[idx.fi] || ' dental practice in ' || towns[idx.ti] || ' with ' || surg ||
       ' surgeries. Loyal patient base, experienced associates in place and strong, consistent trading. Offered on a confidential basis.',
-    true, staff[1 + ((g*3) % 10)],
     current_date - (30 + floor(random()*300)::int), current_date + (60 + floor(random()*300)::int),
     (array[8,9,10,7.5])[1 + (g % 4)],
     'DEMO-PRACTICE-' || g
@@ -265,10 +259,11 @@ begin
 
   -- ── 5. Offers + deals across the stages ───────────────────────────────
   for prac in
-    select id, asking_price, status, owner_id, created_at from public.practices
+    select id, asking_price, status, created_at from public.practices
     where legacy_ref like 'DEMO-PRACTICE-%' and status in ('under_offer','sold_stc','completed')
   loop
-    v_owner := coalesce(prac.owner_id, staff[1]);
+    -- No per-record owner; assign a handling agent deterministically per practice.
+    v_owner := staff[1 + (abs(hashtext(prac.id::text)) % 10)];
     select contact_id into v_buyer from public.practice_contacts
       where practice_id = prac.id and role = 'buyer' order by random() limit 1;
     select contact_id into v_seller from public.practice_contacts
@@ -289,9 +284,9 @@ begin
     order by random() limit 1;
 
     insert into public.deals (practice_id, offer_id, buyer_contact_id, seller_contact_id, agreed_price,
-                              status, target_completion_date, owner_id)
+                              status, target_completion_date)
     values (prac.id, v_offer, v_buyer, v_seller, v_amount, 'in_progress',
-            current_date + 30 + floor(random()*60)::int, v_owner)
+            current_date + 30 + floor(random()*60)::int)
     returning id into v_deal;
 
     n_stages := case prac.status
@@ -319,7 +314,7 @@ begin
 
   insert into public.offers (practice_id, buyer_contact_id, amount, status, offer_date, finance_status, created_by)
   select p.id, pc.contact_id, round(p.asking_price * 0.94 / 1000) * 1000, 'pending', current_date - floor(random()*10)::int,
-         (array['cash','mortgage_agreed','mortgage_needed'])[1 + floor(random()*3)::int], coalesce(p.owner_id, staff[1])
+         (array['cash','mortgage_agreed','mortgage_needed'])[1 + floor(random()*3)::int], staff[1 + (abs(hashtext(p.id::text)) % 10)]
   from public.practices p
   join lateral (select contact_id from public.practice_contacts where practice_id = p.id and role = 'buyer' order by random() limit 1) pc on true
   where p.legacy_ref like 'DEMO-PRACTICE-%' and p.status = 'available' and random() < 0.35;
@@ -338,7 +333,7 @@ begin
       'Called %1$s for a catch-up on %2$s. They are keen to keep momentum; discussed timing and next steps.',
       'Update call with %1$s regarding %2$s. Went through recent enquiries and the plan for the coming fortnight.'
     ])[1 + (abs(hashtext(c.id::text)) % 3)], c.first_name, p.display_title),
-    c.id, p.id, now() - (random()*90 || ' days')::interval, coalesce(c.owner_id, p.owner_id),
+    c.id, p.id, now() - (random()*90 || ' days')::interval, staff[1 + (abs(hashtext(p.id::text)) % 10)],
     'outbound', outcomes[1 + floor(random()*array_length(outcomes,1))::int]
   from public.practice_contacts pc
   join public.practices p on p.id = pc.practice_id
@@ -350,7 +345,7 @@ begin
     'Update on the sale of ' || p.display_title,
     format('Dear %1$s,%3$sThank you for your time this week. We continue to see good engagement on %2$s from our registered buyers and will keep you posted on viewing requests and any offers as they come in.%3$sKind regards,%3$sFrank Taylor & Associates',
            c.first_name, p.display_title, E'\n\n'),
-    c.id, p.id, now() - (random()*80 || ' days')::interval, coalesce(c.owner_id, p.owner_id)
+    c.id, p.id, now() - (random()*80 || ' days')::interval, staff[1 + (abs(hashtext(p.id::text)) % 10)]
   from public.practice_contacts pc
   join public.practices p on p.id = pc.practice_id
   join public.contacts c on c.id = pc.contact_id
@@ -361,7 +356,7 @@ begin
     'Confidential opportunity: ' || p.display_title,
     format('Dear %1$s,%3$sBased on your search criteria I thought of you for %2$s, which we have just brought to market. I''ve attached the confidential summary — do let me know if you''d like to arrange a viewing or discuss further.%3$sBest wishes,%3$sFrank Taylor & Associates',
            c.first_name, p.display_title, E'\n\n'),
-    c.id, p.id, now() - (random()*70 || ' days')::interval, coalesce(p.owner_id, c.owner_id)
+    c.id, p.id, now() - (random()*70 || ' days')::interval, staff[1 + (abs(hashtext(p.id::text)) % 10)]
   from public.practice_contacts pc
   join public.practices p on p.id = pc.practice_id
   join public.contacts c on c.id = pc.contact_id
@@ -374,7 +369,7 @@ begin
       'Spoke with %1$s about %2$s. Wants to arrange a viewing in the next fortnight; finance already in place.',
       'Left a voicemail for %1$s regarding %2$s and followed up by email.'
     ])[1 + (abs(hashtext(c.id::text || p.id::text)) % 3)], c.first_name, p.display_title),
-    c.id, p.id, now() - (random()*60 || ' days')::interval, coalesce(p.owner_id, c.owner_id),
+    c.id, p.id, now() - (random()*60 || ' days')::interval, staff[1 + (abs(hashtext(p.id::text)) % 10)],
     'outbound', outcomes[1 + floor(random()*array_length(outcomes,1))::int]
   from public.practice_contacts pc
   join public.practices p on p.id = pc.practice_id
@@ -390,7 +385,7 @@ begin
       'Buyer''s bank valuation booked. CQC registration application in progress.',
       'Weekly update call held with both parties; all on track for target completion.'
     ])[1 + (s.n % 4)],
-    d.id, d.practice_id, now() - (s.n * 9 || ' days')::interval, coalesce(d.owner_id, staff[1])
+    d.id, d.practice_id, now() - (s.n * 9 || ' days')::interval, staff[1 + (abs(hashtext(d.id::text)) % 10)]
   from public.deals d
   join public.practices p on p.id = d.practice_id
   cross join lateral generate_series(1, 3) s(n)
@@ -410,7 +405,7 @@ begin
       is_seller := (i % 3 = 0);
       scenario := 1 + (i % 5);
       select c.id, p.id, p.display_title, c.first_name,
-             coalesce(c.owner_id, p.owner_id, staff[1 + (i % 10)])
+             staff[1 + (i % 10)]
         into d_contact, d_practice, d_title, d_name, d_agent
       from public.practice_contacts pc
       join public.contacts c on c.id = pc.contact_id
@@ -552,7 +547,7 @@ begin
     end loop;
 
     -- ── 8. Launch outreach flag (go-to-market) ──────────────────────────
-    select p.id, p.display_title, p.owner_id into d_practice, d_title, d_agent
+    select p.id, p.display_title, staff[1 + (abs(hashtext(p.id::text)) % 10)] into d_practice, d_title, d_agent
     from public.practices p
     where p.legacy_ref like 'DEMO-PRACTICE-%' and p.status = 'available'
     order by p.legacy_ref limit 1;

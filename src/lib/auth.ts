@@ -9,7 +9,6 @@ export type SessionProfile = {
   full_name: string;
   email: string;
   role: Role;
-  branch_id: string | null;
   calendar_color: string;
   is_active: boolean;
   signature_html: string | null;
@@ -24,7 +23,7 @@ export const getProfile = cache(async (): Promise<SessionProfile | null> => {
   if (!user) return null;
   const { data } = await supabase
     .from("profiles")
-    .select("id, full_name, email, role, branch_id, calendar_color, is_active, signature_html")
+    .select("id, full_name, email, role, calendar_color, is_active, signature_html")
     .eq("id", user.id)
     .single();
   if (!data || !data.is_active) return null;

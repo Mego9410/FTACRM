@@ -46,9 +46,7 @@ export async function Journal({ link, path }: { link: JournalLink; path: string 
       supabase
         .from("deals")
         .select("id, practice_id")
-        .or(
-          `buyer_contact_id.eq.${link.contactId},seller_contact_id.eq.${link.contactId},buyer_solicitor_id.eq.${link.contactId},seller_solicitor_id.eq.${link.contactId}`,
-        ),
+        .or(`buyer_contact_id.eq.${link.contactId},seller_contact_id.eq.${link.contactId}`),
     ]);
     for (const r of (pcs ?? []) as { practice_id: string | null }[]) if (r.practice_id) practiceIds.add(r.practice_id);
     for (const d of (dls ?? []) as { id: string; practice_id: string | null }[]) {
@@ -59,19 +57,17 @@ export async function Journal({ link, path }: { link: JournalLink; path: string 
   if (link.dealId) {
     const { data: d } = await supabase
       .from("deals")
-      .select("practice_id, buyer_contact_id, seller_contact_id, buyer_solicitor_id, seller_solicitor_id")
+      .select("practice_id, buyer_contact_id, seller_contact_id")
       .eq("id", link.dealId)
       .maybeSingle();
     const deal = d as {
       practice_id: string | null;
       buyer_contact_id: string | null;
       seller_contact_id: string | null;
-      buyer_solicitor_id: string | null;
-      seller_solicitor_id: string | null;
     } | null;
     if (deal) {
       if (deal.practice_id) practiceIds.add(deal.practice_id);
-      for (const c of [deal.buyer_contact_id, deal.seller_contact_id, deal.buyer_solicitor_id, deal.seller_solicitor_id]) {
+      for (const c of [deal.buyer_contact_id, deal.seller_contact_id]) {
         if (c) contactIds.add(c);
       }
     }

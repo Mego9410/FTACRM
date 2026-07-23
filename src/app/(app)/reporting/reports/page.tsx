@@ -10,7 +10,7 @@ import { ReportView } from "../report-view";
 
 export const metadata = { title: "Reports" };
 
-type Search = { report?: string; period?: string; owner?: string; branch?: string };
+type Search = { report?: string; period?: string };
 
 function periodFor(preset: string): { period: Period; label: string } {
   const now = new Date();
@@ -33,7 +33,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const selectedKey = params.report && REPORTS.some((r) => r.key === params.report) ? params.report : REPORTS[0]!.key;
   const def = REPORTS.find((r) => r.key === selectedKey)!;
   const { period, label } = periodFor(params.period ?? "month");
-  const result = await def.run(period, {});
+  const result = await def.run(period);
 
   const qs = (extra: Record<string, string | undefined>) => {
     const merged = { ...params, ...extra };

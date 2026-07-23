@@ -18,7 +18,6 @@ export type MatchPractice = {
   funding_type_id: string | null;
   tenure_type_id: string | null;
   specialism_ids: string[];
-  deal_structure_ids: string[];
   surgeries: number | null;
   annual_turnover: number | null;
 };
@@ -28,7 +27,6 @@ export type MatchBuyer = {
   min_price: number | null;
   max_price: number | null;
   specialism_ids: string[];
-  deal_structure_ids: string[];
   funding_type_ids: string[];
   tenure_type_ids: string[];
   min_surgeries: number | null;
@@ -123,7 +121,6 @@ export function matchBuyerToPractice(
   if (!setCheck(practice.funding_type_id, buyer.funding_type_ids)) return { matches: false, score: 0, facets: [] };
   if (!setCheck(practice.tenure_type_id, buyer.tenure_type_ids)) return { matches: false, score: 0, facets: [] };
   if (!overlapCheck(practice.specialism_ids, buyer.specialism_ids)) return { matches: false, score: 0, facets: [] };
-  if (!overlapCheck(practice.deal_structure_ids, buyer.deal_structure_ids)) return { matches: false, score: 0, facets: [] };
 
   if (buyer.min_surgeries != null && (practice.surgeries ?? 0) < buyer.min_surgeries) {
     return { matches: false, score: 0, facets: [] };
@@ -167,7 +164,6 @@ export function matchBuyerToPractice(
     const hit = practice.specialism_ids.find((s) => buyer.specialism_ids.includes(s));
     if (hit) facets.push(label(hit));
   }
-  if (buyer.deal_structure_ids.length > 0) score += 4;
   if (buyer.temperature === "hot") score += 6;
   else if (buyer.temperature === "warm") score += 3;
   if (buyer.last_contacted_at) {

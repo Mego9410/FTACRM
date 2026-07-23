@@ -30,7 +30,7 @@ export type PracticeMatchRow = {
 };
 
 const PRACTICE_FIELDS =
-  "id, ref, display_title, town, county, status, asking_price, lat, lng, funding_type_id, tenure_type_id, specialism_ids, deal_structure_ids, surgeries, annual_turnover";
+  "id, ref, display_title, town, county, status, asking_price, lat, lng, funding_type_id, tenure_type_id, specialism_ids, surgeries, annual_turnover";
 
 function toMatchPractice(p: Record<string, unknown>): MatchPractice {
   return {
@@ -43,7 +43,6 @@ function toMatchPractice(p: Record<string, unknown>): MatchPractice {
     funding_type_id: p.funding_type_id as string | null,
     tenure_type_id: p.tenure_type_id as string | null,
     specialism_ids: (p.specialism_ids as string[]) ?? [],
-    deal_structure_ids: (p.deal_structure_ids as string[]) ?? [],
     surgeries: p.surgeries as number | null,
     annual_turnover: p.annual_turnover as number | null,
   };
@@ -60,7 +59,7 @@ export async function getMatchingBuyers(practiceId: string): Promise<BuyerMatchR
       supabase
         .from("buyer_criteria")
         .select(
-          "contact_id, min_price, max_price, specialism_ids, deal_structure_ids, funding_type_ids, tenure_type_ids, min_surgeries, min_annual_turnover, contacts!buyer_criteria_contact_id_fkey(id, first_name, last_name, company_name, email, temperature, last_contacted_at, do_not_contact, consent_email, archived_at, roles)",
+          "contact_id, min_price, max_price, specialism_ids, funding_type_ids, tenure_type_ids, min_surgeries, min_annual_turnover, contacts!buyer_criteria_contact_id_fkey(id, first_name, last_name, company_name, email, temperature, last_contacted_at, do_not_contact, consent_email, archived_at, roles)",
         ),
       supabase.from("buyer_search_areas").select("contact_id, lat, lng, radius_miles, region, label"),
       supabase.from("match_exclusions").select("contact_id").eq("practice_id", practiceId),
@@ -103,7 +102,6 @@ export async function getMatchingBuyers(practiceId: string): Promise<BuyerMatchR
       min_price: c.min_price,
       max_price: c.max_price,
       specialism_ids: c.specialism_ids ?? [],
-      deal_structure_ids: c.deal_structure_ids ?? [],
       funding_type_ids: c.funding_type_ids ?? [],
       tenure_type_ids: c.tenure_type_ids ?? [],
       min_surgeries: c.min_surgeries,
@@ -156,7 +154,6 @@ export async function getMatchingPractices(contactId: string): Promise<PracticeM
     min_price: criteria?.min_price ?? null,
     max_price: criteria?.max_price ?? null,
     specialism_ids: criteria?.specialism_ids ?? [],
-    deal_structure_ids: criteria?.deal_structure_ids ?? [],
     funding_type_ids: criteria?.funding_type_ids ?? [],
     tenure_type_ids: criteria?.tenure_type_ids ?? [],
     min_surgeries: criteria?.min_surgeries ?? null,

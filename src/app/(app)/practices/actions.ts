@@ -44,8 +44,6 @@ const practiceSchema = z.object({
   staff_count: z.number().int().nonnegative().nullable(),
   established_year: z.number().int().min(1800).max(2100).nullable(),
   description: optional(20000),
-  owner_id: z.string().uuid().nullable().optional(),
-  branch_id: z.string().uuid().nullable().optional(),
   instructed_at: z.string().nullable(),
   contract_expiry: z.string().nullable(),
   lease_expiry: z.string().nullable(),
@@ -186,7 +184,7 @@ async function flagLaunchOutreach(practiceId: string, changedBy: string) {
 
   const { data: practice } = await supabase
     .from("practices")
-    .select("display_title, owner_id")
+    .select("display_title")
     .eq("id", practiceId)
     .single();
   const top = matches.slice(0, 10).map((m) => ({
@@ -207,7 +205,7 @@ async function flagLaunchOutreach(practiceId: string, changedBy: string) {
   await supabase.from("ai_suggestions").insert({
     kind: "outreach",
     practice_id: practiceId,
-    for_profile_id: practice?.owner_id ?? changedBy,
+    for_profile_id: changedBy,
     payload: { title: `${matches.length} matched buyers for launch`, buyers: top, total: matches.length },
   });
   await systemJournal(
@@ -215,10 +213,9 @@ async function flagLaunchOutreach(practiceId: string, changedBy: string) {
     `Gone to market: ${matches.length} matching buyers identified automatically — top targets flagged for outreach.`,
   );
 
-  const notifyId = practice?.owner_id ?? changedBy;
   const admin = createAdminClient();
   await admin.from("notifications").insert({
-    profile_id: notifyId,
+    profile_id: changedBy,
     kind: "launch_outreach",
     title: "Best buyers identified",
     body: `${practice?.display_title ?? "Practice"} — ${matches.length} matched buyers, top ${top.length} ranked`,

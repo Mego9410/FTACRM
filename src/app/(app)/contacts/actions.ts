@@ -40,8 +40,6 @@ const contactSchema = z.object({
   roles: z.array(z.enum(["buyer", "seller", "solicitor", "other"])).min(1),
   status: optional(60),
   source_id: z.string().uuid().nullable().optional(),
-  owner_id: z.string().uuid().nullable().optional(),
-  branch_id: z.string().uuid().nullable().optional(),
   temperature: z.enum(["hot", "warm", "cold"]).nullable().optional(),
   notes: optional(20000),
   organisation_id: z.string().uuid().nullable().optional(),
@@ -75,14 +73,13 @@ export async function createContact(input: unknown): Promise<ActionResult<{ id: 
   if (parsed.data.roles.includes("buyer")) {
     const due = new Date();
     due.setDate(due.getDate() + 3);
-    const assignee = parsed.data.owner_id ?? me.id;
     const { data: task } = await supabase
       .from("tasks")
       .insert({
         title: INTRO_TASK_TITLE,
         details: "Send this buyer their introduction email after your first call.",
         due_at: due.toISOString(),
-        assignee_id: assignee,
+        assignee_id: me.id,
         created_by: me.id,
         contact_id: data.id,
         task_type: "email",

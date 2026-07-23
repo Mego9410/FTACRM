@@ -8,14 +8,13 @@ export type ReportColumn = {
   type?: "text" | "number" | "money" | "date" | "datetime";
 };
 export type ReportResult = { columns: ReportColumn[]; rows: Record<string, string | number | null>[] };
-export type ReportFilters = { owner?: string; branch?: string };
 export type ReportDef = {
   key: string;
   label: string;
   description: string;
   /** true if this report is bounded by the selected period; false = live snapshot ignoring period */
   periodic: boolean;
-  run: (period: Period, filters: ReportFilters) => Promise<ReportResult>;
+  run: (period: Period) => Promise<ReportResult>;
 };
 
 // ---- helpers -----------------------------------------------------------------
@@ -51,10 +50,8 @@ function contactName(
 type PracticeJoin = {
   display_title: string | null;
   town: string | null;
-  branch_id: string | null;
   fee_percent?: number | null;
   fee_fixed?: number | null;
-  owner_id?: string | null;
 } | null;
 
 type StageJoin = { label: string | null } | null;
@@ -71,10 +68,10 @@ const completions: ReportDef = {
   label: "Completions",
   description: "Deals that completed within the selected period, with the fee banked.",
   periodic: true,
-  async run(period, filters) {
+  async run(period) {
     const supabase = await createClient();
     const { from, to } = dateBounds(period);
-    let q = supabase
+    const { data } = await supabase
       .from("deals")
       .select(
         "ref, agreed_price, completed_at, created_at, practices!deals_practice_id_fkey(display_title, town, fee_percent, fee_fixed), contacts!deals_buyer_contact_id_fkey(first_name, last_name, company_name)",
@@ -82,7 +79,6 @@ const completions: ReportDef = {
       .eq("status", "completed")
       .gte("completed_at", from)
       .lte("completed_at", to);
-    const { data } = await q;
 
     const rows = (data ?? []).map((d) => {
       const practice = d.practices as unknown as PracticeJoin;
@@ -125,15 +121,14 @@ const pipeline: ReportDef = {
   label: "Live pipeline",
   description: "All in-progress deals as they stand right now (a live snapshot, not period-bound).",
   periodic: false,
-  async run(_period, filters) {
+  async run() {
     const supabase = await createClient();
-    let q = supabase
+    const { data } = await supabase
       .from("deals")
       .select(
         "ref, agreed_price, target_completion_date, last_activity_at, practices!deals_practice_id_fkey(display_title, fee_percent, fee_fixed), deal_stages!deals_current_stage_id_fkey(label)",
       )
       .eq("status", "in_progress");
-    const { data } = await q;
 
     const rows = (data ?? []).map((d) => {
       const practice = d.practices as unknown as PracticeJoin;
@@ -170,19 +165,17 @@ const instructions: ReportDef = {
   label: "Instructions taken",
   description: "Practices instructed (put on the market) within the selected period.",
   periodic: true,
-  async run(period, filters) {
+  async run(period) {
     const supabase = await createClient();
     const { from, to } = dateBounds(period);
     const idx = await getLookupIndex();
-    let q = supabase
+    const { data } = await supabase
       .from("practices")
       .select(
         "ref, display_title, town, status, asking_price, funding_type_id, surgeries, fee_percent, instructed_at",
       )
       .gte("instructed_at", from)
       .lte("instructed_at", to);
-    if (filters.branch) q = q.eq("branch_id", filters.branch);
-    const { data } = await q;
 
     const rows = (data ?? []).map((p) => {
       return {
@@ -220,19 +213,16 @@ const valuations: ReportDef = {
   label: "Valuations",
   description: "Valuation appointments scheduled within the selected period.",
   periodic: true,
-  async run(period, filters) {
+  async run(period) {
     const supabase = await createClient();
     const { from, to } = tsBounds(period);
-    let q = supabase
+    const { data } = await supabase
       .from("valuations")
       .select(
-        "appointment_at, suggested_price, price_from, price_to, outcome, created_at, practices!valuations_practice_id_fkey(display_title, branch_id)",
+        "appointment_at, suggested_price, price_from, price_to, outcome, created_at, practices!valuations_practice_id_fkey(display_title)",
       )
       .gte("appointment_at", from)
       .lte("appointment_at", to);
-    // Valuations have no owner or direct branch column; report is firm-wide.
-    void filters;
-    const { data } = await q;
 
     const rows = (data ?? [])
       .map((v) => {
@@ -268,19 +258,16 @@ const offers: ReportDef = {
   label: "Offers",
   description: "Offers received within the selected period.",
   periodic: true,
-  async run(period, filters) {
+  async run(period) {
     const supabase = await createClient();
     const { from, to } = dateBounds(period);
     // offer_date is a date; fall back to created_at when null. Query both windows.
-    let q = supabase
+    const { data } = await supabase
       .from("offers")
       .select(
-        "amount, status, finance_status, offer_date, created_at, practices!offers_practice_id_fkey(display_title, branch_id), contacts!offers_buyer_contact_id_fkey(first_name, last_name, company_name)",
+        "amount, status, finance_status, offer_date, created_at, practices!offers_practice_id_fkey(display_title), contacts!offers_buyer_contact_id_fkey(first_name, last_name, company_name)",
       )
       .or(`and(offer_date.gte.${from},offer_date.lte.${to}),and(offer_date.is.null,created_at.gte.${period.from.toISOString()},created_at.lte.${period.to.toISOString()})`);
-    // Offers have no owner or direct branch column; report is firm-wide.
-    void filters;
-    const { data } = await q;
 
     const rows = (data ?? [])
       .map((o) => {
@@ -315,11 +302,11 @@ const fallThroughs: ReportDef = {
   label: "Fall-throughs",
   description: "Deals that fell through within the selected period, with the recorded reason.",
   periodic: true,
-  async run(period, filters) {
+  async run(period) {
     const supabase = await createClient();
     const { from, to } = dateBounds(period);
     const idx = await getLookupIndex();
-    let q = supabase
+    const { data } = await supabase
       .from("deals")
       .select(
         "ref, agreed_price, fall_through_reason_id, fell_through_at, practices!deals_practice_id_fkey(display_title)",
@@ -327,7 +314,6 @@ const fallThroughs: ReportDef = {
       .eq("status", "fallen_through")
       .gte("fell_through_at", from)
       .lte("fell_through_at", to);
-    const { data } = await q;
 
     const rows = (data ?? []).map((d) => {
       const practice = d.practices as unknown as PracticeJoin;
@@ -358,8 +344,7 @@ const emailSends: ReportDef = {
   label: "Email sends",
   description: "Every campaign and launch created within the period, with delivery and engagement stats.",
   periodic: true,
-  async run(period, filters) {
-    void filters; // campaigns/launches aren't attributed to an owner or branch
+  async run(period) {
     const supabase = await createClient();
     const { from, to } = tsBounds(period);
     const { data } = await supabase
