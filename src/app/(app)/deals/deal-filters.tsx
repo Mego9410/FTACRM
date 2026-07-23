@@ -42,15 +42,6 @@ export function DealFilters() {
         <option value="price">Highest price</option>
         <option value="oldest">Oldest deal</option>
       </Select>
-      <label className="flex items-center gap-2 text-sm font-semibold text-fg-1">
-        <input
-          type="checkbox"
-          checked={params.get("stalled") === "1"}
-          onChange={(e) => apply({ stalled: e.target.checked ? "1" : "" })}
-          className="h-4 w-4 accent-[#E4AD25]"
-        />
-        Stalled only
-      </label>
       {params.size > 0 ? (
         <Button variant="ghost" size="sm" onClick={() => router.push(pathname)}>Clear</Button>
       ) : null}
