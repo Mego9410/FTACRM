@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 const branchSchema = z.object({
   id: z.string().uuid().optional(),
@@ -26,7 +26,7 @@ export async function saveBranch(input: unknown): Promise<ActionResult> {
   if (id) {
     const { data: before } = await admin.from("branches").select("*").eq("id", id).single();
     const { error } = await admin.from("branches").update(fields).eq("id", id);
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
     await audit("branches", id, me.id, Object.entries(fields).map(([field, newValue]) => ({
       field,
       oldValue: (before as Record<string, unknown> | null)?.[field],
@@ -34,7 +34,7 @@ export async function saveBranch(input: unknown): Promise<ActionResult> {
     })));
   } else {
     const { data, error } = await admin.from("branches").insert(fields).select("id").single();
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
     await audit("branches", data.id, me.id, [{ field: "created", oldValue: null, newValue: fields.name }]);
   }
   revalidatePath("/admin/branches");

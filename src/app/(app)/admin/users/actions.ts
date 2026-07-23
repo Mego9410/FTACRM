@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 const inviteSchema = z.object({
   email: z.string().email(),
@@ -25,13 +25,13 @@ export async function inviteUser(input: unknown): Promise<ActionResult> {
     data: { full_name },
     redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset`,
   });
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
 
   const { error: profileError } = await admin
     .from("profiles")
     .update({ full_name, role, branch_id })
     .eq("id", data.user.id);
-  if (profileError) return fail(profileError.message);
+  if (profileError) return dbFail(profileError);
 
   await audit("profiles", data.user.id, me.id, [
     { field: "invited", oldValue: null, newValue: `${email} as ${role}` },
@@ -61,7 +61,7 @@ export async function updateUser(input: unknown): Promise<ActionResult> {
   const admin = createAdminClient();
   const { data: before } = await admin.from("profiles").select("*").eq("id", id).single();
   const { error } = await admin.from("profiles").update(fields).eq("id", id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
 
   await audit("profiles", id, me.id, [
     { field: "full_name", oldValue: before?.full_name, newValue: fields.full_name },

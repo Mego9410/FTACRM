@@ -45,7 +45,9 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+  // Exact path or a proper path-segment prefix (…/), so a public prefix like
+  // "/unsubscribe" can't accidentally expose a future "/unsubscribe-x" route.
+  const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p.endsWith("/") ? p : `${p}/`));
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();

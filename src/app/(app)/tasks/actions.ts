@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 const taskSchema = z.object({
   id: z.string().uuid().optional(),
@@ -65,7 +65,7 @@ export async function saveTask(input: unknown): Promise<ActionResult> {
   if (id) {
     const { data: existing } = await supabase.from("tasks").select("assignee_id").eq("id", id).single();
     const { error } = await supabase.from("tasks").update(writeFields).eq("id", id);
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
     if (links !== undefined) await syncTaskLinks(supabase, id, links);
     const newAssignee = fields.assignee_id;
     if (newAssignee && newAssignee !== me.id && newAssignee !== existing?.assignee_id) {
@@ -85,7 +85,7 @@ export async function saveTask(input: unknown): Promise<ActionResult> {
       .insert({ ...writeFields, assignee_id: assignee, created_by: me.id })
       .select("id")
       .single();
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
     if (created && links && links.length > 0) await syncTaskLinks(supabase, created.id, links);
     if (assignee !== me.id) {
       const admin = createAdminClient();
@@ -165,7 +165,7 @@ export async function setTaskStatus(input: unknown): Promise<ActionResult> {
       completed_at: done ? new Date().toISOString() : null,
     })
     .eq("id", parsed.data.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   if (done) await spawnRecurrence(supabase, parsed.data.id, me.id);
   revalidatePath("/tasks");
   revalidatePath("/dashboard");
@@ -189,7 +189,7 @@ export async function setTaskStage(input: unknown): Promise<ActionResult> {
     .from("tasks")
     .update({ stage: parsed.data.stage, status: done ? "done" : "open", completed_at: done ? new Date().toISOString() : null })
     .eq("id", parsed.data.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   if (done) await spawnRecurrence(supabase, parsed.data.id, me.id);
   revalidatePath("/tasks");
   revalidatePath("/dashboard");

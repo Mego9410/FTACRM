@@ -9,7 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { evaluateSegment, type SegmentDefinition, type SegmentEvaluation } from "@/lib/email/segment";
 import { emailSendingEnabled } from "@/lib/email/provider";
 import { audit } from "@/lib/audit";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 const segmentSchema = z.object({
   roles: z.array(z.string()).optional(),
@@ -53,7 +53,7 @@ export async function saveCampaignDraft(input: unknown): Promise<ActionResult<{ 
     const { data: existing } = await supabase.from("campaigns").select("status").eq("id", id).single();
     if (existing && existing.status !== "draft") return fail("Only drafts can be edited.");
     const { error } = await supabase.from("campaigns").update(fields).eq("id", id);
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
     revalidatePath(`/campaigns/${id}`);
     return ok({ id });
   }
@@ -62,7 +62,7 @@ export async function saveCampaignDraft(input: unknown): Promise<ActionResult<{ 
     .insert({ ...fields, from_profile_id: me.id, created_by: me.id })
     .select("id")
     .single();
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   return ok({ id: data.id });
 }
 
@@ -97,7 +97,7 @@ export async function updateCampaignContent(input: unknown): Promise<ActionResul
   }
 
   const { error } = await supabase.from("campaigns").update({ subject, body_html }).eq("id", id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
 
   await audit("campaigns", id, me.id, [
     { field: "subject", oldValue: campaign.subject, newValue: subject },
@@ -143,7 +143,7 @@ export async function queueCampaign(input: unknown): Promise<ActionResult> {
       email: r.email,
     })),
   );
-  if (recipientsError) return fail(recipientsError.message);
+  if (recipientsError) return dbFail(recipientsError);
 
   const { error } = await supabase
     .from("campaigns")
@@ -153,7 +153,7 @@ export async function queueCampaign(input: unknown): Promise<ActionResult> {
       recipient_count: evaluation.eligible.length,
     })
     .eq("id", campaign.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
 
   await audit("campaigns", campaign.id, me.id, [
     { field: "queued", oldValue: null, newValue: `${evaluation.eligible.length} recipients` },
@@ -172,7 +172,7 @@ export async function cancelCampaign(input: unknown): Promise<ActionResult> {
     .update({ status: "cancelled" })
     .eq("id", parsed.data.id)
     .in("status", ["draft", "scheduled", "sending"]);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   await audit("campaigns", parsed.data.id, me.id, [{ field: "status", oldValue: null, newValue: "cancelled" }]);
   revalidatePath(`/campaigns/${parsed.data.id}`);
   revalidatePath("/campaigns");
@@ -198,10 +198,10 @@ export async function saveTemplate(input: unknown): Promise<ActionResult> {
   const supabase = await createClient();
   if (id) {
     const { error } = await supabase.from("email_templates").update(fields).eq("id", id);
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
   } else {
     const { error } = await supabase.from("email_templates").insert({ ...fields, created_by: me.id });
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
   }
   revalidatePath("/campaigns/templates");
   return ok();
@@ -218,7 +218,7 @@ export async function addSuppression(input: unknown): Promise<ActionResult> {
   const { error } = await admin
     .from("suppressions")
     .upsert({ email: parsed.data.email.toLowerCase(), reason: "manual" }, { onConflict: "email" });
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   await audit("suppressions", me.id, me.id, [{ field: "email", oldValue: null, newValue: parsed.data.email }]);
   revalidatePath("/campaigns/suppressions");
   return ok();

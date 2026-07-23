@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { expandRecurrence, type Recurrence } from "@/lib/calendar/recurrence";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 export type CalendarEventDto = {
   id: string;
@@ -152,7 +152,7 @@ export async function saveCalendarEvent(input: unknown): Promise<ActionResult> {
       return fail("Only the organiser can edit this event.");
     }
     const { error } = await supabase.from("calendar_events").update(fields).eq("id", eventId);
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
     await supabase.from("calendar_event_attendees").delete().eq("event_id", eventId).not("profile_id", "is", null);
   } else {
     const { data, error } = await supabase
@@ -160,7 +160,7 @@ export async function saveCalendarEvent(input: unknown): Promise<ActionResult> {
       .insert({ ...fields, organiser_id: me.id, created_by: me.id, sync_state: "local" })
       .select("id")
       .single();
-    if (error) return fail(error.message);
+    if (error) return dbFail(error);
     eventId = data.id;
   }
 
@@ -168,7 +168,7 @@ export async function saveCalendarEvent(input: unknown): Promise<ActionResult> {
   const { error: attendeesError } = await supabase
     .from("calendar_event_attendees")
     .insert([...attendees].map((profile_id) => ({ event_id: eventId, profile_id })));
-  if (attendeesError) return fail(attendeesError.message);
+  if (attendeesError) return dbFail(attendeesError);
 
   revalidatePath("/calendar");
   return ok();
@@ -192,7 +192,7 @@ export async function cancelCalendarEvent(input: unknown): Promise<ActionResult>
     .from("calendar_events")
     .update({ status: "cancelled" })
     .eq("id", parsed.data.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   revalidatePath("/calendar");
   return ok();
 }

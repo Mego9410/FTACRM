@@ -102,7 +102,7 @@ export async function dispatchCampaigns(): Promise<{ sent: number } | { skipped:
       // merge tags remain. Ordinary campaigns are plain text wrapped in the shell.
       const html =
         (campaign as { kind?: string }).kind === "launch"
-          ? renderMergeTags(campaign.body_html ?? "", ctx)
+          ? renderMergeTags(campaign.body_html ?? "", ctx, { escapeHtml: true })
           : renderEmailShell({
               bodyText: renderMergeTags(campaign.body_html ?? "", ctx),
               unsubscribeUrl,

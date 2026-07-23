@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 const recordLink = z.object({
   contact_id: z.string().uuid().nullable().optional(),
@@ -37,16 +37,21 @@ export async function createJournalEntry(input: unknown): Promise<ActionResult> 
     author_id: me.id,
     occurred_at: fields.occurred_at ?? new Date().toISOString(),
   });
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   revalidatePath(path);
   return ok();
 }
 
-/** System journal entry — used by workflow actions (status changes etc.). */
+/**
+ * System journal entry — used by workflow actions (status changes etc.).
+ * [SEV-LOW-02] This is an exported server action, so it must assert a session
+ * itself; all real callers are already authenticated.
+ */
 export async function systemJournal(
   link: { contact_id?: string | null; practice_id?: string | null; deal_id?: string | null },
   body: string,
 ) {
+  await requireProfile();
   const supabase = await createClient();
   await supabase.from("journal_entries").insert({ ...link, entry_type: "system", body });
 }
@@ -62,7 +67,7 @@ export async function togglePin(input: unknown): Promise<ActionResult> {
     .from("journal_entries")
     .update({ pinned: parsed.data.pinned })
     .eq("id", parsed.data.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   revalidatePath(parsed.data.path);
   return ok();
 }
@@ -83,7 +88,7 @@ export async function deleteJournalEntry(input: unknown): Promise<ActionResult> 
     return fail("Only the author or an administrator can delete an entry.");
   }
   const { error } = await supabase.from("journal_entries").delete().eq("id", parsed.data.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   revalidatePath(parsed.data.path);
   return ok();
 }

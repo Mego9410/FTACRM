@@ -9,7 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { audit, diffChanges } from "@/lib/audit";
 import { geocodePostcode } from "@/lib/geo";
 import { INTRO_TASK_TITLE } from "@/lib/email/intro-email";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 const optional = (max = 200) =>
   z
@@ -67,7 +67,7 @@ export async function createContact(input: unknown): Promise<ActionResult<{ id: 
     .insert({ ...parsed.data, ...(await geoFields(parsed.data.postcode)), created_by: me.id })
     .select("id")
     .single();
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   await audit("contacts", data.id, me.id, [{ field: "created", oldValue: null, newValue: "contact" }]);
 
   // Buyers get a reminder task to send their post-call introduction email.
@@ -109,7 +109,7 @@ export async function updateContact(input: unknown): Promise<ActionResult> {
     .from("contacts")
     .update({ ...fields, ...(await geoFields(fields.postcode)) })
     .eq("id", id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
 
   await audit("contacts", id, me.id, diffChanges(before, fields as Record<string, unknown>));
   revalidatePath(`/contacts/${id}`);
@@ -136,7 +136,7 @@ export async function updateConsent(input: unknown): Promise<ActionResult> {
     .from("contacts")
     .update({ ...fields, consent_updated_at: new Date().toISOString() })
     .eq("id", id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   await audit("contacts", id, me.id, diffChanges(before, fields as Record<string, unknown>));
   revalidatePath(`/contacts/${id}`);
   return ok();
@@ -162,7 +162,7 @@ export async function updateAml(input: unknown): Promise<ActionResult> {
       identity_verified_at: fields.identity_verified ? new Date().toISOString() : null,
     })
     .eq("id", id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   await audit("contacts", id, me.id, diffChanges(before, fields as Record<string, unknown>));
   revalidatePath(`/contacts/${id}`);
   return ok();
@@ -178,7 +178,7 @@ export async function archiveContact(input: unknown): Promise<ActionResult> {
     .from("contacts")
     .update({ archived_at: parsed.data.archive ? new Date().toISOString() : null })
     .eq("id", parsed.data.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   await audit("contacts", parsed.data.id, me.id, [
     { field: "archived", oldValue: !parsed.data.archive, newValue: parsed.data.archive },
   ]);
@@ -198,11 +198,26 @@ export async function eraseContact(input: unknown): Promise<ActionResult> {
   const id = parsed.data.id;
   const admin = createAdminClient();
 
+  // [SEV-MED-03] Capture the email before anonymising so we can also erase
+  // public enquiries that carry it.
+  const { data: pre } = await admin.from("contacts").select("email").eq("id", id).maybeSingle();
+  const email = (pre as { email: string | null } | null)?.email?.toLowerCase() ?? null;
+
   const { data: docs } = await admin.from("documents").select("id, storage_path").eq("contact_id", id);
   if (docs && docs.length > 0) {
     await admin.storage.from("documents").remove(docs.map((d) => d.storage_path));
     await admin.from("documents").delete().eq("contact_id", id);
   }
+
+  // [SEV-MED-03] Scrub PII that survived in the call/AI/enquiry tables.
+  const { data: recs } = await admin.from("call_recordings").select("id").eq("contact_id", id);
+  const recIds = (recs ?? []).map((r) => r.id);
+  await admin.from("call_recordings").update({ transcript: null, summary: null }).eq("contact_id", id);
+  if (recIds.length > 0) {
+    await admin.from("ai_jobs").update({ input: {}, output: null }).in("call_recording_id", recIds);
+  }
+  await admin.from("ai_suggestions").delete().eq("contact_id", id);
+  if (email) await admin.from("practice_enquiries").delete().eq("email", email);
   await admin
     .from("journal_entries")
     .update({ body: "[erased]", subject: null })
@@ -241,7 +256,7 @@ export async function eraseContact(input: unknown): Promise<ActionResult> {
       archived_at: new Date().toISOString(),
     })
     .eq("id", id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
 
   await audit("contacts", id, me.id, [{ field: "gdpr_erasure", oldValue: null, newValue: "erased" }]);
   revalidatePath(`/contacts/${id}`);

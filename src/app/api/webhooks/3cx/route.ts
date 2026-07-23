@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
+import { hmacHex, secretsMatch } from "@/lib/http/verify-secret";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isInternalExtension, normalisePhone } from "@/lib/telephony/normalise";
 import { matchCallToContact } from "@/lib/telephony/match";
@@ -32,13 +33,22 @@ export async function POST(request: NextRequest) {
   if (!secret) {
     return NextResponse.json({ error: "telephony not configured" }, { status: 503 });
   }
-  if (request.headers.get("x-webhook-secret") !== secret) {
+
+  // Read the raw body once so we can verify an HMAC over it (preferred) and
+  // still parse it. Auth is constant-time in both paths: an x-webhook-signature
+  // (HMAC-SHA256 of the raw body) if 3CX can sign, else a static shared secret.
+  const raw = await request.text();
+  const signature = request.headers.get("x-webhook-signature");
+  const authorised = signature
+    ? secretsMatch(signature.replace(/^sha256=/i, ""), hmacHex(secret, raw))
+    : secretsMatch(request.headers.get("x-webhook-secret"), secret);
+  if (!authorised) {
     return NextResponse.json({ error: "unauthorised" }, { status: 401 });
   }
 
   let body: unknown;
   try {
-    body = await request.json();
+    body = JSON.parse(raw);
   } catch {
     return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
   }

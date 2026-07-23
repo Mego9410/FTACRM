@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { ok, fail, type ActionResult } from "@/lib/action-result";
+import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 const schema = z.object({
   full_name: z.string().min(1).max(120),
@@ -18,7 +18,7 @@ export async function updateMySettings(input: unknown): Promise<ActionResult> {
   if (!parsed.success) return fail("Check the form fields.");
   const supabase = await createClient();
   const { error } = await supabase.from("profiles").update(parsed.data).eq("id", me.id);
-  if (error) return fail(error.message);
+  if (error) return dbFail(error);
   revalidatePath("/settings");
   return ok();
 }
