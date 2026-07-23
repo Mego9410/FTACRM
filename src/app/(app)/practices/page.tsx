@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LayoutGrid, List } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getLookupIndex } from "@/lib/lookups";
 import { PageHeader } from "@/components/shell/page-header";
@@ -6,7 +7,7 @@ import { LinkTabs } from "@/components/ui/tabs";
 import { Badge, Button, Card, EmptyState, LookupPill } from "@/components/ui/primitives";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PRACTICE_STATUS_LABELS, PRACTICE_STATUS_TONES } from "@/lib/contact-helpers";
-import { formatGBP } from "@/lib/utils";
+import { cn, formatGBP } from "@/lib/utils";
 import { resolveSort, applySort, type SortOptions } from "@/lib/sort";
 import { PracticeMapDefs, PracticeMapUse } from "@/components/practices/practice-map";
 import { practiceLabel } from "@/lib/practice-helpers";
@@ -34,11 +35,13 @@ type Search = {
   page?: string;
   sort?: string;
   dir?: string;
+  view?: string;
 };
 
 export default async function PracticesPage({ searchParams }: { searchParams: Promise<Search> }) {
   const params = await searchParams;
   const page = Math.max(1, Number(params.page) || 1);
+  const view = params.view === "list" ? "list" : "grid";
   const supabase = await createClient();
 
   const countFor = async (status?: string) => {
@@ -129,6 +132,29 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
 
       <PracticeFilters />
 
+      <div className="mt-4 flex items-center justify-end">
+        <div className="inline-flex gap-1 rounded-[12px] bg-surface-2 p-1">
+          <Link
+            href={`/practices${qs({ view: undefined })}`}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-[13px] font-semibold transition-colors",
+              view === "grid" ? "bg-surface text-ink shadow-xs" : "text-fg-3 hover:text-fg-1",
+            )}
+          >
+            <LayoutGrid size={14} /> Grid
+          </Link>
+          <Link
+            href={`/practices${qs({ view: "list" })}`}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-[13px] font-semibold transition-colors",
+              view === "list" ? "bg-surface text-ink shadow-xs" : "text-fg-3 hover:text-fg-1",
+            )}
+          >
+            <List size={14} /> List
+          </Link>
+        </div>
+      </div>
+
       {(practices ?? []).length === 0 ? (
         <EmptyState
           className="mt-4"
@@ -140,6 +166,52 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
             </Link>
           }
         />
+      ) : view === "list" ? (
+        <Card className="mt-4 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-line bg-surface-2 text-left text-[10.5px] font-bold uppercase tracking-[0.08em] text-fg-4">
+                  <th className="px-5 py-3">Practice</th>
+                  <th className="px-3 py-3">Status</th>
+                  <th className="px-3 py-3">Funding</th>
+                  <th className="px-3 py-3">Town</th>
+                  <th className="px-3 py-3">Surgeries</th>
+                  <th className="px-3 py-3 text-right">Guide</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(practices ?? []).map((p) => {
+                  const funding = p.funding_type_id ? lookupIndex.get(p.funding_type_id) : null;
+                  const guide = p.asking_price
+                    ? `${p.price_prefix === "offers_over" ? "Offers over " : p.price_prefix === "guide" ? "Guide " : ""}${formatGBP(p.asking_price)}`
+                    : "POA";
+                  return (
+                    <tr key={p.id} className="cursor-pointer border-t border-line hover:bg-gold-tint">
+                      <td className="px-5 py-3">
+                        <Link href={`/practices/${p.id}`} className="block">
+                          <span className="font-semibold text-fg-1">{practiceLabel(p)}</span>
+                          <span className="mt-0.5 block text-xs text-fg-3">{p.ref}</span>
+                        </Link>
+                      </td>
+                      <td className="px-3 py-3">
+                        <Badge tone={PRACTICE_STATUS_TONES[p.status] ?? "neutral"}>
+                          {PRACTICE_STATUS_LABELS[p.status] ?? p.status}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-3">
+                        {funding ? <LookupPill color={funding.color}>{funding.value}</LookupPill> : <span className="text-fg-4">—</span>}
+                      </td>
+                      <td className="px-3 py-3 text-fg-2">{p.town ?? "—"}</td>
+                      <td className="px-3 py-3 text-fg-2">{p.surgeries ?? "—"}</td>
+                      <td className="px-3 py-3 text-right font-extrabold text-gold-deep">{guide}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       ) : (
         <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {anyMap ? <PracticeMapDefs /> : null}

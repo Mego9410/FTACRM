@@ -20,7 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <p className="mt-0.5 text-sm text-fg-3">Reporting, users, configuration and taxonomy — changes apply firm-wide.</p>
       </div>
       <div className="flex flex-col gap-5 lg:flex-row">
-        <nav className="flex shrink-0 flex-row gap-1 overflow-x-auto lg:w-48 lg:flex-col">
+        <nav className="flex shrink-0 flex-row gap-1 overflow-x-auto overflow-y-hidden lg:w-48 lg:flex-col lg:overflow-visible">
           {SECTIONS.map((s) => (
             <Link
               key={s.href}

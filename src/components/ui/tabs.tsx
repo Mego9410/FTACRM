@@ -19,7 +19,7 @@ export function LinkTabs({ tabs, className }: { tabs: TabDef[]; className?: stri
   };
 
   return (
-    <nav className={cn("flex gap-1 overflow-x-auto border-b border-line", className)}>
+    <nav className={cn("flex gap-1 overflow-x-auto overflow-y-hidden border-b border-line", className)}>
       {tabs.map((t) => {
         const active = isActive(t);
         return (
