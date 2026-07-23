@@ -30,7 +30,7 @@ export function SidebarPanels({ data }: { data: SidebarData }) {
       {/* Mini task list */}
       <div>
         <div className="mb-1 flex items-center justify-between px-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-fg-4">My tasks</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-fg-4">My tasks</p>
           <Link href="/tasks" className="text-[11px] font-semibold text-gold-deep hover:underline">
             All
           </Link>
@@ -62,7 +62,7 @@ export function SidebarPanels({ data }: { data: SidebarData }) {
       {/* Mini calendar */}
       <div>
         <div className="mb-1.5 flex items-center justify-between px-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-fg-4">{monthLabel}</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-fg-4">{monthLabel}</p>
           <Link href="/calendar" className="text-[11px] font-semibold text-gold-deep hover:underline">
             Open
           </Link>
