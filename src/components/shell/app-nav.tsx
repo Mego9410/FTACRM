@@ -44,7 +44,7 @@ function Wordmark() {
   return (
     <span className="flex min-w-0 flex-col leading-none">
       <AspenWordmark className="h-[26px] w-auto" />
-      <span className="mt-1 truncate text-[9px] font-bold uppercase tracking-[0.16em] text-fg-4">
+      <span className="mt-[3px] truncate text-[9px] font-bold uppercase tracking-[0.14em] text-fg-3">
         Frank Taylor &amp; Associates
       </span>
     </span>
@@ -165,7 +165,7 @@ export function AppNav({
         <nav className="flex flex-1 flex-col overflow-y-auto p-3">
           <div className="flex flex-col gap-0.5">
             {!collapsed ? (
-              <p className="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-fg-4">Menu</p>
+              <p className="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-fg-4">Menu</p>
             ) : null}
             <NavLinks mini={collapsed} />
           </div>
