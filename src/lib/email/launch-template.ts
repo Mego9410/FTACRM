@@ -35,7 +35,11 @@ export type LaunchPractice = {
 };
 
 const GOLD = "#E4AD25";
+const GOLD_DEEP = "#B4862A";
+const TINT = "#FBF1D6";
 const INK = "#0F0F0A";
+const INK_DEEP = "#090909";
+const FG1 = "#1A1A17";
 const FG2 = "#5E5E5A";
 const FG3 = "#8C8C88";
 const LINE = "#E7E7E4";
@@ -67,9 +71,10 @@ export function renderLaunchEmail(
   const publicUrl = opts?.publicUrl ?? null;
   const location = [practice.town, practice.county].filter(Boolean).join(", ");
   const subject = `New launch — ${practice.display_title}${location ? `, ${location}` : ""}`;
+  const heroPrice = priceLabel(practice.asking_price, practice.price_prefix);
 
+  // Asking price now headlines the hero, so it's dropped from the fact grid.
   const facts: [string, string | null][] = [
-    ["Asking price", priceLabel(practice.asking_price, practice.price_prefix)],
     ["Surgeries", practice.surgeries != null ? String(practice.surgeries) : null],
     ["Funding", practice.funding],
     ["Tenure", practice.tenure],
@@ -104,22 +109,53 @@ export function renderLaunchEmail(
         .join("")
     : "";
 
+  const ctaHref = publicUrl
+    ? esc(publicUrl)
+    : `mailto:{{sender.email}}?subject=${encodeURIComponent(`Interest in ${practice.ref} — ${practice.display_title}`)}`;
+
+  // Advertising blocks carried over from the live FTA launch email — the
+  // partner promos (Finance, Media) and the sell-side valuation prompt,
+  // rebuilt as on-brand HTML cards rather than hosted promo images.
+  const promo = (label: string, title: string, body: string, cta: string, href: string) => `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;margin:0 0 12px;">
+      <tr><td style="border:1px solid ${LINE};border-radius:16px;background:#FFFFFF;padding:18px 20px;">
+        <p style="margin:0;font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:${GOLD_DEEP};">${esc(label)}</p>
+        <p style="margin:5px 0 0;font-size:16px;font-weight:800;letter-spacing:-0.01em;color:${FG1};">${esc(title)}</p>
+        <p style="margin:6px 0 0;font-size:13.5px;line-height:1.55;color:${FG2};">${esc(body)}</p>
+        <a href="${href}" style="display:inline-block;margin:12px 0 0;font-size:13px;font-weight:800;color:${GOLD_DEEP};text-decoration:none;">${esc(cta)} &rarr;</a>
+      </td></tr>
+    </table>`;
+
+  const socials = [
+    ["Website", "https://www.ft-associates.com/"],
+    ["Facebook", "https://www.facebook.com/FrankTaylorandAssociates"],
+    ["LinkedIn", "https://uk.linkedin.com/company/frank-taylor-and-associates"],
+    ["Instagram", "https://www.instagram.com/franktaylorassoc/"],
+    ["YouTube", "https://www.youtube.com/@franktaylorassociates"],
+  ]
+    .map(([l, h]) => `<a href="${h}" style="color:#C9C9C4;text-decoration:none;font-weight:600;">${l}</a>`)
+    .join('<span style="color:#4A4A46;"> &middot; </span>');
+
   const html = `<!doctype html>
 <html lang="en-GB">
 <body style="margin:0;padding:0;background:#F4F4F3;font-family:'Hanken Grotesk',-apple-system,'Segoe UI',sans-serif;color:${FG2};font-size:16px;">
   <div style="max-width:620px;margin:0 auto;padding:24px 16px;">
     <div style="background:#FFFFFF;border-radius:20px;overflow:hidden;border:1px solid ${LINE};">
 
-      <div style="background:${INK};padding:28px 32px;">
+      <!-- Hero -->
+      <div style="background:${INK};padding:30px 32px 34px;">
         <span style="display:inline-block;background:${GOLD};color:${INK};font-weight:800;font-size:14px;letter-spacing:-0.01em;padding:7px 13px;border-radius:12px;">Frank Taylor &amp; Associates</span>
-        <p style="margin:18px 0 0;font-size:12px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:${GOLD};">New practice launch</p>
-        <h1 style="margin:6px 0 0;font-size:26px;line-height:1.25;font-weight:800;letter-spacing:-0.02em;color:#FFFFFF;">${esc(practice.display_title)}</h1>
-        ${location ? `<p style="margin:6px 0 0;font-size:15px;color:#B6B6B2;">${esc(location)}</p>` : ""}
+        <p style="margin:20px 0 0;font-size:11.5px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:${GOLD};">Confidential sale &nbsp;&middot;&nbsp; <span style="color:#8C8C88;">Ref ${esc(practice.ref)}</span></p>
+        <h1 style="margin:8px 0 0;font-size:30px;line-height:1.12;font-weight:800;letter-spacing:-0.02em;color:#FFFFFF;">${esc(practice.display_title)}<span style="color:${GOLD};">.</span></h1>
+        ${location ? `<p style="margin:12px 0 0;"><span style="display:inline-block;background:rgba(255,255,255,0.1);color:#E6E6E2;font-size:13px;font-weight:600;border-radius:999px;padding:5px 13px;">${esc(location)}</span></p>` : ""}
+        <p style="margin:22px 0 0;font-size:11.5px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#7C7C78;">Asking price</p>
+        <p style="margin:2px 0 0;font-size:40px;line-height:1;font-weight:800;letter-spacing:-0.02em;color:${GOLD};">${esc(heroPrice)}</p>
       </div>
 
-      <div style="padding:32px;">
-        <p style="margin:0 0 16px;line-height:1.65;">Dear {{contact.salutation|there}},</p>
-        <p style="margin:0 0 20px;line-height:1.65;">A practice matching your registered requirements has just come to market. As a matched buyer you're receiving these details ahead of general release — in strict confidence. The name and exact location are withheld at this stage; we'll share them once you register your interest.</p>
+      <!-- Intro + facts -->
+      <div style="padding:30px 32px;">
+        <p style="margin:0 0 16px;line-height:1.65;color:${FG1};">Dear {{contact.salutation|there}},</p>
+        <p style="margin:0 0 20px;line-height:1.65;">We&rsquo;re delighted to launch another practice to market today. A practice matching your registered requirements has just become available — as a matched buyer you&rsquo;re receiving these details ahead of general release, in strict confidence. The name and exact location are withheld at this stage; we&rsquo;ll share them once you register your interest.</p>
 
         <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:separate;border-spacing:0 10px;">
           ${factRows.join("")}
@@ -129,21 +165,32 @@ export function renderLaunchEmail(
 
         ${description ? `<div style="margin:24px 0 0;">${description}</div>` : ""}
 
-        <div style="margin:28px 0 0;text-align:center;">
-          <a href="${publicUrl ? esc(publicUrl) : `mailto:{{sender.email}}?subject=${encodeURIComponent(`Interest in ${practice.ref} — ${practice.display_title}`)}`}"
-             style="display:inline-block;background:${GOLD};color:${INK};font-weight:800;font-size:15px;text-decoration:none;padding:14px 30px;border-radius:14px;">
+        <div style="margin:30px 0 4px;text-align:center;">
+          <a href="${ctaHref}"
+             style="display:inline-block;background:${GOLD};color:${INK};font-weight:800;font-size:15px;text-decoration:none;padding:15px 34px;border-radius:14px;">
             ${publicUrl ? "View Full Details" : "Register your interest"}
           </a>
-          <p style="margin:10px 0 0;font-size:13px;color:${FG3};">or simply reply to this email — quote ref ${esc(practice.ref)}</p>
+          <p style="margin:12px 0 0;font-size:13px;color:${FG3};">Or reply to this email, or call <strong style="color:${FG1};">0330 088 1156</strong> &mdash; quote ref ${esc(practice.ref)}.</p>
         </div>
 
-        <p style="margin:28px 0 0;line-height:1.5;color:#1A1A17;font-weight:600;">{{sender.full_name|The FTA team}}<br/><span style="font-weight:400;color:${FG3};font-size:14px;">Frank Taylor &amp; Associates</span></p>
+        <p style="margin:26px 0 0;line-height:1.5;color:${FG1};font-weight:600;">{{sender.full_name|The FTA team}}<br/><span style="font-weight:400;color:${FG3};font-size:14px;">Frank Taylor &amp; Associates</span></p>
       </div>
 
-      <div style="background:#090909;color:#B6B6B2;padding:24px 32px;font-size:12.5px;line-height:1.6;">
-        <p style="margin:0 0 8px;">Frank Taylor &amp; Associates — the UK's leading independent dental practice sales agency. Guiding practice owners with integrity since 1988.</p>
-        <p style="margin:0;">These details are confidential and shared with you as a registered buyer. You're receiving this because you registered your interest with us.
-        <a href="{{unsubscribe_url}}" style="color:${GOLD};">Unsubscribe</a></p>
+      <!-- Advertising -->
+      <div style="background:#FAFAF9;border-top:1px solid ${LINE};padding:26px 32px;">
+        <p style="margin:0 0 14px;font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:${FG3};">Here to help at every step</p>
+        ${promo("Thinking of selling?", "Book a confidential valuation", "Considering selling your own practice? Arrange a no-obligation valuation with the UK’s leading dental practice sales agency.", "Book a valuation", "https://www.ft-associates.com/")}
+        ${promo("FTA Finance", "Fund your acquisition", "FTA Finance arranges competitive practice-purchase funding, tailored to dentists and structured around your plans.", "Explore finance", "https://www.ftafinance.co.uk/")}
+        ${promo("FTA Media", "Grow once you’re in", "FTA Media builds websites, branding and marketing that bring new patients through the door.", "See FTA Media", "https://www.fta.media/")}
+      </div>
+
+      <!-- Footer -->
+      <div style="background:${INK_DEEP};color:#B6B6B2;padding:26px 32px;font-size:12.5px;line-height:1.65;">
+        <p style="margin:0 0 12px;">${socials}</p>
+        <p style="margin:0 0 8px;">Frank Taylor &amp; Associates &mdash; the UK&rsquo;s leading independent dental practice sales agency. Guiding practice owners with integrity since 1988.</p>
+        <p style="margin:0 0 8px;">1 Bradmore Building, Bradmore Green, Brookmans Park, Hertfordshire AL9 7QR &nbsp;&middot;&nbsp; 0330 088 1156 &nbsp;&middot;&nbsp; www.ft-associates.com</p>
+        <p style="margin:0 0 8px;color:#7C7C78;">These details are confidential and shared with you as a registered buyer, because you registered your interest with us. <a href="{{unsubscribe_url}}" style="color:${GOLD};">Unsubscribe</a></p>
+        <p style="margin:0;color:#5C5C58;font-size:11.5px;">Frank Taylor &amp; Associates Limited &middot; Registered in England No. 4028278 &middot; Registered office: 1 Bradmore Building, Bradmore Green, Brookmans Park, Hertfordshire AL9 7QR.</p>
       </div>
     </div>
   </div>
