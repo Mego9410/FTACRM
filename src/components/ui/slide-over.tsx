@@ -18,7 +18,7 @@ export function SlideOver({
   title: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  width?: "md" | "lg";
+  width?: "md" | "lg" | "xl";
 }) {
   React.useEffect(() => {
     if (!open) return;
@@ -43,7 +43,7 @@ export function SlideOver({
         aria-modal="true"
         className={cn(
           "absolute inset-y-0 right-0 flex w-full flex-col border-l border-line bg-surface shadow-lg animate-[slidein_.2s_ease-out]",
-          width === "lg" ? "max-w-lg" : "max-w-md",
+          width === "xl" ? "max-w-3xl" : width === "lg" ? "max-w-lg" : "max-w-md",
         )}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-3.5">

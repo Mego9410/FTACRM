@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/sign-in", "/unsubscribe", "/api/webhooks", "/api/cron", "/auth", "/p/"];
+const PUBLIC_PATHS = ["/sign-in", "/unsubscribe", "/api/webhooks", "/api/cron", "/auth", "/p/", "/sign/"];
 
 export async function middleware(request: NextRequest) {
   // Unconfigured deployment (no Supabase env vars): show the setup notice

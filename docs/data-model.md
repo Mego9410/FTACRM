@@ -254,6 +254,35 @@ Trigger updates `contacts.last_contacted_at` / `deals.last_activity_at`.
 ### `documents`
 `storage_path`, `file_name`, `mime_type`, `size_bytes`, `category_id fk lookup_values`,
 `contact_id/practice_id/deal_id` (nullable links), `uploaded_by`. Private bucket, signed URLs.
+Uploads are MIME allow-listed — **HTML/SVG excluded** so a file can't render from the storage
+domain, which is why generated/signed documents live in `signature_requests` (below), not here.
+
+### `document_templates` (migration 0031)
+`key` (stable for system templates, e.g. `loa`; null for user-made), `name`, `description`,
+`body_html` (with `{{merge.fields}}` — rendered by `lib/documents/render.ts`; fields registry
+in `lib/documents/merge-fields.ts`), `is_active`, `sort_order`. Managed in Control Centre →
+Documents. Seeded with the **Letter of Authority**.
+
+### `signature_requests` (migration 0031) — generate-and-sign
+| column | type | notes |
+|---|---|---|
+| template_id | uuid fk document_templates | |
+| title | text | |
+| body_html | text | the **populated** document, frozen at send (`{{signature}}` → a slot filled at signing) |
+| practice_id / contact_id / deal_id | nullable fks | the record it's attached to |
+| signer_name, signer_email | text | |
+| token | text unique | unguessable — the public `/sign/[token]` link |
+| status | text | `draft` \| `sent` \| `viewed` \| `signed` \| `declined` \| `cancelled` |
+| signature_name | text | typed name at signing |
+| signature_image | text nullable | drawn signature (data URL), if used |
+| signer_ip, sent_at, viewed_at, signed_at | | audit trail |
+| created_by | uuid fk profiles | notified when signed |
+
+Built-in signing (no third party): a record's Documents tab generates a populated document and
+creates a request; the signer opens `/sign/[token]` (public route, service-role read/write by
+token), types their name, and submits. The signed copy is rendered in-app from `body_html` +
+the signature (browser print for a PDF), surfaced back on the record; FTA gets a journal entry +
+notification. Templates: RLS permissive (Control Centre gates edits).
 
 ### `call_recordings` (phase 8b — see `features/11-telephony.md`)
 | column | type | notes |
