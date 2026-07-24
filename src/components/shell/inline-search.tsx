@@ -34,8 +34,17 @@ export function InlineSearch({
   const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const rootRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  // Null until the platform is known on the client, so the server and first
+  // client render agree (no badge) and we avoid a hydration mismatch.
+  const [isMac, setIsMac] = React.useState<boolean | null>(null);
 
   const term = q.trim();
+
+  React.useEffect(() => {
+    const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
+    const platform = nav.userAgentData?.platform || nav.platform || nav.userAgent || "";
+    setIsMac(/mac/i.test(platform));
+  }, []);
 
   React.useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
@@ -135,9 +144,9 @@ export function InlineSearch({
             isHero ? "py-3.5 text-[15px]" : "text-sm",
           )}
         />
-        {hotkey && !q ? (
+        {hotkey && !q && isMac !== null ? (
           <kbd className="hidden shrink-0 rounded border border-line bg-surface px-1.5 py-0.5 text-[11px] font-semibold text-fg-4 sm:inline">
-            ⌘K
+            {isMac ? "⌘K" : "Ctrl K"}
           </kbd>
         ) : null}
       </div>
