@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   ListTodo,
   LogOut,
+  HandCoins,
   Menu as MenuIcon,
   Palmtree,
   PanelLeftClose,
@@ -39,6 +40,7 @@ const NAV = [
   { label: "Practices", href: "/practices", icon: Building2 },
   { label: "Sales progression", href: "/deals", icon: Handshake },
   { label: "Launches", href: "/launches", icon: Rocket },
+  { label: "Referrals", href: "/referrals", icon: HandCoins },
   { label: "My holiday", href: "/holidays", icon: Palmtree },
 ];
 

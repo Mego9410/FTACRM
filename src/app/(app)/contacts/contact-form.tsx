@@ -29,6 +29,8 @@ export type ContactFormValues = {
   roles: string[];
   status: string | null;
   source_id: string | null;
+  membership_tier_id: string | null;
+  principals_club_id: string | null;
   temperature: string | null;
   notes: string | null;
 };
@@ -45,12 +47,16 @@ export type ContactSection = "identity" | "contact" | "address" | "crm";
 export function ContactForm({
   initial,
   sources,
+  membershipTiers,
+  principalsClubLevels,
   section,
   onSaved,
   onCancel,
 }: {
   initial?: ContactFormValues;
   sources: LookupValue[];
+  membershipTiers: LookupValue[];
+  principalsClubLevels: LookupValue[];
   /** When set, only this section is shown (the rest stay in the DOM so nothing is lost on save). */
   section?: ContactSection;
   onSaved?: () => void;
@@ -93,6 +99,8 @@ export function ContactForm({
       roles,
       status: String(f.get("status") ?? ""),
       source_id: String(f.get("source_id") ?? "") || null,
+      membership_tier_id: String(f.get("membership_tier_id") ?? "") || null,
+      principals_club_id: String(f.get("principals_club_id") ?? "") || null,
       temperature: (String(f.get("temperature") ?? "") || null) as "hot" | "warm" | "cold" | null,
       notes: String(f.get("notes") ?? ""),
     };
@@ -230,6 +238,22 @@ export function ContactForm({
               <option value="hot">Hot</option>
               <option value="warm">Warm</option>
               <option value="cold">Cold</option>
+            </Select>
+          </Field>
+          <Field label="Membership tier" htmlFor="cf_tier" hint="Buyer membership level (counts in the monthly figures)">
+            <Select id="cf_tier" name="membership_tier_id" defaultValue={initial?.membership_tier_id ?? ""}>
+              <option value="">None</option>
+              {membershipTiers.map((t) => (
+                <option key={t.id} value={t.id}>{t.value}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Principals Club" htmlFor="cf_club" hint="Principals Club level, if a member">
+            <Select id="cf_club" name="principals_club_id" defaultValue={initial?.principals_club_id ?? ""}>
+              <option value="">Not a member</option>
+              {principalsClubLevels.map((t) => (
+                <option key={t.id} value={t.id}>{t.value}</option>
+              ))}
             </Select>
           </Field>
           <Field label="Status" htmlFor="cf_status" className="sm:col-span-2">

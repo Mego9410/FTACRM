@@ -37,6 +37,12 @@ export type PracticeFormValues = {
   closing_date: string | null;
   fee_percent: number | null;
   fee_fixed: number | null;
+  loa_issued_at: string | null;
+  loa_received_at: string | null;
+  loa_lapsed_at: string | null;
+  sales_particulars_sent_at: string | null;
+  being_updated: boolean | null;
+  hd_paid: boolean | null;
 };
 
 function TogglePills({
@@ -144,6 +150,12 @@ export function PracticeForm({
       closing_date: String(f.get("closing_date") ?? "") || null,
       fee_percent: num(f.get("fee_percent")),
       fee_fixed: num(f.get("fee_fixed")),
+      loa_issued_at: String(f.get("loa_issued_at") ?? "") || null,
+      loa_received_at: String(f.get("loa_received_at") ?? "") || null,
+      loa_lapsed_at: String(f.get("loa_lapsed_at") ?? "") || null,
+      sales_particulars_sent_at: String(f.get("sales_particulars_sent_at") ?? "") || null,
+      being_updated: f.get("being_updated") === "on",
+      hd_paid: f.get("hd_paid") === "on",
     };
     const res = initial?.id
       ? await updatePractice({ id: initial.id, ...values })
@@ -300,6 +312,28 @@ export function PracticeForm({
           <Field label="Best and final closing date" htmlFor="pf_closing" hint="Deadline for offers when running a closing-date process">
             <Input id="pf_closing" name="closing_date" type="date" defaultValue={initial?.closing_date ?? ""} />
           </Field>
+
+          <p className="mt-1 text-xs font-bold uppercase tracking-wide text-fg-3 sm:col-span-3">Pre-market tracking</p>
+          <Field label="LoA issued" htmlFor="pf_loa_issued" hint="Letter of Authority sent">
+            <Input id="pf_loa_issued" name="loa_issued_at" type="date" defaultValue={initial?.loa_issued_at ?? ""} />
+          </Field>
+          <Field label="LoA received" htmlFor="pf_loa_received">
+            <Input id="pf_loa_received" name="loa_received_at" type="date" defaultValue={initial?.loa_received_at ?? ""} />
+          </Field>
+          <Field label="LoA lapsed" htmlFor="pf_loa_lapsed">
+            <Input id="pf_loa_lapsed" name="loa_lapsed_at" type="date" defaultValue={initial?.loa_lapsed_at ?? ""} />
+          </Field>
+          <Field label="Sales particulars sent" htmlFor="pf_parts">
+            <Input id="pf_parts" name="sales_particulars_sent_at" type="date" defaultValue={initial?.sales_particulars_sent_at ?? ""} />
+          </Field>
+          <label className="flex items-center gap-2 self-end pb-2 text-sm font-semibold text-fg-1">
+            <input type="checkbox" name="being_updated" defaultChecked={initial?.being_updated ?? false} className="h-4 w-4 accent-[#E4AD25]" />
+            Being updated
+          </label>
+          <label className="flex items-center gap-2 self-end pb-2 text-sm font-semibold text-fg-1">
+            <input type="checkbox" name="hd_paid" defaultChecked={initial?.hd_paid ?? false} className="h-4 w-4 accent-[#E4AD25]" />
+            HD paid
+          </label>
         </div>
       </Card>
 

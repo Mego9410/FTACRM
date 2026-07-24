@@ -40,6 +40,8 @@ const contactSchema = z.object({
   roles: z.array(z.enum(["buyer", "seller", "solicitor", "other"])).min(1),
   status: optional(60),
   source_id: z.string().uuid().nullable().optional(),
+  membership_tier_id: z.string().uuid().nullable().optional(),
+  principals_club_id: z.string().uuid().nullable().optional(),
   temperature: z.enum(["hot", "warm", "cold"]).nullable().optional(),
   notes: optional(20000),
   organisation_id: z.string().uuid().nullable().optional(),

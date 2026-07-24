@@ -15,6 +15,7 @@ import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 const valuationSchema = z.object({
   id: z.string().uuid().optional(),
   practice_id: z.string().uuid(),
+  kind_id: z.string().uuid().nullable().optional(),
   appointment_at: z.string().nullable(),
   duration_mins: z.number().int().positive().max(600).nullable(),
   booked: z.boolean(),

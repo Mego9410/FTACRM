@@ -50,6 +50,12 @@ const practiceSchema = z.object({
   closing_date: z.string().nullable(),
   fee_percent: z.number().nonnegative().max(100).nullable(),
   fee_fixed: money,
+  loa_issued_at: z.string().nullable().optional(),
+  loa_received_at: z.string().nullable().optional(),
+  loa_lapsed_at: z.string().nullable().optional(),
+  sales_particulars_sent_at: z.string().nullable().optional(),
+  being_updated: z.boolean().optional(),
+  hd_paid: z.boolean().optional(),
 });
 
 async function geoFields(postcode: string | null | undefined) {

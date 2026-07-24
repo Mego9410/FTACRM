@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Badge, Button, Card, EmptyState, Field, Input, Select, Textarea } from "@/components/ui/primitives";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
 import { SortSelect, useClientSort } from "@/components/ui/sortable";
+import type { LookupValue } from "@/lib/lookups";
 import { formatDateTime, formatGBP } from "@/lib/utils";
 import { saveValuation } from "../activity-actions";
 
@@ -21,14 +22,17 @@ type Valuation = {
   fee_percent: number | null;
   outcome: string | null;
   notes: string | null;
+  kind_id: string | null;
 };
 
 export function ValuationsClient({
   practiceId,
   valuations,
+  kinds,
 }: {
   practiceId: string;
   valuations: Valuation[];
+  kinds: LookupValue[];
 }) {
   const router = useRouter();
   const [editing, setEditing] = React.useState<Valuation | "new" | null>(null);
@@ -66,6 +70,7 @@ export function ValuationsClient({
     const res = await saveValuation({
       id: current?.id,
       practice_id: practiceId,
+      kind_id: String(f.get("kind_id") ?? "") || null,
       appointment_at: when ? new Date(when).toISOString() : null,
       duration_mins: Number(f.get("duration_mins")) || 60,
       booked: f.get("booked") === "on",
@@ -143,6 +148,14 @@ export function ValuationsClient({
       <Dialog open={!!editing} onClose={() => setEditing(null)} title={current ? "Edit valuation" : "Add valuation"} wide>
         <form onSubmit={submit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
+            <Field label="Kind" htmlFor="va_kind" hint="Valuation, desktop or update — feeds the monthly figures">
+              <Select id="va_kind" name="kind_id" defaultValue={current?.kind_id ?? kinds.find((k) => k.system_key === "valuation")?.id ?? ""}>
+                <option value="">Not set</option>
+                {kinds.map((k) => (
+                  <option key={k.id} value={k.id}>{k.value}</option>
+                ))}
+              </Select>
+            </Field>
             <Field label="Appointment" htmlFor="va_when">
               <Input id="va_when" name="appointment_at" type="datetime-local" defaultValue={toLocalInput(current?.appointment_at ?? null)} />
             </Field>

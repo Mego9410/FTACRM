@@ -36,9 +36,13 @@ const dash = (v: string | number | null | undefined) =>
 export function ContactRecord({
   contact,
   sources,
+  membershipTiers,
+  principalsClubLevels,
 }: {
   contact: ContactFormValues & { id: string };
   sources: LookupValue[];
+  membershipTiers: LookupValue[];
+  principalsClubLevels: LookupValue[];
 }) {
   const [editing, setEditing] = React.useState<ContactSection | null>(null);
 
@@ -134,6 +138,8 @@ export function ContactRecord({
           <ContactForm
             initial={contact}
             sources={sources}
+            membershipTiers={membershipTiers}
+            principalsClubLevels={principalsClubLevels}
             section={editing}
             onSaved={() => setEditing(null)}
             onCancel={() => setEditing(null)}
