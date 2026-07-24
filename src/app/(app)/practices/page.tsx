@@ -13,6 +13,10 @@ import { PracticeMapDefs, PracticeMapUse } from "@/components/practices/practice
 import { practiceLabel } from "@/lib/practice-helpers";
 import { PracticeFilters } from "./practice-filters";
 import { SavedViews } from "@/components/shell/saved-views";
+import { ExportButton } from "@/components/shell/export-button";
+import { SelectionProvider, RowCheck, SelectAll } from "@/components/shell/bulk-select";
+import { PracticesBulkBar } from "./practices-bulk";
+import { exportPracticesCsv } from "./csv-actions";
 
 export const metadata = { title: "Practices" };
 
@@ -113,15 +117,21 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
     return s ? `?${s}` : "";
   };
 
+  const practiceIds = (practices ?? []).map((p) => p.id);
+
   return (
+    <SelectionProvider>
     <div>
       <PageHeader
         eyebrow="Instructions" title="Practices"
         subtitle="Every practice from first valuation to completion"
         actions={
-          <Link href="/practices/new">
-            <Button>New practice</Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <ExportButton action={exportPracticesCsv} paramKeys={["q", "status", "funding", "min", "max", "offmarket"]} />
+            <Link href="/practices/new">
+              <Button>New practice</Button>
+            </Link>
+          </div>
         }
       />
 
@@ -182,7 +192,8 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-line bg-surface-2 text-left text-[10.5px] font-bold uppercase tracking-[0.08em] text-fg-4">
-                  <th className="w-[76px] px-5 py-3" />
+                  <th className="w-10 pl-5 py-3"><SelectAll ids={practiceIds} /></th>
+                  <th className="w-[60px] py-3" />
                   <th className="py-3 pr-3">Practice</th>
                   <th className="px-3 py-3">Status</th>
                   <th className="px-3 py-3">Funding</th>
@@ -201,7 +212,8 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
                     : "POA";
                   return (
                     <tr key={p.id} className="cursor-pointer border-t border-line hover:bg-gold-tint">
-                      <td className="py-3 pl-5 pr-0">
+                      <td className="pl-5 py-3"><RowCheck id={p.id} /></td>
+                      <td className="py-3 pr-0">
                         <Link href={`/practices/${p.id}`} className="block">
                           <span className="flex h-11 w-14 items-center justify-center overflow-hidden rounded-md border border-line bg-surface-3">
                             {photoUrl ? (
@@ -321,6 +333,8 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
           </div>
         </div>
       ) : null}
+      {view === "list" ? <PracticesBulkBar /> : null}
     </div>
+    </SelectionProvider>
   );
 }
