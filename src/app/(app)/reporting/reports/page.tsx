@@ -58,6 +58,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           { label: "Management", href: "/reporting", exact: true },
           { label: "Reports", href: "/reporting/reports" },
           { label: "Monthly figures", href: "/reporting/monthly" },
+          { label: "Referrals", href: "/reporting/referrals" },
           { label: "Email marketing", href: "/reporting/email" },
           { label: "Activity feed", href: "/reporting/activity" },
         ]}

@@ -37,7 +37,7 @@ export async function createReferral(input: unknown): Promise<ActionResult<{ id:
     .single();
   if (error) return dbFail(error);
   await audit("referrals", data.id, me.id, [{ field: "created", oldValue: null, newValue: parsed.data.referred_on }]);
-  revalidatePath("/referrals");
+  revalidatePath("/reporting/referrals");
   return ok({ id: data.id });
 }
 
@@ -49,6 +49,6 @@ export async function deleteReferral(input: unknown): Promise<ActionResult> {
   const { error } = await supabase.from("referrals").delete().eq("id", parsed.data.id);
   if (error) return dbFail(error);
   await audit("referrals", parsed.data.id, me.id, [{ field: "deleted", oldValue: "referral", newValue: null }]);
-  revalidatePath("/referrals");
+  revalidatePath("/reporting/referrals");
   return ok();
 }

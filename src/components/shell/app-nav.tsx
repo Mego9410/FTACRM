@@ -10,7 +10,6 @@ import {
   LayoutDashboard,
   ListTodo,
   LogOut,
-  HandCoins,
   Menu as MenuIcon,
   Palmtree,
   PanelLeftClose,
@@ -40,8 +39,6 @@ const NAV = [
   { label: "Practices", href: "/practices", icon: Building2 },
   { label: "Sales progression", href: "/deals", icon: Handshake },
   { label: "Launches", href: "/launches", icon: Rocket },
-  { label: "Referrals", href: "/referrals", icon: HandCoins },
-  { label: "My holiday", href: "/holidays", icon: Palmtree },
 ];
 
 function Wordmark() {
@@ -240,6 +237,9 @@ export function AppNav({
                 <p className="text-sm font-bold text-fg-1">{profile.full_name}</p>
                 <p className="text-xs text-fg-3">{profile.email}</p>
               </div>
+              <MenuItem href="/holidays">
+                <Palmtree size={15} /> My holiday
+              </MenuItem>
               <MenuItem href="/settings">
                 <User size={15} /> My settings
               </MenuItem>
