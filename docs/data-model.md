@@ -404,6 +404,7 @@ thread don't duplicate journal spam: one journal entry per (message, contact).
 |---|---|---|
 | profile_id | uuid fk profiles | the requester |
 | start_date, end_date | date | inclusive range; `end_date >= start_date` enforced |
+| start_portion, end_portion | text | `full` \| `am` \| `pm` — half-day support on each boundary; single-day requests keep both equal. Day totals via `holidayDays()` in `lib/holiday-utils.ts` (unit-tested) |
 | reason | text nullable | optional note from the requester |
 | status | text | `pending` \| `approved` \| `rejected` \| `cancelled` |
 | decision_note | text nullable | management's note — the "why" on a decline (or an approval comment) |
@@ -416,8 +417,9 @@ Unlike the ordinary business tables (permissive RLS + server-action gating), thi
 `notifications` / `graph_connections` precedent). Server actions add the finer gate — only
 management may decide; a requester may only cancel their own request. Approving a request
 inserts the calendar event so leave shows on the team diary; declining stores the note that's
-surfaced back to the requester. UI: `/holidays` (my requests) and Control Centre → Holiday
-(`/admin/holidays`, the approval queue).
+surfaced back to the requester. A decision can be **revised** later (change the outcome and/or
+note) — the linked calendar event is created or removed to match. UI: `/holidays` (my requests)
+and Control Centre → Holiday (`/admin/holidays`, the approval queue).
 
 Two-way sync rules (detail in `features/07-calendar.md`): CRM-created events push to the
 organiser's Outlook via Graph; Outlook-created/edited events pull via delta + webhook;

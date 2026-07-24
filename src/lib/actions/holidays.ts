@@ -9,11 +9,14 @@ import { audit } from "@/lib/audit";
 import { ok, fail, type ActionResult, dbFail } from "@/lib/action-result";
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a valid date.");
+const portion = z.enum(["full", "am", "pm"]);
 
 const createSchema = z
   .object({
     start_date: isoDate,
     end_date: isoDate,
+    start_portion: portion.default("full"),
+    end_portion: portion.default("full"),
     reason: z.string().max(1000).nullable().optional(),
   })
   .refine((v) => v.end_date >= v.start_date, {
@@ -27,11 +30,22 @@ export async function createHolidayRequest(input: unknown): Promise<ActionResult
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Check the dates.");
   const { start_date, end_date, reason } = parsed.data;
+  // A single-day request has one portion; keep both boundaries in step.
+  const start_portion = parsed.data.start_portion;
+  const end_portion = start_date === end_date ? start_portion : parsed.data.end_portion;
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("holiday_requests")
-    .insert({ profile_id: me.id, start_date, end_date, reason: reason ?? null, status: "pending" })
+    .insert({
+      profile_id: me.id,
+      start_date,
+      end_date,
+      start_portion,
+      end_portion,
+      reason: reason ?? null,
+      status: "pending",
+    })
     .select("id")
     .single();
   if (error) return dbFail(error);
@@ -68,7 +82,11 @@ const decideSchema = z.object({
   note: z.string().max(1000).nullable().optional(),
 });
 
-/** Management approves or declines a pending request. */
+/**
+ * Management approves or declines a request — and can revisit that decision
+ * later, changing the outcome and/or the note. The linked calendar event is
+ * created when approved and removed when the outcome moves away from approved.
+ */
 export async function decideHolidayRequest(input: unknown): Promise<ActionResult> {
   const me = await requireRole("manager");
   const parsed = decideSchema.safeParse(input);
@@ -78,15 +96,17 @@ export async function decideHolidayRequest(input: unknown): Promise<ActionResult
 
   const { data: req } = await supabase
     .from("holiday_requests")
-    .select("id, profile_id, start_date, end_date, status")
+    .select("id, profile_id, start_date, end_date, start_portion, status, calendar_event_id")
     .eq("id", id)
     .maybeSingle();
   if (!req) return fail("Request not found.");
-  if (req.status !== "pending") return fail("This request has already been decided.");
+  if (req.status === "cancelled") return fail("This request was cancelled by the requester.");
 
-  let calendarEventId: string | null = null;
+  const wasStatus = req.status;
+  let calendarEventId: string | null = req.calendar_event_id;
 
-  if (decision === "approved") {
+  if (decision === "approved" && !calendarEventId) {
+    // Newly approved (or re-approved) — put it on the diary.
     const { data: requester } = await supabase
       .from("profiles")
       .select("full_name")
@@ -98,16 +118,23 @@ export async function decideHolidayRequest(input: unknown): Promise<ActionResult
       .eq("system_key", "holiday")
       .maybeSingle();
     const firstName = (requester?.full_name ?? "Staff").split(" ")[0];
+    // Annotate a single half-day so the diary reads correctly.
+    const halfSuffix =
+      req.start_date === req.end_date && req.start_portion !== "full"
+        ? req.start_portion === "am"
+          ? " (morning)"
+          : " (afternoon)"
+        : "";
 
-    // All-day multi-day event: FullCalendar treats the end as exclusive, so the
-    // event runs [start, end+1). organiser = the requester so it shows under
+    // All-day, possibly multi-day: FullCalendar treats the end as exclusive, so
+    // the event runs [start, end+1). organiser = requester so it shows under
     // their colour on the team diary.
     const endExclusive = new Date(`${req.end_date}T00:00:00Z`);
     endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
     const { data: event, error: eventError } = await supabase
       .from("calendar_events")
       .insert({
-        title: `${firstName} — Annual leave`,
+        title: `${firstName} — Annual leave${halfSuffix}`,
         event_type_id: holidayType?.id ?? null,
         starts_at: `${req.start_date}T00:00:00Z`,
         ends_at: endExclusive.toISOString(),
@@ -122,6 +149,10 @@ export async function decideHolidayRequest(input: unknown): Promise<ActionResult
       .single();
     if (eventError) return dbFail(eventError);
     calendarEventId = event.id;
+  } else if (decision === "rejected" && calendarEventId) {
+    // Outcome changed from approved to declined — pull it off the diary.
+    await supabase.from("calendar_events").delete().eq("id", calendarEventId);
+    calendarEventId = null;
   }
 
   const { error } = await supabase
@@ -136,7 +167,7 @@ export async function decideHolidayRequest(input: unknown): Promise<ActionResult
     .eq("id", id);
   if (error) return dbFail(error);
 
-  // Let the requester know the outcome.
+  // Let the requester know the outcome (or the revised one).
   const admin = createAdminClient();
   await admin.from("notifications").insert({
     profile_id: req.profile_id,
@@ -149,7 +180,7 @@ export async function decideHolidayRequest(input: unknown): Promise<ActionResult
     link_url: "/holidays",
   });
 
-  await audit("holiday_requests", id, me.id, [{ field: "status", oldValue: "pending", newValue: decision }]);
+  await audit("holiday_requests", id, me.id, [{ field: "status", oldValue: wasStatus, newValue: decision }]);
   revalidatePath("/holidays");
   revalidatePath("/admin/holidays");
   revalidatePath("/calendar");

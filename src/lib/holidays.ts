@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { HolidayStatus } from "@/lib/holiday-utils";
+import type { HolidayStatus, DayPortion } from "@/lib/holiday-utils";
 
 export type { HolidayStatus };
 
@@ -8,6 +8,8 @@ export type HolidayRequest = {
   profile_id: string;
   start_date: string;
   end_date: string;
+  start_portion: DayPortion;
+  end_portion: DayPortion;
   reason: string | null;
   status: HolidayStatus;
   decision_note: string | null;
@@ -19,7 +21,7 @@ export type HolidayRequest = {
 };
 
 const SELECT =
-  "id, profile_id, start_date, end_date, reason, status, decision_note, decided_by, decided_at, created_at";
+  "id, profile_id, start_date, end_date, start_portion, end_portion, reason, status, decision_note, decided_by, decided_at, created_at";
 
 /** The signed-in user's own requests, newest first. RLS scopes this to them. */
 export async function getMyHolidayRequests(profileId: string): Promise<HolidayRequest[]> {
