@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Avatar, Badge, Button, Card, CardHeader, Field, Input, Select } from "@/components/ui/primitives";
 import { SortTh, useClientSort } from "@/components/ui/sortable";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
+import { useToast } from "@/components/ui/toast";
 import { createUser, updateUser } from "./actions";
 
 type UserRow = {
@@ -22,6 +23,7 @@ const DEFAULT_TEMP_PASSWORD = "FTA-Welcome-2026";
 
 export function UsersClient({ users }: { users: UserRow[] }) {
   const router = useRouter();
+  const toast = useToast();
   const { sorted, toggle, stateFor } = useClientSort(
     users,
     {
@@ -32,7 +34,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
     { key: "name", dir: "asc" },
   );
   const [addOpen, setAddOpen] = React.useState(false);
-  const [created, setCreated] = React.useState<{ email: string; password: string } | null>(null);
+  const [created, setCreated] = React.useState<{ email: string; password: string; emailed: boolean } | null>(null);
   const [copied, setCopied] = React.useState(false);
   const [editing, setEditing] = React.useState<UserRow | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -59,9 +61,15 @@ export function UsersClient({ users }: { users: UserRow[] }) {
       temp_password: password,
     });
     setBusy(false);
-    if (!res.ok) return setError(res.error);
-    // Keep the dialog open to show the credentials the admin needs to pass on.
-    setCreated({ email, password });
+    if (!res.ok) {
+      setError(res.error);
+      toast.error(res.error);
+      return;
+    }
+    const emailed = (res.data as { emailed?: boolean } | undefined)?.emailed ?? false;
+    // Keep the dialog open to show the credentials / confirm the email went out.
+    setCreated({ email, password, emailed });
+    toast.success(emailed ? `Account created — invite emailed to ${email}.` : "Account created.");
     router.refresh();
   }
 
@@ -87,8 +95,13 @@ export function UsersClient({ users }: { users: UserRow[] }) {
       is_active: f.get("is_active") === "on",
     });
     setBusy(false);
-    if (!res.ok) return setError(res.error);
+    if (!res.ok) {
+      setError(res.error);
+      toast.error(res.error);
+      return;
+    }
     setEditing(null);
+    toast.success("User updated.");
     router.refresh();
   }
 
@@ -137,8 +150,17 @@ export function UsersClient({ users }: { users: UserRow[] }) {
         {created ? (
           <div className="space-y-4">
             <p className="text-sm text-fg-2">
-              Account created for <span className="font-semibold text-fg-1">{created.email}</span>. Share these
-              details with them — they'll be asked to set their own password when they first sign in.
+              {created.emailed ? (
+                <>
+                  Account created and a sign-in link has been <span className="font-semibold text-fg-1">emailed to {created.email}</span>.
+                  They&apos;ll set their own password when they first sign in. You can also share the details below as a backup.
+                </>
+              ) : (
+                <>
+                  Account created for <span className="font-semibold text-fg-1">{created.email}</span>. No email provider is
+                  linked yet, so share these details with them — they&apos;ll set their own password on first sign in.
+                </>
+              )}
             </p>
             <dl className="space-y-2 rounded-md border border-line bg-surface-2 p-3 text-sm">
               <div className="flex justify-between gap-3">

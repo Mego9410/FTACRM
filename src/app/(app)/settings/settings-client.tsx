@@ -6,6 +6,7 @@ import type { SessionProfile } from "@/lib/auth";
 import { Badge, Button, Card, CardHeader, Field, Input, Textarea } from "@/components/ui/primitives";
 import { PageHeader } from "@/components/shell/page-header";
 import { ChangePasswordForm } from "@/components/account/change-password-form";
+import { useToast } from "@/components/ui/toast";
 import { formatDateTime } from "@/lib/utils";
 import { updateMySettings } from "./actions";
 
@@ -27,6 +28,7 @@ export function SettingsClient({
   graphConfigured: boolean;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [busy, setBusy] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -43,8 +45,13 @@ export function SettingsClient({
       signature_html: String(f.get("signature_html")) || null,
     });
     setBusy(false);
-    if (!res.ok) return setError(res.error);
+    if (!res.ok) {
+      setError(res.error);
+      toast.error(res.error);
+      return;
+    }
     setSaved(true);
+    toast.success("Settings saved.");
     router.refresh();
   }
 

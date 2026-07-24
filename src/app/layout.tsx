@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Hanken_Grotesk, Lora } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import "@/styles/globals.css";
+import { ToastProvider } from "@/components/ui/toast";
 
 const hanken = Hanken_Grotesk({
   subsets: ["latin"],
@@ -37,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           crawlSpeed={160}
           speed={280}
         />
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );

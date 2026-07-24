@@ -102,8 +102,10 @@ CRON_SECRET=
 ENCRYPTION_KEY=                     # 32-byte base64, pgcrypto token encryption
 
 # Resend
-RESEND_API_KEY=
+RESEND_API_KEY=                    # set this to enable outbound email (campaigns + transactional invites/resets)
 RESEND_WEBHOOK_SECRET=
+RESEND_FROM=                       # transactional "from", e.g. "Frank Taylor & Associates <no-reply@ft-associates.com>" (falls back to EMAIL_FROM, then a default)
+EMAIL_FROM=
 CAMPAIGN_FROM_DOMAIN=mail.ft-associates.com
 
 # Microsoft Graph
