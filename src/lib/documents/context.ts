@@ -1,5 +1,6 @@
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { getFirmSettings } from "@/lib/firm-settings";
 import { DOCUMENT_MERGE_FIELDS } from "@/lib/documents/merge-fields";
 
 export type ResolvedField = { key: string; label: string; value: string };
@@ -19,6 +20,7 @@ export function longDate(d = new Date()): string {
 export async function buildPracticeDocContext(practiceId: string): Promise<DocContext> {
   const me = await requireProfile();
   const supabase = await createClient();
+  const firm = await getFirmSettings();
 
   const { data: p } = await supabase
     .from("practices")
@@ -53,8 +55,8 @@ export async function buildPracticeDocContext(practiceId: string): Promise<DocCo
     "practice.address_inline": addressParts.join(", "),
     "practice.town": p?.town ?? "",
     "practice.postcode": p?.postcode ?? "",
-    "fee.percent": p?.fee_percent != null ? String(p.fee_percent) : "",
-    "fee.minimum": "£12,000",
+    "fee.percent": p?.fee_percent != null ? String(p.fee_percent) : firm.default_fee_percent != null ? String(firm.default_fee_percent) : "",
+    "fee.minimum": firm.default_min_fee ?? "£12,000",
     "seller.name": sellerName,
     "seller.title": seller?.title ?? "",
   };
@@ -77,6 +79,7 @@ export async function buildPracticeDocContext(practiceId: string): Promise<DocCo
 export async function buildContactDocContext(contactId: string): Promise<DocContext> {
   const me = await requireProfile();
   const supabase = await createClient();
+  const firm = await getFirmSettings();
 
   const { data: c } = await supabase
     .from("contacts")
@@ -125,8 +128,8 @@ export async function buildContactDocContext(contactId: string): Promise<DocCont
     "practice.address_inline": addressParts.join(", "),
     "practice.town": p?.town ?? "",
     "practice.postcode": p?.postcode ?? "",
-    "fee.percent": p?.fee_percent != null ? String(p.fee_percent) : "",
-    "fee.minimum": "£12,000",
+    "fee.percent": p?.fee_percent != null ? String(p.fee_percent) : firm.default_fee_percent != null ? String(firm.default_fee_percent) : "",
+    "fee.minimum": firm.default_min_fee ?? "£12,000",
     "seller.name": sellerName,
     "seller.title": contact?.title ?? "",
   };

@@ -2,14 +2,24 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Check, Undo2 } from "lucide-react";
+import { Check, Undo2, Plus, Trash2 } from "lucide-react";
 import type { LookupValue } from "@/lib/lookups";
 import { Pencil } from "lucide-react";
 import { Badge, Button, Card, CardHeader, Field, Input, Select, Textarea } from "@/components/ui/primitives";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
 import { SlideOver } from "@/components/ui/slide-over";
+import { useToast } from "@/components/ui/toast";
 import { cn, daysSince, formatDate } from "@/lib/utils";
-import { markStage, setDealStatus, unmarkStage, updateDealFields } from "../actions";
+import {
+  markStage,
+  setDealStatus,
+  unmarkStage,
+  updateDealFields,
+  addCustomStage,
+  markCustomStage,
+  unmarkCustomStage,
+  deleteCustomStage,
+} from "../actions";
 
 type Stage = {
   id: string;
@@ -20,6 +30,7 @@ type Stage = {
   achieved_on: string | null;
   note: string | null;
   recorded_by: string | null;
+  custom: boolean;
 };
 
 type Deal = {
@@ -40,11 +51,13 @@ export function ProgressionClient({
   fallThroughReasons: LookupValue[];
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [marking, setMarking] = React.useState<Stage | null>(null);
   const [fallOpen, setFallOpen] = React.useState(false);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
+  const [newStage, setNewStage] = React.useState("");
 
   const firstUnachieved = stages.find((s) => !s.achieved_on);
   const live = deal.status === "in_progress";
@@ -57,15 +70,26 @@ export function ProgressionClient({
     setBusy(true);
     setError(null);
     const f = new FormData(e.currentTarget);
-    const res = await markStage({
-      deal_id: deal.id,
-      stage_id: marking.id,
-      achieved_on: String(f.get("achieved_on")),
-      note: String(f.get("note") ?? "") || null,
-    });
+    const res = marking.custom
+      ? await markCustomStage({ deal_id: deal.id, id: marking.id, achieved_on: String(f.get("achieved_on")), note: String(f.get("note") ?? "") || null })
+      : await markStage({ deal_id: deal.id, stage_id: marking.id, achieved_on: String(f.get("achieved_on")), note: String(f.get("note") ?? "") || null });
     setBusy(false);
     if (!res.ok) return setError(res.error);
     setMarking(null);
+    toast.success(`“${marking.label}” marked done.`);
+    router.refresh();
+  }
+
+  async function addStage(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!newStage.trim()) return;
+    // Slot the new stage just after the last achieved template stage.
+    const lastAchieved = [...stages].reverse().find((s) => s.achieved_on && !s.custom);
+    const sortOrder = (lastAchieved?.sort_order ?? 0) + 0.5;
+    const res = await addCustomStage({ deal_id: deal.id, label: newStage.trim(), sort_order: sortOrder });
+    if (!res.ok) return toast.error(res.error);
+    setNewStage("");
+    toast.success("Stage added to this deal.");
     router.refresh();
   }
 
@@ -109,8 +133,9 @@ export function ProgressionClient({
                   {s.achieved_on ? <Check size={15} /> : s.sort_order}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className={cn("text-sm font-bold", s.achieved_on ? "text-fg-1" : isCurrent ? "text-gold-deep" : "text-fg-3")}>
+                  <p className={cn("flex items-center gap-1.5 text-sm font-bold", s.achieved_on ? "text-fg-1" : isCurrent ? "text-gold-deep" : "text-fg-3")}>
                     {s.label}
+                    {s.custom ? <Badge>Deal-specific</Badge> : null}
                   </p>
                   {s.achieved_on ? (
                     <p className="text-xs text-fg-3">
@@ -123,29 +148,57 @@ export function ProgressionClient({
                   ) : null}
                 </div>
                 {live || deal.status === "on_hold" ? (
-                  s.achieved_on ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={async () => {
-                        if (!window.confirm(`Un-mark “${s.label}”? Its date will be removed.`)) return;
-                        const res = await unmarkStage({ deal_id: deal.id, stage_id: s.id });
-                        if (!res.ok) window.alert(res.error);
-                        router.refresh();
-                      }}
-                    >
-                      <Undo2 size={13} /> Undo
-                    </Button>
-                  ) : (
-                    <Button variant={isCurrent ? "primary" : "outline"} size="sm" onClick={() => setMarking(s)}>
-                      Mark done
-                    </Button>
-                  )
+                  <div className="flex items-center gap-1">
+                    {s.achieved_on ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={async () => {
+                          if (!window.confirm(`Un-mark “${s.label}”? Its date will be removed.`)) return;
+                          const res = s.custom
+                            ? await unmarkCustomStage({ deal_id: deal.id, id: s.id })
+                            : await unmarkStage({ deal_id: deal.id, stage_id: s.id });
+                          if (!res.ok) toast.error(res.error);
+                          router.refresh();
+                        }}
+                      >
+                        <Undo2 size={13} /> Undo
+                      </Button>
+                    ) : (
+                      <Button variant={isCurrent ? "primary" : "outline"} size="sm" onClick={() => setMarking(s)}>
+                        Mark done
+                      </Button>
+                    )}
+                    {s.custom ? (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!window.confirm(`Remove the “${s.label}” stage from this deal?`)) return;
+                          const res = await deleteCustomStage({ deal_id: deal.id, id: s.id });
+                          if (!res.ok) toast.error(res.error);
+                          else toast.success("Stage removed.");
+                          router.refresh();
+                        }}
+                        className="rounded p-1.5 text-fg-4 hover:bg-surface-3 hover:text-danger"
+                        aria-label={`Remove ${s.label}`}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    ) : null}
+                  </div>
                 ) : null}
               </li>
             );
           })}
         </ol>
+        {live || deal.status === "on_hold" ? (
+          <form onSubmit={addStage} className="flex items-end gap-2 border-t border-line p-4">
+            <Field label="Add a stage for this deal" htmlFor="new_custom_stage" className="flex-1">
+              <Input id="new_custom_stage" value={newStage} onChange={(e) => setNewStage(e.target.value)} placeholder="e.g. Landlord consent, CQC transfer…" />
+            </Field>
+            <Button type="submit" variant="outline" disabled={!newStage.trim()} className="gap-1"><Plus size={15} /> Add</Button>
+          </form>
+        ) : null}
       </Card>
 
       <div className="space-y-5">
