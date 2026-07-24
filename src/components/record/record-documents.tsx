@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { FileSignature, Copy, Eye } from "lucide-react";
+import { FileSignature, Copy, Eye, Download } from "lucide-react";
 import { Badge, Button, Card, CardHeader, EmptyState, Field, Input } from "@/components/ui/primitives";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
 import { formatDate } from "@/lib/utils";
@@ -122,6 +122,38 @@ export function RecordDocuments({
     setViewing({ title: d.title, html: d.html });
   }
 
+  // Open the signed copy as a printable A4 page so the user can save it as a
+  // PDF (or print it). The document is self-contained — no external assets.
+  async function download(id: string) {
+    const res = await getSignatureDocument({ id });
+    if (!res.ok) return window.alert(res.error);
+    const d = res.data as { title: string; html: string };
+    const win = window.open("", "_blank");
+    if (!win) {
+      window.alert("Please allow pop-ups to download the signed document.");
+      return;
+    }
+    const safeTitle = d.title.replace(/[<>&"]/g, (c) =>
+      ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c] ?? c,
+    );
+    win.document.write(
+      `<!doctype html><html><head><meta charset="utf-8"><title>${safeTitle}</title>` +
+        `<style>@page{size:A4;margin:22mm}*{box-sizing:border-box}` +
+        `body{font-family:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;color:#1a1a1a;font-size:13.5px;line-height:1.65;margin:0}` +
+        `h1,h2,h3{color:#111}p{margin:0 0 10px}</style></head>` +
+        `<body>${d.html}</body></html>`,
+    );
+    win.document.close();
+    win.focus();
+    setTimeout(() => {
+      try {
+        win.print();
+      } catch {
+        /* user can print manually */
+      }
+    }, 350);
+  }
+
   async function cancel(id: string) {
     if (!window.confirm("Cancel this signature request?")) return;
     const res = await cancelSignatureRequest({ id, path });
@@ -162,6 +194,9 @@ export function RecordDocuments({
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 <Button variant="ghost" size="sm" onClick={() => view(r.id)} className="gap-1"><Eye size={13} /> View</Button>
+                {r.status === "signed" ? (
+                  <Button variant="ghost" size="sm" onClick={() => download(r.id)} className="gap-1"><Download size={13} /> Download</Button>
+                ) : null}
                 {r.status === "sent" || r.status === "viewed" ? (
                   <>
                     <Button
