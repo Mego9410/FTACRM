@@ -64,3 +64,72 @@ export async function buildPracticeDocContext(practiceId: string): Promise<DocCo
 
   return { fields, signerName: sellerName, signerEmail: seller?.email ?? "" };
 }
+
+/**
+ * Resolve the document merge fields for a contact (the seller themselves): the
+ * signer is this contact, and practice.* / fee.* fields are drawn from the
+ * practice they sell (their primary seller link, if any). Anything unresolved
+ * stays editable for staff to confirm before sending.
+ */
+export async function buildContactDocContext(contactId: string): Promise<DocContext> {
+  const me = await requireProfile();
+  const supabase = await createClient();
+
+  const { data: c } = await supabase
+    .from("contacts")
+    .select("title, first_name, last_name, company_name, email")
+    .eq("id", contactId)
+    .maybeSingle();
+  const contact = c as
+    | { title: string | null; first_name: string | null; last_name: string | null; company_name: string | null; email: string | null }
+    | null;
+
+  const { data: practiceLink } = await supabase
+    .from("practice_contacts")
+    .select(
+      "is_primary, practices!practice_contacts_practice_id_fkey(name, display_title, address_line1, address_line2, town, county, postcode, fee_percent)",
+    )
+    .eq("contact_id", contactId)
+    .eq("role", "seller")
+    .order("is_primary", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const p = (practiceLink?.practices ?? null) as
+    | {
+        name: string | null;
+        display_title: string | null;
+        address_line1: string | null;
+        address_line2: string | null;
+        town: string | null;
+        county: string | null;
+        postcode: string | null;
+        fee_percent: number | null;
+      }
+    | null;
+
+  const sellerName =
+    [contact?.title, contact?.first_name, contact?.last_name].filter(Boolean).join(" ") || contact?.company_name || "";
+  const address = [p?.address_line1, p?.address_line2, p?.town, p?.county, p?.postcode].filter(Boolean).join("\n");
+
+  const values: Record<string, string> = {
+    "date.today": longDate(),
+    "agent.name": (me.full_name ?? "").split(" ")[0] ?? "",
+    "practice.name": p?.name ?? p?.display_title ?? "",
+    "practice.legal_name": p?.name ?? "",
+    "practice.address": address,
+    "practice.town": p?.town ?? "",
+    "practice.postcode": p?.postcode ?? "",
+    "fee.percent": p?.fee_percent != null ? String(p.fee_percent) : "",
+    "fee.minimum": "£12,000",
+    "seller.name": sellerName,
+    "seller.title": contact?.title ?? "",
+  };
+
+  const fields = DOCUMENT_MERGE_FIELDS.filter((f) => f.key !== "signature").map((f) => ({
+    key: f.key,
+    label: f.label,
+    value: values[f.key] ?? "",
+  }));
+
+  return { fields, signerName: sellerName, signerEmail: contact?.email ?? "" };
+}

@@ -43,7 +43,7 @@ export function RecordDocuments({
   signerName,
   signerEmail,
   requests,
-  practiceId,
+  link,
   path,
 }: {
   templates: Template[];
@@ -51,7 +51,7 @@ export function RecordDocuments({
   signerName: string;
   signerEmail: string;
   requests: SignatureRequestRow[];
-  practiceId: string;
+  link: { practiceId?: string; contactId?: string; dealId?: string };
   path: string;
 }) {
   const router = useRouter();
@@ -100,7 +100,9 @@ export function RecordDocuments({
     const res = await sendForSignature({
       template_id: selected.id,
       title: selected.name,
-      practice_id: practiceId,
+      practice_id: link.practiceId ?? null,
+      contact_id: link.contactId ?? null,
+      deal_id: link.dealId ?? null,
       values,
       body_html: editMode && editorRef.current ? normaliseEditedDocument(editorRef.current.innerHTML) : undefined,
       signer_name: sName,

@@ -22,7 +22,7 @@ export default async function PracticeDocumentsPage({ params }: { params: Promis
         signerName={ctx.signerName}
         signerEmail={ctx.signerEmail}
         requests={requests}
-        practiceId={id}
+        link={{ practiceId: id }}
         path={path}
       />
       <Documents link={{ practiceId: id }} path={path} />
