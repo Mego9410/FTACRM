@@ -17,6 +17,7 @@ import {
 import type { ResolvedField } from "@/lib/documents/context";
 import type { SignatureRequestRow } from "@/lib/documents/signatures";
 import { cancelSignatureRequest, getSignatureDocument, sendForSignature } from "@/lib/actions/signatures";
+import { extractTags } from "@/lib/merge-tags";
 
 type Template = { id: string; name: string; body_html: string };
 
@@ -75,6 +76,14 @@ export function RecordDocuments({
   const previewHtml = selected
     ? applySignature(renderDocument(selected.body_html, values), SIGN_PENDING_HTML)
     : "";
+
+  // Only show the merge fields the chosen template actually uses, so each
+  // document's form stays focused rather than listing every possible field.
+  const visibleFields = React.useMemo(() => {
+    if (!selected) return fields;
+    const used = new Set(extractTags(selected.body_html));
+    return fields.filter((f) => used.has(f.key));
+  }, [selected, fields]);
 
   // Seed the editable document from the current template + field values whenever
   // the user switches into "edit text" mode.
@@ -258,7 +267,7 @@ export function RecordDocuments({
                 </select>
               </Field>
               <div className="max-h-64 space-y-2 overflow-auto pr-1">
-                {fields.map((f) => (
+                {visibleFields.map((f) => (
                   <Field key={f.key} label={f.label} htmlFor={`gd_${f.key}`}>
                     <Input
                       id={`gd_${f.key}`}
