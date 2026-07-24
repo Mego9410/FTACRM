@@ -19,6 +19,12 @@ export type SessionProfile = {
   notify_email: boolean;
 };
 
+// Columns guaranteed to exist since early migrations vs. those added later
+// (migration 0034). The extended set is fetched tolerantly so a not-yet-applied
+// migration can never break sign-in.
+const CORE_COLUMNS = "id, full_name, email, role, calendar_color, is_active, must_change_password, signature_html";
+const EXTENDED_COLUMNS = `${CORE_COLUMNS}, phone, job_title, notify_inapp, notify_email`;
+
 /** Current signed-in profile, or null. Cached per request. */
 export const getProfile = cache(async (): Promise<SessionProfile | null> => {
   const supabase = await createClient();
@@ -26,13 +32,26 @@ export const getProfile = cache(async (): Promise<SessionProfile | null> => {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return null;
-  const { data } = await supabase
-    .from("profiles")
-    .select("id, full_name, email, role, calendar_color, is_active, must_change_password, signature_html, phone, job_title, notify_inapp, notify_email")
-    .eq("id", user.id)
-    .single();
-  if (!data || !data.is_active) return null;
-  return data as SessionProfile;
+
+  // Prefer the full row; if the newer columns aren't migrated yet, the query
+  // errors and we fall back to the core set with sensible defaults.
+  let row = (await supabase.from("profiles").select(EXTENDED_COLUMNS).eq("id", user.id).single()).data as
+    | Record<string, unknown>
+    | null;
+  if (!row) {
+    row = (await supabase.from("profiles").select(CORE_COLUMNS).eq("id", user.id).single()).data as
+      | Record<string, unknown>
+      | null;
+  }
+  if (!row || !row.is_active) return null;
+
+  return {
+    ...(row as unknown as SessionProfile),
+    phone: (row.phone as string | null) ?? null,
+    job_title: (row.job_title as string | null) ?? null,
+    notify_inapp: (row.notify_inapp as boolean | undefined) ?? true,
+    notify_email: (row.notify_email as boolean | undefined) ?? true,
+  };
 });
 
 /** Require a signed-in, active profile — redirects to sign-in otherwise. */
