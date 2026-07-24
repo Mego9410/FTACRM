@@ -9,6 +9,10 @@ import { practiceLabel } from "@/lib/practice-helpers";
 import { daysSince, formatDate, formatGBP } from "@/lib/utils";
 import { DealFilters } from "./deal-filters";
 import { SavedViews } from "@/components/shell/saved-views";
+import { ExportButton } from "@/components/shell/export-button";
+import { SelectionProvider, RowCheck } from "@/components/shell/bulk-select";
+import { DealsSelectAll, DealsBulkBar } from "./deals-bulk";
+import { exportDealsCsv } from "./csv-actions";
 
 export const metadata = { title: "Sales progression" };
 
@@ -85,9 +89,17 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
   const { data: deals, count } = await query.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
   const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
 
+  const dealIds = (deals ?? []).map((d) => d.id);
+
   return (
+    <SelectionProvider>
     <div>
-      <PageHeader eyebrow="Pipeline" title="Sales progression" subtitle="Every transaction from accepted offer to completion" />
+      <PageHeader
+        eyebrow="Pipeline"
+        title="Sales progression"
+        subtitle="Every transaction from accepted offer to completion"
+        actions={<ExportButton action={exportDealsCsv} paramKeys={["status", "stalled"]} />}
+      />
 
       <LinkTabs
         className="mb-4"
@@ -101,7 +113,10 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
 
       <div className="flex flex-wrap items-start justify-between gap-2">
         <DealFilters />
-        <SavedViews entity="deals" />
+        <div className="flex items-center gap-2">
+          {dealIds.length > 0 ? <DealsSelectAll ids={dealIds} /> : null}
+          <SavedViews entity="deals" />
+        </div>
       </div>
 
       {(deals ?? []).length === 0 ? (
@@ -139,9 +154,13 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
             ].filter(Boolean);
             const completed = d.status === "completed";
             return (
-              <Link key={d.id} href={`/deals/${d.id}`} className="block">
+              <div key={d.id} className="relative">
+                <label className="absolute left-3 top-4 z-10 flex items-center rounded bg-surface/95 p-0.5 shadow-sm" onClick={(e) => e.stopPropagation()}>
+                  <RowCheck id={d.id} />
+                </label>
+                <Link href={`/deals/${d.id}`} className="block">
                 <Card className="overflow-hidden rounded-[18px] p-0 transition-all hover:-translate-y-[2px] hover:shadow-md">
-                  <div className="flex items-start justify-between gap-3 px-6 pt-5">
+                  <div className="flex items-start justify-between gap-3 pl-12 pr-6 pt-5">
                     <div className="min-w-0">
                       <p className="truncate text-[16px] font-extrabold tracking-tight text-fg-1">{headerBits.join(" – ")}</p>
                       {buyer || seller ? (
@@ -182,7 +201,8 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
                     </div>
                   </div>
                 </Card>
-              </Link>
+                </Link>
+              </div>
             );
           })}
         </div>
@@ -205,6 +225,8 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
           </div>
         </div>
       ) : null}
+      <DealsBulkBar />
     </div>
+    </SelectionProvider>
   );
 }
