@@ -32,6 +32,9 @@ export function InlineSearch({
   const [open, setOpen] = React.useState(false);
   const [activeIdx, setActiveIdx] = React.useState(-1);
   const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Monotonic request id: only the most recent query's results are applied,
+  // so a slow earlier response can never overwrite a newer one.
+  const seq = React.useRef(0);
   const rootRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   // Null until the platform is known on the client, so the server and first
@@ -49,20 +52,26 @@ export function InlineSearch({
   React.useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
     if (term.length < 2) {
+      seq.current++; // invalidate any in-flight request
       setHits([]);
+      setBusy(false);
       return;
     }
     timer.current = setTimeout(async () => {
+      const mySeq = ++seq.current;
       setBusy(true);
       try {
         const r = await globalSearch(term);
+        if (mySeq !== seq.current) return; // superseded by a newer keystroke
         setHits(r);
         setOpen(true);
         setActiveIdx(-1);
+      } catch {
+        if (mySeq === seq.current) setHits([]);
       } finally {
-        setBusy(false);
+        if (mySeq === seq.current) setBusy(false);
       }
-    }, 180);
+    }, 140);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
