@@ -6,7 +6,14 @@ import { FileSignature, Copy, Eye } from "lucide-react";
 import { Badge, Button, Card, CardHeader, EmptyState, Field, Input } from "@/components/ui/primitives";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
 import { formatDate } from "@/lib/utils";
-import { renderDocument, applySignature, SIGN_PENDING_HTML } from "@/lib/documents/render";
+import {
+  renderDocument,
+  applySignature,
+  normaliseEditedDocument,
+  SIG_SLOT,
+  SIG_EDIT_PLACEHOLDER,
+  SIGN_PENDING_HTML,
+} from "@/lib/documents/render";
 import type { ResolvedField } from "@/lib/documents/context";
 import type { SignatureRequestRow } from "@/lib/documents/signatures";
 import { cancelSignatureRequest, getSignatureDocument, sendForSignature } from "@/lib/actions/signatures";
@@ -61,16 +68,28 @@ export function RecordDocuments({
   const [copied, setCopied] = React.useState(false);
 
   const [viewing, setViewing] = React.useState<{ title: string; html: string } | null>(null);
+  const [editMode, setEditMode] = React.useState(false);
+  const editorRef = React.useRef<HTMLDivElement | null>(null);
 
   const selected = templates.find((t) => t.id === templateId) ?? null;
   const previewHtml = selected
     ? applySignature(renderDocument(selected.body_html, values), SIGN_PENDING_HTML)
     : "";
 
+  // Seed the editable document from the current template + field values whenever
+  // the user switches into "edit text" mode.
+  React.useEffect(() => {
+    if (editMode && editorRef.current && selected) {
+      editorRef.current.innerHTML = renderDocument(selected.body_html, values).split(SIG_SLOT).join(SIG_EDIT_PLACEHOLDER);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editMode]);
+
   function openGen() {
     setSentUrl(null);
     setError(null);
     setCopied(false);
+    setEditMode(false);
     setGenOpen(true);
   }
 
@@ -83,6 +102,7 @@ export function RecordDocuments({
       title: selected.name,
       practice_id: practiceId,
       values,
+      body_html: editMode && editorRef.current ? normaliseEditedDocument(editorRef.current.innerHTML) : undefined,
       signer_name: sName,
       signer_email: sEmail,
       path,
@@ -228,8 +248,27 @@ export function RecordDocuments({
               </DialogFooter>
             </div>
             <div className="min-w-0">
-              <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-fg-3">Preview</p>
-              <div className="max-h-[520px] overflow-auto rounded-md border border-line bg-white p-4" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+              <div className="mb-1.5 flex items-center justify-between">
+                <p className="text-xs font-bold uppercase tracking-wide text-fg-3">{editMode ? "Edit document" : "Preview"}</p>
+                <button
+                  type="button"
+                  onClick={() => setEditMode((v) => !v)}
+                  className="text-xs font-semibold text-gold-deep hover:underline"
+                >
+                  {editMode ? "Done editing" : "Edit text"}
+                </button>
+              </div>
+              {editMode ? (
+                <div
+                  ref={editorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  className="max-h-[520px] overflow-auto rounded-md border border-gold bg-white p-4 text-sm outline-none focus:ring-2 focus:ring-gold/40"
+                />
+              ) : (
+                <div className="max-h-[520px] overflow-auto rounded-md border border-line bg-white p-4" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+              )}
+              {editMode ? <p className="mt-1 text-[11px] text-fg-4">Edit the wording as needed. The signature box stays where it is.</p> : null}
             </div>
           </div>
         )}

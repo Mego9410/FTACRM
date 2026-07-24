@@ -8,7 +8,15 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { systemJournal } from "@/lib/actions/journal";
-import { renderDocument, applySignature, signatureBlock, SIGN_PENDING_HTML } from "@/lib/documents/render";
+import {
+  renderDocument,
+  applySignature,
+  signatureBlock,
+  sanitizeDocumentHtml,
+  normaliseEditedDocument,
+  SIG_SLOT,
+  SIGN_PENDING_HTML,
+} from "@/lib/documents/render";
 import { longDate } from "@/lib/documents/context";
 import { ok, fail, type ActionResult, dbFail } from "@/lib/action-result";
 
@@ -19,6 +27,7 @@ const sendSchema = z.object({
   contact_id: z.string().uuid().nullable().optional(),
   deal_id: z.string().uuid().nullable().optional(),
   values: z.record(z.string(), z.string()),
+  body_html: z.string().max(200000).optional(), // set when the user edited the text
   signer_name: z.string().trim().min(1).max(200),
   signer_email: z.string().email(),
   path: z.string().optional(),
@@ -31,14 +40,21 @@ export async function sendForSignature(input: unknown): Promise<ActionResult<{ t
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Check the details.");
   const supabase = await createClient();
 
-  const { data: tpl } = await supabase
-    .from("document_templates")
-    .select("body_html")
-    .eq("id", parsed.data.template_id)
-    .maybeSingle();
-  if (!tpl) return fail("Template not found.");
-
-  const body = renderDocument(tpl.body_html, parsed.data.values);
+  // Use the user's edited text if they tweaked it; otherwise render from the
+  // template + field values. Either way the signature slot is guaranteed present.
+  let body: string;
+  if (parsed.data.body_html && parsed.data.body_html.trim()) {
+    const clean = sanitizeDocumentHtml(parsed.data.body_html);
+    body = clean.includes(SIG_SLOT) ? clean : normaliseEditedDocument(clean);
+  } else {
+    const { data: tpl } = await supabase
+      .from("document_templates")
+      .select("body_html")
+      .eq("id", parsed.data.template_id)
+      .maybeSingle();
+    if (!tpl) return fail("Template not found.");
+    body = renderDocument(tpl.body_html, parsed.data.values);
+  }
   const token = randomBytes(24).toString("base64url");
 
   const { error } = await supabase.from("signature_requests").insert({
