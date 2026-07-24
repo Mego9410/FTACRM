@@ -6,6 +6,9 @@ import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
 import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
+import { sendInviteEmail, sendPasswordResetEmail } from "@/lib/email/transactional";
+
+const signInUrl = () => `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/sign-in`;
 
 const createSchema = z.object({
   email: z.string().email(),
@@ -15,11 +18,12 @@ const createSchema = z.object({
 });
 
 /**
- * Create a staff account with a temporary password the admin shares with the
- * new user. The account is flagged must_change_password, so the app forces a
- * password change on first sign-in (see the /change-password gate).
+ * Create a staff account with a temporary password. We email the new user a
+ * welcome with a sign-in link (via Resend, once linked); until then the admin
+ * copies the credentials to share manually. The account is flagged
+ * must_change_password, so the app forces a password change on first sign-in.
  */
-export async function createUser(input: unknown): Promise<ActionResult> {
+export async function createUser(input: unknown): Promise<ActionResult<{ emailed: boolean }>> {
   const me = await requireRole("admin");
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Check the form fields.");
@@ -49,8 +53,52 @@ export async function createUser(input: unknown): Promise<ActionResult> {
   await audit("profiles", data.user.id, me.id, [
     { field: "created", oldValue: null, newValue: `${email} as ${role}` },
   ]);
+
+  const invite = await sendInviteEmail({ to: email, fullName: full_name, tempPassword: temp_password, signInUrl: signInUrl() });
   revalidatePath("/admin/users");
-  return ok();
+  return ok({ emailed: invite.emailed });
+}
+
+const resetSchema = z.object({
+  id: z.string().uuid(),
+  temp_password: z.string().min(10, "The temporary password needs at least 10 characters.").max(200),
+});
+
+/**
+ * Admin resets a user's password to a new temporary one and re-arms the
+ * forced-change flag. Emails the user the new password + sign-in link when a
+ * provider is linked; otherwise the admin shares it manually.
+ */
+export async function resetUserPassword(input: unknown): Promise<ActionResult<{ emailed: boolean }>> {
+  const me = await requireRole("admin");
+  const parsed = resetSchema.safeParse(input);
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Check the form fields.");
+  const { id, temp_password } = parsed.data;
+
+  const admin = createAdminClient();
+  const { data: profile } = await admin.from("profiles").select("email, full_name").eq("id", id).single();
+  if (!profile?.email) return fail("Couldn't find that user.");
+
+  const { error } = await admin.auth.admin.updateUserById(id, { password: temp_password });
+  if (error) return dbFail(error);
+  const { error: flagErr } = await admin.from("profiles").update({ must_change_password: true }).eq("id", id);
+  if (flagErr) return dbFail(flagErr);
+
+  await audit("profiles", id, me.id, [{ field: "password_reset", oldValue: null, newValue: "by admin" }]);
+
+  const sent = await sendPasswordResetEmail({
+    to: profile.email,
+    fullName: profile.full_name ?? "",
+    tempPassword: temp_password,
+    signInUrl: signInUrl(),
+  });
+  revalidatePath("/admin/users");
+  return ok({ emailed: sent.emailed });
+}
+
+/** Re-send the welcome email to a user (same account, a fresh temp password). */
+export async function resendInvite(input: unknown): Promise<ActionResult<{ emailed: boolean }>> {
+  return resetUserPassword(input);
 }
 
 const updateSchema = z.object({
@@ -59,6 +107,9 @@ const updateSchema = z.object({
   role: z.enum(["admin", "manager", "agent"]),
   calendar_color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   is_active: z.boolean(),
+  phone: z.string().max(40).nullable().optional(),
+  job_title: z.string().max(120).nullable().optional(),
+  manager_id: z.string().uuid().nullable().optional(),
 });
 
 export async function updateUser(input: unknown): Promise<ActionResult> {

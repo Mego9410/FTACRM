@@ -13,6 +13,10 @@ export type SessionProfile = {
   is_active: boolean;
   must_change_password: boolean;
   signature_html: string | null;
+  phone: string | null;
+  job_title: string | null;
+  notify_inapp: boolean;
+  notify_email: boolean;
 };
 
 /** Current signed-in profile, or null. Cached per request. */
@@ -24,7 +28,7 @@ export const getProfile = cache(async (): Promise<SessionProfile | null> => {
   if (!user) return null;
   const { data } = await supabase
     .from("profiles")
-    .select("id, full_name, email, role, calendar_color, is_active, must_change_password, signature_html")
+    .select("id, full_name, email, role, calendar_color, is_active, must_change_password, signature_html, phone, job_title, notify_inapp, notify_email")
     .eq("id", user.id)
     .single();
   if (!data || !data.is_active) return null;

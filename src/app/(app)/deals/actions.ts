@@ -24,6 +24,76 @@ async function refreshCurrentStage(dealId: string) {
     .eq("id", dealId);
 }
 
+/* ── Per-deal custom stages ─────────────────────────────────────────────
+ * Deals can add their own extra steps on top of the firm template. These live
+ * in deal_custom_stages and are tracked on the row itself (separate from the
+ * template events, so firm-wide reporting is unaffected). */
+
+export async function addCustomStage(input: unknown): Promise<ActionResult> {
+  const me = await requireProfile();
+  await requirePermission(me, "deals.edit");
+  const parsed = z
+    .object({ deal_id: z.string().uuid(), label: z.string().min(1).max(120), sort_order: z.coerce.number().optional() })
+    .safeParse(input);
+  if (!parsed.success) return fail("Enter a stage name.");
+  const supabase = await createClient();
+  const { error } = await supabase.from("deal_custom_stages").insert({
+    deal_id: parsed.data.deal_id,
+    label: parsed.data.label,
+    sort_order: parsed.data.sort_order ?? 99,
+  });
+  if (error) return dbFail(error);
+  revalidatePath(`/deals/${parsed.data.deal_id}`);
+  return ok();
+}
+
+export async function markCustomStage(input: unknown): Promise<ActionResult> {
+  const me = await requireProfile();
+  await requirePermission(me, "deals.edit");
+  const parsed = z
+    .object({ deal_id: z.string().uuid(), id: z.string().uuid(), achieved_on: z.string(), note: z.string().max(2000).nullable().optional() })
+    .safeParse(input);
+  if (!parsed.success) return fail("Invalid stage update.");
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("deal_custom_stages")
+    .update({ achieved_on: parsed.data.achieved_on, note: parsed.data.note ?? null, achieved_by: me.id })
+    .eq("id", parsed.data.id)
+    .eq("deal_id", parsed.data.deal_id);
+  if (error) return dbFail(error);
+  await supabase.from("deals").update({ last_activity_at: new Date().toISOString() }).eq("id", parsed.data.deal_id);
+  revalidatePath(`/deals/${parsed.data.deal_id}`);
+  return ok();
+}
+
+export async function unmarkCustomStage(input: unknown): Promise<ActionResult> {
+  const me = await requireProfile();
+  await requirePermission(me, "deals.edit");
+  const parsed = z.object({ deal_id: z.string().uuid(), id: z.string().uuid() }).safeParse(input);
+  if (!parsed.success) return fail("Invalid.");
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("deal_custom_stages")
+    .update({ achieved_on: null, note: null, achieved_by: null })
+    .eq("id", parsed.data.id)
+    .eq("deal_id", parsed.data.deal_id);
+  if (error) return dbFail(error);
+  revalidatePath(`/deals/${parsed.data.deal_id}`);
+  return ok();
+}
+
+export async function deleteCustomStage(input: unknown): Promise<ActionResult> {
+  const me = await requireProfile();
+  await requirePermission(me, "deals.edit");
+  const parsed = z.object({ deal_id: z.string().uuid(), id: z.string().uuid() }).safeParse(input);
+  if (!parsed.success) return fail("Invalid.");
+  const supabase = await createClient();
+  const { error } = await supabase.from("deal_custom_stages").delete().eq("id", parsed.data.id).eq("deal_id", parsed.data.deal_id);
+  if (error) return dbFail(error);
+  revalidatePath(`/deals/${parsed.data.deal_id}`);
+  return ok();
+}
+
 const markSchema = z.object({
   deal_id: z.string().uuid(),
   stage_id: z.string().uuid(),
@@ -214,5 +284,29 @@ export async function updateDealFields(input: unknown): Promise<ActionResult> {
     })),
   );
   revalidatePath(`/deals/${deal_id}`);
+  return ok();
+}
+
+const PARTY_FIELDS = ["buyer_contact_id", "seller_contact_id", "buyer_solicitor_id", "seller_solicitor_id"] as const;
+
+/** Set (or clear) one of a deal's party contact links from the People tab. */
+export async function setDealParty(input: unknown): Promise<ActionResult> {
+  const me = await requireProfile();
+  await requirePermission(me, "deals.edit");
+  const parsed = z
+    .object({
+      deal_id: z.string().uuid(),
+      field: z.enum(PARTY_FIELDS),
+      contact_id: z.string().uuid().nullable(),
+    })
+    .safeParse(input);
+  if (!parsed.success) return fail("Invalid.");
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("deals")
+    .update({ [parsed.data.field]: parsed.data.contact_id, last_activity_at: new Date().toISOString() })
+    .eq("id", parsed.data.deal_id);
+  if (error) return dbFail(error);
+  revalidatePath(`/deals/${parsed.data.deal_id}/people`);
   return ok();
 }

@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { Badge, Button, Card, CardHeader, Field, Input, Select } from "@/components/ui/primitives";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
-import { saveChecklistTemplate } from "./actions";
+import { useToast } from "@/components/ui/toast";
+import { saveChecklistTemplate, deleteChecklistTemplate } from "./actions";
 
 type Template = {
   id: string;
@@ -17,7 +18,16 @@ type Template = {
 
 export function ChecklistsClient({ templates }: { templates: Template[] }) {
   const router = useRouter();
+  const toast = useToast();
   const [editing, setEditing] = React.useState<Template | "new" | null>(null);
+
+  async function remove(t: Template) {
+    if (!window.confirm(`Delete the "${t.name}" checklist template? Checklists already created from it are unaffected.`)) return;
+    const res = await deleteChecklistTemplate({ id: t.id });
+    if (!res.ok) return toast.error(res.error);
+    toast.success("Template deleted.");
+    router.refresh();
+  }
   const [labels, setLabels] = React.useState<string[]>([]);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
@@ -43,6 +53,7 @@ export function ChecklistsClient({ templates }: { templates: Template[] }) {
     setBusy(false);
     if (!res.ok) return setError(res.error);
     setEditing(null);
+    toast.success("Template saved.");
     router.refresh();
   }
 
@@ -64,6 +75,15 @@ export function ChecklistsClient({ templates }: { templates: Template[] }) {
             <div className="flex items-center gap-2">
               {!t.is_active ? <Badge>Inactive</Badge> : null}
               <Button variant="ghost" size="sm" onClick={() => setEditing(t)}>Edit</Button>
+              <button
+                type="button"
+                onClick={() => remove(t)}
+                className="rounded p-1.5 text-fg-4 hover:bg-surface-3 hover:text-danger"
+                aria-label={`Delete ${t.name}`}
+                title="Delete template"
+              >
+                <Trash2 size={15} />
+              </button>
             </div>
           </li>
         ))}

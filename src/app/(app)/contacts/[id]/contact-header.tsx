@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { ContactStatusControl } from "./contact-status-control";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Archive, Mail, Phone, Send, ShieldAlert } from "lucide-react";
@@ -92,7 +93,7 @@ export function ContactHeader({
                 {contact.temperature}
               </Badge>
             ) : null}
-            {contact.status ? <Badge tone="gold">{contact.status}</Badge> : null}
+            <ContactStatusControl id={contact.id} status={contact.status} />
           </div>
           <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-fg-3">
             <span>{contact.ref}</span>

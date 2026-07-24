@@ -59,6 +59,17 @@ export function PracticeFilters() {
         <option value="desc">Descending</option>
         <option value="asc">Ascending</option>
       </Select>
+      {!params.get("status") ? (
+        <label className="flex items-center gap-1.5 text-sm text-fg-2" title="Withdrawn and completed practices stay on the database but are hidden here by default">
+          <input
+            type="checkbox"
+            checked={params.get("offmarket") !== "1"}
+            onChange={(e) => apply({ offmarket: e.target.checked ? "" : "1" })}
+            className="h-4 w-4 accent-[#E4AD25]"
+          />
+          Hide off-market
+        </label>
+      ) : null}
       {params.size > 0 ? (
         <Button variant="ghost" size="sm" onClick={() => router.push(pathname)}>Clear</Button>
       ) : null}

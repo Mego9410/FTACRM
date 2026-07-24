@@ -3,6 +3,8 @@ import { requireRole } from "@/lib/auth";
 
 const SECTIONS = [
   { label: "Reporting", href: "/reporting" },
+  { label: "Firm settings", href: "/admin/firm" },
+  { label: "Deal stages", href: "/admin/deal-stages" },
   { label: "Users", href: "/admin/users" },
   { label: "Holiday", href: "/admin/holidays" },
   { label: "Documents", href: "/admin/documents" },

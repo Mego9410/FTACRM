@@ -12,6 +12,7 @@ import { resolveSort, applySort, type SortOptions } from "@/lib/sort";
 import { PracticeMapDefs, PracticeMapUse } from "@/components/practices/practice-map";
 import { practiceLabel } from "@/lib/practice-helpers";
 import { PracticeFilters } from "./practice-filters";
+import { SavedViews } from "@/components/shell/saved-views";
 
 export const metadata = { title: "Practices" };
 
@@ -36,6 +37,7 @@ type Search = {
   sort?: string;
   dir?: string;
   view?: string;
+  offmarket?: string;
 };
 
 export default async function PracticesPage({ searchParams }: { searchParams: Promise<Search> }) {
@@ -68,8 +70,12 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
     .select("*", { count: "exact" })
     .is("archived_at", null);
 
+  const showOffMarket = params.offmarket === "1";
   if (params.status === "live") query = query.in("status", ["available", "under_offer", "sold_stc"]);
   else if (params.status) query = query.eq("status", params.status);
+  // Default: hide practices no longer on the market (withdrawn / completed) unless
+  // the user ticks to show them, or is explicitly viewing one of those tabs.
+  else if (!showOffMarket) query = query.not("status", "in", "(withdrawn,completed)");
   if (params.funding) query = query.eq("funding_type_id", params.funding);
   if (params.min) query = query.gte("asking_price", Number(params.min));
   if (params.max) query = query.lte("asking_price", Number(params.max));
@@ -130,7 +136,10 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
         ]}
       />
 
-      <PracticeFilters />
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <PracticeFilters />
+        <SavedViews entity="practices" />
+      </div>
 
       <div className="mt-4 flex items-center justify-end">
         <div className="inline-flex gap-1 rounded-[12px] bg-surface-2 p-1">

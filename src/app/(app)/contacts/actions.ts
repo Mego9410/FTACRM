@@ -261,3 +261,18 @@ export async function eraseContact(input: unknown): Promise<ActionResult> {
   revalidatePath(`/contacts/${id}`);
   return ok();
 }
+
+/** Quick inline status change from the contact header. */
+export async function setContactStatus(input: unknown): Promise<ActionResult> {
+  const me = await requireProfile();
+  await requirePermission(me, "contacts.edit");
+  const parsed = z.object({ id: z.string().uuid(), status: z.string().max(60) }).safeParse(input);
+  if (!parsed.success) return fail("Invalid status.");
+  const supabase = await createClient();
+  const { data: before } = await supabase.from("contacts").select("status").eq("id", parsed.data.id).maybeSingle();
+  const { error } = await supabase.from("contacts").update({ status: parsed.data.status || null }).eq("id", parsed.data.id);
+  if (error) return dbFail(error);
+  await audit("contacts", parsed.data.id, me.id, [{ field: "status", oldValue: before?.status, newValue: parsed.data.status }]);
+  revalidatePath(`/contacts/${parsed.data.id}`);
+  return ok();
+}

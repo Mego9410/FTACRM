@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { notify } from "@/lib/notify";
 import { ok, fail, type ActionResult , dbFail } from "@/lib/action-result";
 
 const taskSchema = z.object({
@@ -69,14 +69,7 @@ export async function saveTask(input: unknown): Promise<ActionResult> {
     if (links !== undefined) await syncTaskLinks(supabase, id, links);
     const newAssignee = fields.assignee_id;
     if (newAssignee && newAssignee !== me.id && newAssignee !== existing?.assignee_id) {
-      const admin = createAdminClient();
-      await admin.from("notifications").insert({
-        profile_id: newAssignee,
-        kind: "task_assigned",
-        title: "Task assigned to you",
-        body: fields.title,
-        link_url: "/tasks",
-      });
+      await notify(newAssignee, { kind: "task_assigned", title: "Task assigned to you", body: fields.title, link_url: "/tasks" });
     }
   } else {
     const assignee = fields.assignee_id ?? me.id;
@@ -88,14 +81,7 @@ export async function saveTask(input: unknown): Promise<ActionResult> {
     if (error) return dbFail(error);
     if (created && links && links.length > 0) await syncTaskLinks(supabase, created.id, links);
     if (assignee !== me.id) {
-      const admin = createAdminClient();
-      await admin.from("notifications").insert({
-        profile_id: assignee,
-        kind: "task_assigned",
-        title: "New task assigned",
-        body: fields.title,
-        link_url: "/tasks",
-      });
+      await notify(assignee, { kind: "task_assigned", title: "New task assigned", body: fields.title, link_url: "/tasks" });
     }
   }
   revalidatePath("/tasks");

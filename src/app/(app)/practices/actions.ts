@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { notify } from "@/lib/notify";
 import { audit, diffChanges } from "@/lib/audit";
 import { geocodePostcode } from "@/lib/geo";
 import { systemJournal } from "@/lib/actions/journal";
@@ -218,9 +218,7 @@ async function flagLaunchOutreach(practiceId: string, changedBy: string) {
     `Gone to market: ${matches.length} matching buyers identified automatically — top targets flagged for outreach.`,
   );
 
-  const admin = createAdminClient();
-  await admin.from("notifications").insert({
-    profile_id: changedBy,
+  await notify(changedBy, {
     kind: "launch_outreach",
     title: "Best buyers identified",
     body: `${practice?.display_title ?? "Practice"} — ${matches.length} matched buyers, top ${top.length} ranked`,

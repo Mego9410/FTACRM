@@ -8,6 +8,7 @@ import { contactName } from "@/lib/contact-helpers";
 import { practiceLabel } from "@/lib/practice-helpers";
 import { daysSince, formatDate, formatGBP } from "@/lib/utils";
 import { DealFilters } from "./deal-filters";
+import { SavedViews } from "@/components/shell/saved-views";
 
 export const metadata = { title: "Sales progression" };
 
@@ -98,7 +99,10 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
         ]}
       />
 
-      <DealFilters />
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <DealFilters />
+        <SavedViews entity="deals" />
+      </div>
 
       {(deals ?? []).length === 0 ? (
         <EmptyState
