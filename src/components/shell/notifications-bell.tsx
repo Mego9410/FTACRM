@@ -104,6 +104,8 @@ export function NotificationsBell({ profileId, dark }: { profileId: string; dark
           </Link>
         ))
       )}
+      <MenuSeparator />
+      <MenuItem href="/notifications">View all notifications</MenuItem>
     </Menu>
   );
 }
