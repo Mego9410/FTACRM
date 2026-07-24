@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/auth";
+import { requireProfile } from "@/lib/auth";
 import { REPORTS } from "@/lib/reports";
 import type { Period } from "@/lib/reporting";
 import { PageHeader } from "@/components/shell/page-header";
@@ -28,7 +28,7 @@ function periodFor(preset: string): { period: Period; label: string } {
 }
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<Search> }) {
-  await requireRole("manager");
+  await requireProfile();
   const params = await searchParams;
   const selectedKey = params.report && REPORTS.some((r) => r.key === params.report) ? params.report : REPORTS[0]!.key;
   const def = REPORTS.find((r) => r.key === selectedKey)!;

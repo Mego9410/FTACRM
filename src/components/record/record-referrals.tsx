@@ -4,24 +4,29 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import type { LookupValue } from "@/lib/lookups";
+import type { ReferralCompany, ReferralRow } from "@/lib/referrals";
 import { Button, Card, CardHeader, EmptyState, Field, Input, Select, Textarea } from "@/components/ui/primitives";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
 import { formatDate, formatGBP } from "@/lib/utils";
-import type { ReferralRow } from "@/lib/referrals";
 import { createReferral, deleteReferral } from "@/lib/actions/referrals";
+
+const ADD_NEW = "__new__";
 
 /**
  * Log referrals attached to a record (buyer/seller/practice). Any staff member
- * can add them here; the back-end report reads them for the monthly figures.
+ * can add them here, drilling category → company (or adding a new company). The
+ * back-end report reads them for the monthly figures.
  */
 export function RecordReferrals({
   referrals,
-  types,
+  categories,
+  companies,
   contactId,
   practiceId,
 }: {
   referrals: ReferralRow[];
-  types: LookupValue[];
+  categories: LookupValue[];
+  companies: ReferralCompany[];
   contactId?: string;
   practiceId?: string;
 }) {
@@ -31,14 +36,32 @@ export function RecordReferrals({
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
+  const [categoryId, setCategoryId] = React.useState("");
+  const [companySel, setCompanySel] = React.useState(""); // "" | uuid | ADD_NEW
+  const [newCompany, setNewCompany] = React.useState("");
+
+  const companiesForCategory = companies.filter((c) => c.category_id === categoryId);
+
+  function openForm() {
+    setCategoryId("");
+    setCompanySel("");
+    setNewCompany("");
+    setError(null);
+    setOpen(true);
+  }
+
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!categoryId) return setError("Pick a referral type.");
+    if (companySel === ADD_NEW && !newCompany.trim()) return setError("Enter the new company name.");
     setBusy(true);
     setError(null);
     const f = new FormData(e.currentTarget);
     const rawValue = String(f.get("value") ?? "").replace(/[,£\s]/g, "");
     const res = await createReferral({
-      referral_type_id: String(f.get("referral_type_id")),
+      category_id: categoryId,
+      company_id: companySel && companySel !== ADD_NEW ? companySel : null,
+      new_company_name: companySel === ADD_NEW ? newCompany.trim() : null,
       referred_on: String(f.get("referred_on")),
       value: rawValue === "" ? null : Number(rawValue),
       note: String(f.get("note") ?? "") || null,
@@ -63,7 +86,7 @@ export function RecordReferrals({
       <CardHeader
         title={`Referrals (${referrals.length})`}
         action={
-          <Button size="sm" onClick={() => setOpen(true)} className="gap-1.5">
+          <Button size="sm" onClick={openForm} className="gap-1.5">
             <Plus size={14} /> Log referral
           </Button>
         }
@@ -76,7 +99,8 @@ export function RecordReferrals({
             <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-semibold text-fg-1">{r.type_name ?? "Referral"}</span>
+                  <span className="text-sm font-semibold text-fg-1">{r.category_name ?? "Referral"}</span>
+                  {r.company_name ? <span className="text-xs text-fg-2">· {r.company_name}</span> : null}
                   {r.value != null ? <span className="text-xs font-semibold text-gold-deep">{formatGBP(r.value)}</span> : null}
                   <span className="text-xs text-fg-3">{formatDate(r.referred_on)}</span>
                 </div>
@@ -90,14 +114,42 @@ export function RecordReferrals({
 
       <Dialog open={open} onClose={() => setOpen(false)} title="Log referral">
         <form onSubmit={submit} className="space-y-4">
-          <Field label="Referral type" htmlFor="rf_type">
-            <Select id="rf_type" name="referral_type_id" required defaultValue="">
-              <option value="" disabled>Choose…</option>
-              {types.map((t) => (
-                <option key={t.id} value={t.id}>{t.value}</option>
+          <Field label="Referral type" htmlFor="rf_cat">
+            <Select
+              id="rf_cat"
+              value={categoryId}
+              onChange={(e) => {
+                setCategoryId(e.target.value);
+                setCompanySel("");
+                setNewCompany("");
+              }}
+              required
+            >
+              <option value="" disabled>Choose a type…</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.value}</option>
               ))}
             </Select>
           </Field>
+
+          {categoryId ? (
+            <Field label="Company" htmlFor="rf_co" hint="Pick the exact company, or add a new one">
+              <Select id="rf_co" value={companySel} onChange={(e) => setCompanySel(e.target.value)}>
+                <option value="">Not specified</option>
+                {companiesForCategory.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+                <option value={ADD_NEW}>+ Add a new company…</option>
+              </Select>
+            </Field>
+          ) : null}
+
+          {companySel === ADD_NEW ? (
+            <Field label="New company name" htmlFor="rf_newco">
+              <Input id="rf_newco" value={newCompany} onChange={(e) => setNewCompany(e.target.value)} placeholder="e.g. Smith & Co" autoFocus />
+            </Field>
+          ) : null}
+
           <div className="grid grid-cols-2 gap-3">
             <Field label="Date" htmlFor="rf_date">
               <Input id="rf_date" name="referred_on" type="date" defaultValue={today} required />

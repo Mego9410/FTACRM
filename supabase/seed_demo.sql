@@ -205,7 +205,7 @@ begin
     (name, display_title, address_line1, town, county, lat, lng, status, asking_price, price_prefix,
      funding_type_id, tenure_type_id, specialism_ids, surgeries, annual_turnover,
      ebitda, nhs_contract_value, udas, staff_count, description,
-     instructed_at, contract_expiry, fee_percent, legacy_ref)
+     instructed_at, fee_percent, legacy_ref)
   select
     towns[idx.ti] || ' ' || (array['Dental Practice','Dental Care','Dental Surgery','Family Dental','Smile Clinic'])[1 + (g % 5)],
     surg || '-surgery ' || fund_labels[idx.fi] || ' practice, ' || counties[idx.ti],
@@ -222,7 +222,7 @@ begin
     4 + surg + floor(random()*6)::int,
     'A well-established ' || fund_labels[idx.fi] || ' dental practice in ' || towns[idx.ti] || ' with ' || surg ||
       ' surgeries. Loyal patient base, experienced associates in place and strong, consistent trading. Offered on a confidential basis.',
-    current_date - (30 + floor(random()*300)::int), current_date + (60 + floor(random()*300)::int),
+    current_date - (30 + floor(random()*300)::int),
     (array[8,9,10,7.5])[1 + (g % 4)],
     'DEMO-PRACTICE-' || g
   from generate_series(1,50) g

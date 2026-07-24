@@ -1,6 +1,6 @@
 import { formatGBP } from "@/lib/utils";
 
-/** The 15 key numbers a user can choose from for the dashboard's top strip. */
+/** The key numbers a user can choose from for the dashboard's top strip. */
 export type MetricId =
   | "open_tasks"
   | "overdue_tasks"
@@ -15,8 +15,7 @@ export type MetricId =
   | "buyer_pool"
   | "hot_buyers"
   | "viewings_week"
-  | "offers_pending"
-  | "contracts_expiring";
+  | "offers_pending";
 
 /** Raw numbers computed server-side; every metric reads from this map. */
 export type Metrics = Record<MetricId, number>;
@@ -131,13 +130,6 @@ export const METRICS: MetricDef[] = [
     href: "/practices",
     value: (m) => n(m.offers_pending),
     sub: () => ({ text: "awaiting decision", tone: "gold" }),
-  },
-  {
-    id: "contracts_expiring",
-    label: "Renewals due",
-    href: "/practices",
-    value: (m) => n(m.contracts_expiring),
-    sub: () => ({ text: "contracts expiring", tone: "danger" }),
   },
 ];
 

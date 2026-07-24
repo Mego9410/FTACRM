@@ -8,7 +8,9 @@ import { audit } from "@/lib/audit";
 import { ok, fail, type ActionResult, dbFail } from "@/lib/action-result";
 
 const schema = z.object({
-  referral_type_id: z.string().uuid(),
+  category_id: z.string().uuid(),
+  company_id: z.string().uuid().nullable().optional(),
+  new_company_name: z.string().trim().max(200).nullable().optional(),
   referred_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a valid date."),
   value: z.number().nonnegative().nullable().optional(),
   practice_id: z.string().uuid().nullable().optional(),
@@ -16,16 +18,42 @@ const schema = z.object({
   note: z.string().max(2000).nullable().optional(),
 });
 
-/** Log a referral FTA made to a partner/service (feeds the monthly figures). */
+/** Log a referral (category + optional specific company; a new company can be
+ * created inline). Attached to the buyer/seller/practice it was logged on. */
 export async function createReferral(input: unknown): Promise<ActionResult<{ id: string }>> {
   const me = await requireProfile();
   const parsed = schema.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Check the referral details.");
   const supabase = await createClient();
+
+  // Resolve the company: an explicit id, or create a new one under the category.
+  let companyId = parsed.data.company_id ?? null;
+  const newName = parsed.data.new_company_name?.trim();
+  if (!companyId && newName) {
+    const { data: existing } = await supabase
+      .from("referral_companies")
+      .select("id")
+      .eq("category_id", parsed.data.category_id)
+      .ilike("name", newName)
+      .maybeSingle();
+    if (existing) {
+      companyId = existing.id;
+    } else {
+      const { data: created, error: companyError } = await supabase
+        .from("referral_companies")
+        .insert({ category_id: parsed.data.category_id, name: newName, created_by: me.id })
+        .select("id")
+        .single();
+      if (companyError) return dbFail(companyError);
+      companyId = created.id;
+    }
+  }
+
   const { data, error } = await supabase
     .from("referrals")
     .insert({
-      referral_type_id: parsed.data.referral_type_id,
+      category_id: parsed.data.category_id,
+      company_id: companyId,
       referred_on: parsed.data.referred_on,
       value: parsed.data.value ?? null,
       practice_id: parsed.data.practice_id ?? null,

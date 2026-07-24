@@ -218,10 +218,6 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
           {(practices ?? []).map((p) => {
             const funding = p.funding_type_id ? lookupIndex.get(p.funding_type_id) : null;
             const tenure = p.tenure_type_id ? lookupIndex.get(p.tenure_type_id) : null;
-            const expiring =
-              p.contract_expiry &&
-              !["completed", "withdrawn"].includes(p.status) &&
-              new Date(p.contract_expiry) < new Date(Date.now() + 60 * 86_400_000);
             const headlinePath = (p as { headline_image_path?: string | null }).headline_image_path ?? null;
             const photoUrl = headlinePath ? urlByPath.get(headlinePath) ?? null : null;
             const guide = p.asking_price
@@ -257,7 +253,6 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
                           {PRACTICE_STATUS_LABELS[p.status] ?? p.status}
                         </Badge>
                         {funding ? <LookupPill color={funding.color}>{funding.value}</LookupPill> : null}
-                        {expiring ? <Badge tone="warn">Contract expiring</Badge> : null}
                       </div>
                       <p className="text-[16.5px] font-extrabold leading-snug tracking-tight text-fg-1">{practiceLabel(p)}</p>
                       <p className="text-xs leading-relaxed text-fg-3">

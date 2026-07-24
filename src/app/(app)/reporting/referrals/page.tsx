@@ -1,16 +1,23 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/auth";
-import { listReferrals, referralBreakdown } from "@/lib/referrals";
+import { requireProfile } from "@/lib/auth";
+import { getLookup } from "@/lib/lookups";
+import { listReferralCompanies, listReferrals, referralBreakdown } from "@/lib/referrals";
 import { PageHeader } from "@/components/shell/page-header";
 import { LinkTabs } from "@/components/ui/tabs";
 import { Card, CardHeader, EmptyState } from "@/components/ui/primitives";
 import { formatDate, formatGBP } from "@/lib/utils";
+import { ReferralSourcesManager } from "./referral-sources-manager";
 
 export const metadata = { title: "Referrals" };
 
 export default async function ReferralsReportPage() {
-  await requireRole("manager");
-  const [breakdown, recent] = await Promise.all([referralBreakdown(), listReferrals({ limit: 100 })]);
+  await requireProfile();
+  const [breakdown, recent, categories, companies] = await Promise.all([
+    referralBreakdown(),
+    listReferrals({ limit: 100 }),
+    getLookup("referral_category"),
+    listReferralCompanies(),
+  ]);
 
   return (
     <div>
@@ -31,14 +38,18 @@ export default async function ReferralsReportPage() {
         ]}
       />
 
+      <div className="mb-4">
+        <ReferralSourcesManager categories={categories} companies={companies} />
+      </div>
+
       <div className="grid gap-5 lg:grid-cols-[360px_1fr]">
         <Card>
           <CardHeader title="By type (all time)" />
           <table className="w-full text-sm">
             <tbody>
               {breakdown.rows.map((r, i) => (
-                <tr key={r.type_name} className={i % 2 ? "bg-surface-2/40" : ""}>
-                  <td className="px-5 py-2 text-fg-2">{r.type_name}</td>
+                <tr key={r.name} className={i % 2 ? "bg-surface-2/40" : ""}>
+                  <td className="px-5 py-2 text-fg-2">{r.name}</td>
                   <td className="px-3 py-2 text-right font-bold tabular-nums text-fg-1">{r.count}</td>
                   <td className="px-5 py-2 text-right text-xs tabular-nums text-gold-deep">
                     {r.total ? formatGBP(r.total) : ""}
@@ -73,7 +84,8 @@ export default async function ReferralsReportPage() {
                   <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-2.5">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-semibold text-fg-1">{r.type_name ?? "Referral"}</span>
+                        <span className="text-sm font-semibold text-fg-1">{r.category_name ?? "Referral"}</span>
+                        {r.company_name ? <span className="text-xs text-fg-2">· {r.company_name}</span> : null}
                         {r.value != null ? <span className="text-xs font-semibold text-gold-deep">{formatGBP(r.value)}</span> : null}
                         <span className="text-xs text-fg-3">{formatDate(r.referred_on)}</span>
                       </div>

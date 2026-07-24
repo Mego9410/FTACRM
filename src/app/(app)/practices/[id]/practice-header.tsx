@@ -27,7 +27,6 @@ type HeaderPractice = {
   funding: { value: string; color: string | null } | null;
   tenure: string | null;
   surgeries: number | null;
-  contract_expiry: string | null;
   seller: { id: string; name: string } | null;
   warning: string | null;
 };
@@ -58,10 +57,6 @@ export function PracticeHeader({
   const [reasonId, setReasonId] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
-  const expiring =
-    practice.contract_expiry &&
-    !["completed", "withdrawn"].includes(practice.status) &&
-    new Date(practice.contract_expiry) < new Date(Date.now() + 60 * 86_400_000);
 
   const launchable = ["preparing", "available"].includes(practice.status);
 
@@ -101,11 +96,6 @@ export function PracticeHeader({
   return (
     <div className="mb-5">
       <RecordWarning table="practices" id={practice.id} warning={practice.warning} />
-      {expiring ? (
-        <div className="mb-3 rounded-sm border border-warn/30 bg-warn-bg px-4 py-2.5 text-sm font-semibold text-warn">
-          Agency contract expires {practice.contract_expiry} — renew or conclude before it lapses.
-        </div>
-      ) : null}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">

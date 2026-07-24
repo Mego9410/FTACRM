@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/auth";
+import { requireProfile } from "@/lib/auth";
 import {
   completionsByMonth,
   computeKpis,
@@ -62,7 +62,7 @@ function Delta({ current, previous, money }: { current: number; previous: number
 }
 
 export default async function ReportingPage({ searchParams }: { searchParams: Promise<Search> }) {
-  await requireRole("manager");
+  await requireProfile();
   const params = await searchParams;
   const preset = params.period ?? "month";
   const { current, previous, label } = resolvePeriods(preset);

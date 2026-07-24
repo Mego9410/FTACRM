@@ -141,9 +141,6 @@ export function PracticeRecord({
                 : "—"}
           </Row>
           <Row label="Instructed">{practice.instructed_at ? formatDate(practice.instructed_at) : "—"}</Row>
-          <Row label="Agency contract expiry">
-            {practice.contract_expiry ? formatDate(practice.contract_expiry) : "—"}
-          </Row>
           <Row label="Best and final closing date">
             {practice.closing_date ? (
               <Badge tone="warn">{formatDate(practice.closing_date)}</Badge>

@@ -20,7 +20,8 @@ insert into public.lookup_types (key, label, is_system) values
   ('valuation_kind', 'Valuation kinds', true),
   ('membership_tier', 'Membership tiers', false),
   ('principals_club_level', 'Principals Club levels', false),
-  ('referral_type', 'Referral types', false)
+  ('referral_type', 'Referral types', false),
+  ('referral_category', 'Referral categories', false)
 on conflict (key) do nothing;
 
 -- ── Lookup values ────────────────────────────────────────────────────
@@ -119,7 +120,18 @@ join (values
   ('referral_type', 'Acuity Law', 12, null, 'acuity_law'),
   ('referral_type', 'Berman', 13, null, 'berman'),
   ('referral_type', 'Other Sols', 14, null, 'other_sols'),
-  ('referral_type', 'The Principals Club', 15, null, 'principals_club')
+  ('referral_type', 'The Principals Club', 15, null, 'principals_club'),
+  ('referral_category', 'EPCs', 0, null, 'epcs'),
+  ('referral_category', 'Capital Allowances', 1, null, 'capital_allowances'),
+  ('referral_category', 'Mortgages', 2, null, 'mortgages'),
+  ('referral_category', 'CQC/Compliance', 3, null, 'cqc_compliance'),
+  ('referral_category', 'Wills/LPAs', 4, null, 'wills_lpas'),
+  ('referral_category', 'Insurances', 5, null, 'insurances'),
+  ('referral_category', 'Pensions/Tax Planning/Investment', 6, null, 'pensions_tax_investment'),
+  ('referral_category', 'Commercial Loans', 7, null, 'commercial_loans'),
+  ('referral_category', 'Membership Upgrades', 8, null, 'membership_upgrades'),
+  ('referral_category', 'Solicitors', 9, null, 'solicitors'),
+  ('referral_category', 'The Principals Club', 10, null, 'principals_club')
 ) as v(type_key, value, sort_order, color, system_key)
   on v.type_key = t.key
 on conflict (lookup_type_id, value) do nothing;

@@ -166,18 +166,11 @@ export type SmartList = { name: string; count: number; href: string; hint: strin
 
 export async function computeSmartLists(): Promise<SmartList[]> {
   const supabase = await createClient();
-  const soon = new Date(Date.now() + 60 * 86_400_000).toISOString().slice(0, 10);
   const stale90 = new Date(Date.now() - 90 * 86_400_000).toISOString();
   const stale30 = new Date(Date.now() - 30 * 86_400_000).toISOString();
   const stalled = new Date(Date.now() - 14 * 86_400_000).toISOString();
 
-  const [contracts, staleBuyers, valuationsPending, offersPending, stalledDeals, feedback, introEmails] = await Promise.all([
-    supabase
-      .from("practices")
-      .select("id", { count: "exact", head: true })
-      .in("status", ["available", "under_offer", "sold_stc"])
-      .not("contract_expiry", "is", null)
-      .lte("contract_expiry", soon),
+  const [staleBuyers, valuationsPending, offersPending, stalledDeals, feedback, introEmails] = await Promise.all([
     supabase
       .from("contacts")
       .select("id", { count: "exact", head: true })
@@ -208,12 +201,6 @@ export async function computeSmartLists(): Promise<SmartList[]> {
   ]);
 
   return [
-    {
-      name: "Agency contracts expiring",
-      count: contracts.count ?? 0,
-      href: "/practices?status=live",
-      hint: "Live listings whose agency agreement ends within 60 days",
-    },
     {
       name: "Buyers not contacted 90 days",
       count: staleBuyers.count ?? 0,

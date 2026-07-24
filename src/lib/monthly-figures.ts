@@ -22,10 +22,10 @@ export async function computeMonthlyFigures(month: string): Promise<MonthlyFigur
   const fromTs = `${fromDate}T00:00:00Z`;
   const toTs = `${toDate}T00:00:00Z`;
 
-  const [valuationKinds, membershipTiers, referralTypes] = await Promise.all([
+  const [valuationKinds, membershipTiers, referralCategories] = await Promise.all([
     getLookup("valuation_kind"),
     getLookup("membership_tier"),
-    getLookup("referral_type"),
+    getLookup("referral_category"),
   ]);
   const kindId = (key: string) => valuationKinds.find((k) => k.system_key === key)?.id ?? null;
 
@@ -70,17 +70,18 @@ export async function computeMonthlyFigures(month: string): Promise<MonthlyFigur
   // ── Referrals in month, per type + total ──────────────────────────────
   const { data: refs } = await supabase
     .from("referrals")
-    .select("referral_type_id, value")
+    .select("category_id, value")
     .gte("referred_on", fromDate)
     .lt("referred_on", toDate);
   const refCount = new Map<string, { n: number; sum: number }>();
   let refTotal = 0;
   let refTotalValue = 0;
-  for (const r of (refs ?? []) as { referral_type_id: string; value: number | null }[]) {
-    const cur = refCount.get(r.referral_type_id) ?? { n: 0, sum: 0 };
+  for (const r of (refs ?? []) as { category_id: string | null; value: number | null }[]) {
+    if (!r.category_id) continue;
+    const cur = refCount.get(r.category_id) ?? { n: 0, sum: 0 };
     cur.n += 1;
     cur.sum += Number(r.value ?? 0);
-    refCount.set(r.referral_type_id, cur);
+    refCount.set(r.category_id, cur);
     refTotal += 1;
     refTotalValue += Number(r.value ?? 0);
   }
@@ -179,7 +180,7 @@ export async function computeMonthlyFigures(month: string): Promise<MonthlyFigur
     {
       title: "Referrals",
       rows: [
-        ...referralTypes.map((t) => {
+        ...referralCategories.map((t) => {
           const c = refCount.get(t.id) ?? { n: 0, sum: 0 };
           return { label: t.value, value: c.n, money: c.sum || undefined };
         }),

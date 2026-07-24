@@ -72,14 +72,12 @@ export async function getDashboardData(profileId: string): Promise<DashboardData
   endOfDay.setHours(23, 59, 59, 999);
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const weekAhead = new Date(now.getTime() + 7 * 86_400_000);
-  const soon = new Date(now.getTime() + 60 * 86_400_000).toISOString().slice(0, 10);
   const stalledCut = new Date(now.getTime() - 14 * 86_400_000).toISOString();
 
   const [
     eventsRes,
     tasksRes,
     stalledRes,
-    expiringRes,
     feedbackRes,
     activityRes,
     dealsRes,
@@ -114,14 +112,6 @@ export async function getDashboardData(profileId: string): Promise<DashboardData
       .eq("status", "in_progress")
       .lt("last_activity_at", stalledCut)
       .order("last_activity_at")
-      .limit(6),
-    supabase
-      .from("practices")
-      .select("id, display_title, contract_expiry")
-      .in("status", ["available", "under_offer", "sold_stc"])
-      .not("contract_expiry", "is", null)
-      .lte("contract_expiry", soon)
-      .order("contract_expiry")
       .limit(6),
     supabase
       .from("viewings")
@@ -172,7 +162,6 @@ export async function getDashboardData(profileId: string): Promise<DashboardData
     hotBuyersRes,
     viewingsWeekRes,
     offersPendingRes,
-    contractsExpiringRes,
   ] = await Promise.all([
     supabase
       .from("deals")
@@ -197,12 +186,6 @@ export async function getDashboardData(profileId: string): Promise<DashboardData
       .gte("scheduled_at", startOfDay.toISOString())
       .lte("scheduled_at", weekAhead.toISOString()),
     supabase.from("offers").select("id", { count: "exact", head: true }).eq("status", "pending"),
-    supabase
-      .from("practices")
-      .select("id", { count: "exact", head: true })
-      .in("status", ["available", "under_offer", "sold_stc"])
-      .not("contract_expiry", "is", null)
-      .lte("contract_expiry", soon),
   ]);
 
   // Today's events the user is on.
@@ -272,14 +255,6 @@ export async function getDashboardData(profileId: string): Promise<DashboardData
       sublabel: "Deal stalled — no activity 14+ days",
       href: `/deals/${d.id}`,
       tone: "danger",
-    });
-  }
-  for (const p of expiringRes.data ?? []) {
-    attention.push({
-      label: p.display_title,
-      sublabel: `Agency contract expires ${p.contract_expiry}`,
-      href: `/practices/${p.id}`,
-      tone: "warn",
     });
   }
   for (const v of feedbackRes.data ?? []) {
@@ -361,7 +336,6 @@ export async function getDashboardData(profileId: string): Promise<DashboardData
       hot_buyers: hotBuyersRes.count ?? 0,
       viewings_week: viewingsWeekRes.count ?? 0,
       offers_pending: offersPendingRes.count ?? 0,
-      contracts_expiring: contractsExpiringRes.count ?? 0,
     },
     todayEvents,
     tasks: { overdue, today: todayTasks, upcoming, doneCount },

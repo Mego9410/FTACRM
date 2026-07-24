@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/auth";
+import { requireProfile } from "@/lib/auth";
 import { computeMonthlyFigures } from "@/lib/monthly-figures";
 import { PageHeader } from "@/components/shell/page-header";
 import { LinkTabs } from "@/components/ui/tabs";
@@ -17,7 +17,7 @@ function defaultMonth(): string {
 }
 
 export default async function MonthlyFiguresPage({ searchParams }: { searchParams: Promise<Search> }) {
-  await requireRole("manager");
+  await requireProfile();
   const params = await searchParams;
   const month = /^\d{4}-\d{2}$/.test(params.month ?? "") ? params.month! : defaultMonth();
   const figures = await computeMonthlyFigures(month);

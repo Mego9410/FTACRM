@@ -1,9 +1,13 @@
 import { getLookup } from "@/lib/lookups";
-import { listReferrals } from "@/lib/referrals";
+import { listReferrals, listReferralCompanies } from "@/lib/referrals";
 import { RecordReferrals } from "@/components/record/record-referrals";
 
 export default async function ContactReferralsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [referrals, types] = await Promise.all([listReferrals({ contactId: id }), getLookup("referral_type")]);
-  return <RecordReferrals referrals={referrals} types={types} contactId={id} />;
+  const [referrals, categories, companies] = await Promise.all([
+    listReferrals({ contactId: id }),
+    getLookup("referral_category"),
+    listReferralCompanies(),
+  ]);
+  return <RecordReferrals referrals={referrals} categories={categories} companies={companies} contactId={id} />;
 }

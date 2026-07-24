@@ -45,7 +45,6 @@ const practiceSchema = z.object({
   established_year: z.number().int().min(1800).max(2100).nullable(),
   description: optional(20000),
   instructed_at: z.string().nullable(),
-  contract_expiry: z.string().nullable(),
   lease_expiry: z.string().nullable(),
   closing_date: z.string().nullable(),
   fee_percent: z.number().nonnegative().max(100).nullable(),

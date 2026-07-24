@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  BarChart3,
   Building2,
   CalendarDays,
   Handshake,
@@ -39,6 +40,7 @@ const NAV = [
   { label: "Practices", href: "/practices", icon: Building2 },
   { label: "Sales progression", href: "/deals", icon: Handshake },
   { label: "Launches", href: "/launches", icon: Rocket },
+  { label: "Reporting", href: "/reporting", icon: BarChart3 },
 ];
 
 function Wordmark() {

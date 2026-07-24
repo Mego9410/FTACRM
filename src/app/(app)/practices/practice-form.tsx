@@ -32,7 +32,6 @@ export type PracticeFormValues = {
   established_year: number | null;
   description: string | null;
   instructed_at: string | null;
-  contract_expiry: string | null;
   lease_expiry: string | null;
   closing_date: string | null;
   fee_percent: number | null;
@@ -145,7 +144,6 @@ export function PracticeForm({
       established_year: intOrNull(f.get("established_year")),
       description: String(f.get("description") ?? ""),
       instructed_at: String(f.get("instructed_at") ?? "") || null,
-      contract_expiry: String(f.get("contract_expiry") ?? "") || null,
       lease_expiry: String(f.get("lease_expiry") ?? "") || null,
       closing_date: String(f.get("closing_date") ?? "") || null,
       fee_percent: num(f.get("fee_percent")),
@@ -305,9 +303,6 @@ export function PracticeForm({
           <div />
           <Field label="Instructed" htmlFor="pf_instructed">
             <Input id="pf_instructed" name="instructed_at" type="date" defaultValue={initial?.instructed_at ?? ""} />
-          </Field>
-          <Field label="Agency contract expiry" htmlFor="pf_expiry">
-            <Input id="pf_expiry" name="contract_expiry" type="date" defaultValue={initial?.contract_expiry ?? ""} />
           </Field>
           <Field label="Best and final closing date" htmlFor="pf_closing" hint="Deadline for offers when running a closing-date process">
             <Input id="pf_closing" name="closing_date" type="date" defaultValue={initial?.closing_date ?? ""} />

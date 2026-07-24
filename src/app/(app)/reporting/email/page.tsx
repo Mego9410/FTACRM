@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { TriangleAlert } from "lucide-react";
-import { requireRole } from "@/lib/auth";
+import { requireProfile } from "@/lib/auth";
 import type { Period } from "@/lib/reporting";
 import { computeEmailKpis, emailBreakdownByKind, emailVolumeByMonth, suppressionBreakdown } from "@/lib/email/reporting";
 import { emailSendingEnabled } from "@/lib/email/provider";
@@ -84,7 +84,7 @@ function RateDelta({ current, previous, invert }: { current: number | null; prev
 const rate = (v: number | null) => (v === null ? "—" : `${v}%`);
 
 export default async function EmailReportingPage({ searchParams }: { searchParams: Promise<Search> }) {
-  await requireRole("manager");
+  await requireProfile();
   const params = await searchParams;
   const preset = params.period ?? "month";
   const { current, previous, label } = resolvePeriods(preset);

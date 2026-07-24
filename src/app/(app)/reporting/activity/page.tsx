@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/auth";
+import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/shell/page-header";
 import { LinkTabs } from "@/components/ui/tabs";
@@ -14,7 +14,7 @@ const PAGE_SIZE = 50;
 type Search = { author?: string; type?: string; before?: string };
 
 export default async function ActivityFeedPage({ searchParams }: { searchParams: Promise<Search> }) {
-  await requireRole("manager"); // [SEV-LOW-03] align with the other reporting pages
+  await requireProfile();
   const params = await searchParams;
   const supabase = await createClient();
 
