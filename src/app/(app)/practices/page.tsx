@@ -169,10 +169,12 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
       ) : view === "list" ? (
         <Card className="mt-4 overflow-hidden">
           <div className="overflow-x-auto">
+            {anyMap ? <PracticeMapDefs /> : null}
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-line bg-surface-2 text-left text-[10.5px] font-bold uppercase tracking-[0.08em] text-fg-4">
-                  <th className="px-5 py-3">Practice</th>
+                  <th className="w-[76px] px-5 py-3" />
+                  <th className="py-3 pr-3">Practice</th>
                   <th className="px-3 py-3">Status</th>
                   <th className="px-3 py-3">Funding</th>
                   <th className="px-3 py-3">Town</th>
@@ -183,28 +185,46 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
               <tbody>
                 {(practices ?? []).map((p) => {
                   const funding = p.funding_type_id ? lookupIndex.get(p.funding_type_id) : null;
+                  const headlinePath = (p as { headline_image_path?: string | null }).headline_image_path ?? null;
+                  const photoUrl = headlinePath ? urlByPath.get(headlinePath) ?? null : null;
                   const guide = p.asking_price
                     ? `${p.price_prefix === "offers_over" ? "Offers over " : p.price_prefix === "guide" ? "Guide " : ""}${formatGBP(p.asking_price)}`
                     : "POA";
                   return (
                     <tr key={p.id} className="cursor-pointer border-t border-line hover:bg-gold-tint">
-                      <td className="px-5 py-3">
+                      <td className="py-3 pl-5 pr-0">
+                        <Link href={`/practices/${p.id}`} className="block">
+                          <span className="flex h-11 w-14 items-center justify-center overflow-hidden rounded-md border border-line bg-surface-3">
+                            {photoUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={photoUrl} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              <PracticeMapUse
+                                lat={(p as { lat?: number | null }).lat ?? null}
+                                lng={(p as { lng?: number | null }).lng ?? null}
+                                className="max-h-full w-auto p-1"
+                              />
+                            )}
+                          </span>
+                        </Link>
+                      </td>
+                      <td className="py-4 pl-3 pr-3">
                         <Link href={`/practices/${p.id}`} className="block">
                           <span className="font-semibold text-fg-1">{practiceLabel(p)}</span>
                           <span className="mt-0.5 block text-xs text-fg-3">{p.ref}</span>
                         </Link>
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="px-3 py-4">
                         <Badge tone={PRACTICE_STATUS_TONES[p.status] ?? "neutral"}>
                           {PRACTICE_STATUS_LABELS[p.status] ?? p.status}
                         </Badge>
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="px-3 py-4">
                         {funding ? <LookupPill color={funding.color}>{funding.value}</LookupPill> : <span className="text-fg-4">—</span>}
                       </td>
-                      <td className="px-3 py-3 text-fg-2">{p.town ?? "—"}</td>
-                      <td className="px-3 py-3 text-fg-2">{p.surgeries ?? "—"}</td>
-                      <td className="px-3 py-3 text-right font-extrabold text-gold-deep">{guide}</td>
+                      <td className="px-3 py-4 text-fg-2">{p.town ?? "—"}</td>
+                      <td className="px-3 py-4 text-fg-2">{p.surgeries ?? "—"}</td>
+                      <td className="px-3 py-4 text-right font-extrabold text-gold-deep">{guide}</td>
                     </tr>
                   );
                 })}
