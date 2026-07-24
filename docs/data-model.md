@@ -261,28 +261,44 @@ domain, which is why generated/signed documents live in `signature_requests` (be
 `key` (stable for system templates, e.g. `loa`; null for user-made), `name`, `description`,
 `body_html` (with `{{merge.fields}}` — rendered by `lib/documents/render.ts`; fields registry
 in `lib/documents/merge-fields.ts`), `is_active`, `sort_order`. Managed in Control Centre →
-Documents. Seeded with the **Letter of Authority**.
+Documents. Seeded with the **Letter of Authority** (seller), **Holding Deposit** and **Heads of
+Agreement** (buyer/transaction) — the latter two in migration 0032. A body may declare more than
+one signature slot: `{{signature}}` is the default/sole slot; `{{signature:seller}}` /
+`{{signature:buyer}}` are named per-party slots for multi-party documents.
 
 ### `signature_requests` (migration 0031) — generate-and-sign
 | column | type | notes |
 |---|---|---|
 | template_id | uuid fk document_templates | |
 | title | text | |
-| body_html | text | the **populated** document, frozen at send (`{{signature}}` → a slot filled at signing) |
+| body_html | text | the **populated** document, frozen at send (signature slots filled at signing) |
 | practice_id / contact_id / deal_id | nullable fks | the record it's attached to |
-| signer_name, signer_email | text | |
-| token | text unique | unguessable — the public `/sign/[token]` link |
-| status | text | `draft` \| `sent` \| `viewed` \| `signed` \| `declined` \| `cancelled` |
-| signature_name | text | typed name at signing |
-| signature_image | text nullable | drawn signature (data URL), if used |
-| signer_ip, sent_at, viewed_at, signed_at | | audit trail |
+| signer_name, signer_email, token | nullable | **legacy** single-signer fields (0033 relaxed the NOT NULLs); signers now live in `signature_signers` |
+| status | text | aggregate: `draft` \| `sent` \| `viewed` \| `signed` (all parties) \| `declined` \| `cancelled` |
+| signature_image | text nullable | reserved (drawn signature data URL) |
+| sent_at, signed_at | | set when sent / fully signed |
 | created_by | uuid fk profiles | notified when signed |
 
+### `signature_signers` (migration 0033) — one row per party
+| column | type | notes |
+|---|---|---|
+| request_id | uuid fk signature_requests (cascade) | |
+| slot_key | text | `''` = default `{{signature}}`; else the `{{signature:key}}` key. Unique per request |
+| party_label | text | "Seller", "Purchaser", "Signatory" |
+| signer_name, signer_email | text | |
+| token | text unique | this party's own unguessable `/sign/[token]` link |
+| sign_order | int | display order |
+| status | text | `sent` \| `viewed` \| `signed` \| `declined` |
+| signature_name, signed_at, viewed_at, signer_ip | | per-signer audit trail |
+
 Built-in signing (no third party): a record's Documents tab generates a populated document and
-creates a request; the signer opens `/sign/[token]` (public route, service-role read/write by
-token), types their name, and submits. The signed copy is rendered in-app from `body_html` +
-the signature (browser print for a PDF), surfaced back on the record; FTA gets a journal entry +
-notification. Templates: RLS permissive (Control Centre gates edits).
+creates a request plus one `signature_signers` row per party (each with its own token). Each
+signer opens `/sign/[token]` (public route, service-role read/write by token), sees the live
+progress of all parties, types their name, and submits — filling only their own slot. When every
+signer has signed, the request flips to `signed` and FTA gets a journal entry + notification. The
+signing page polls so each party sees the other's signature appear. The signed copy is rendered
+in-app from `body_html` + the signatures (browser print for a PDF). RLS permissive on all three
+tables (Control Centre gates template edits; the public route uses the service role by token).
 
 ### `call_recordings` (phase 8b — see `features/11-telephony.md`)
 | column | type | notes |

@@ -40,14 +40,17 @@ export async function buildPracticeDocContext(practiceId: string): Promise<DocCo
 
   const sellerName =
     [seller?.title, seller?.first_name, seller?.last_name].filter(Boolean).join(" ") || seller?.company_name || "";
-  const address = [p?.address_line1, p?.address_line2, p?.town, p?.county, p?.postcode].filter(Boolean).join("\n");
+  const addressParts = [p?.address_line1, p?.address_line2, p?.town, p?.county, p?.postcode].filter(Boolean);
+  const address = addressParts.join("\n");
 
   const values: Record<string, string> = {
     "date.today": longDate(),
     "agent.name": (me.full_name ?? "").split(" ")[0] ?? "",
+    "fta.signatory": me.full_name ?? "",
     "practice.name": p?.name ?? p?.display_title ?? "",
     "practice.legal_name": p?.name ?? "",
     "practice.address": address,
+    "practice.address_inline": addressParts.join(", "),
     "practice.town": p?.town ?? "",
     "practice.postcode": p?.postcode ?? "",
     "fee.percent": p?.fee_percent != null ? String(p.fee_percent) : "",
@@ -109,14 +112,17 @@ export async function buildContactDocContext(contactId: string): Promise<DocCont
 
   const sellerName =
     [contact?.title, contact?.first_name, contact?.last_name].filter(Boolean).join(" ") || contact?.company_name || "";
-  const address = [p?.address_line1, p?.address_line2, p?.town, p?.county, p?.postcode].filter(Boolean).join("\n");
+  const addressParts = [p?.address_line1, p?.address_line2, p?.town, p?.county, p?.postcode].filter(Boolean);
+  const address = addressParts.join("\n");
 
   const values: Record<string, string> = {
     "date.today": longDate(),
     "agent.name": (me.full_name ?? "").split(" ")[0] ?? "",
+    "fta.signatory": me.full_name ?? "",
     "practice.name": p?.name ?? p?.display_title ?? "",
     "practice.legal_name": p?.name ?? "",
     "practice.address": address,
+    "practice.address_inline": addressParts.join(", "),
     "practice.town": p?.town ?? "",
     "practice.postcode": p?.postcode ?? "",
     "fee.percent": p?.fee_percent != null ? String(p.fee_percent) : "",

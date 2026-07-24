@@ -8,17 +8,20 @@ import { Dialog, DialogFooter } from "@/components/ui/dialog";
 import { formatDate } from "@/lib/utils";
 import {
   renderDocument,
-  applySignature,
+  applySignatureSlots,
+  pendingSlotHtml,
+  slotLabel,
+  parseSignatureSlots,
+  slotsToEditor,
   normaliseEditedDocument,
-  SIG_SLOT,
-  SIG_EDIT_PLACEHOLDER,
-  SIGN_PENDING_HTML,
 } from "@/lib/documents/render";
 import type { ResolvedField } from "@/lib/documents/context";
-import type { SignatureRequestRow } from "@/lib/documents/signatures";
+import type { SignatureRequestRow, SignerSummary } from "@/lib/documents/signatures";
 import { cancelSignatureRequest, getSignatureDocument, sendForSignature } from "@/lib/actions/signatures";
+import { extractTags } from "@/lib/merge-tags";
 
 type Template = { id: string; name: string; body_html: string };
+type SignerDraft = { slot_key: string; party_label: string; signer_name: string; signer_email: string };
 
 const STATUS_TONE: Record<string, "warn" | "green" | "danger" | "neutral" | "gold"> = {
   draft: "neutral",
@@ -36,6 +39,13 @@ const STATUS_LABEL: Record<string, string> = {
   declined: "Declined",
   cancelled: "Cancelled",
 };
+
+function signerLine(s: SignerSummary): string {
+  if (s.status === "signed") return `${s.party_label}: signed${s.signed_at ? ` ${formatDate(s.signed_at)}` : ""}`;
+  if (s.status === "viewed") return `${s.party_label}: viewed`;
+  if (s.status === "declined") return `${s.party_label}: declined`;
+  return `${s.party_label}: awaiting`;
+}
 
 export function RecordDocuments({
   templates,
@@ -60,41 +70,73 @@ export function RecordDocuments({
   const [values, setValues] = React.useState<Record<string, string>>(() =>
     Object.fromEntries(fields.map((f) => [f.key, f.value])),
   );
-  const [sName, setSName] = React.useState(signerName);
-  const [sEmail, setSEmail] = React.useState(signerEmail);
+  const [signers, setSigners] = React.useState<SignerDraft[]>([]);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [sentUrl, setSentUrl] = React.useState<string | null>(null);
-  const [copied, setCopied] = React.useState(false);
+  const [sentLinks, setSentLinks] = React.useState<{ party_label: string; url: string }[] | null>(null);
+  const [copied, setCopied] = React.useState<string | null>(null);
 
   const [viewing, setViewing] = React.useState<{ title: string; html: string } | null>(null);
   const [editMode, setEditMode] = React.useState(false);
   const editorRef = React.useRef<HTMLDivElement | null>(null);
 
   const selected = templates.find((t) => t.id === templateId) ?? null;
+
+  // Which signature slots this template declares (1 for most, 2 for Heads of Agreement).
+  const slots = React.useMemo(() => (selected ? parseSignatureSlots(selected.body_html) : []), [selected]);
+
+  // Reset the signer list to match the chosen template's slots. Seed the
+  // seller/sole signatory from the record; leave the buyer for staff to fill.
+  React.useEffect(() => {
+    setSigners(
+      slots.map((s) => {
+        const prefill = s.slotKey === "" || s.slotKey === "seller";
+        return {
+          slot_key: s.slotKey,
+          party_label: s.label,
+          signer_name: prefill ? signerName : "",
+          signer_email: prefill ? signerEmail : "",
+        };
+      }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateId]);
+
   const previewHtml = selected
-    ? applySignature(renderDocument(selected.body_html, values), SIGN_PENDING_HTML)
+    ? applySignatureSlots(renderDocument(selected.body_html, values), (k) => pendingSlotHtml(slotLabel(k)))
     : "";
 
-  // Seed the editable document from the current template + field values whenever
-  // the user switches into "edit text" mode.
+  const visibleFields = React.useMemo(() => {
+    if (!selected) return fields;
+    const used = new Set(extractTags(selected.body_html));
+    return fields.filter((f) => used.has(f.key));
+  }, [selected, fields]);
+
+  // Seed the editable document from the current template + field values when the
+  // user switches into "edit text" mode.
   React.useEffect(() => {
     if (editMode && editorRef.current && selected) {
-      editorRef.current.innerHTML = renderDocument(selected.body_html, values).split(SIG_SLOT).join(SIG_EDIT_PLACEHOLDER);
+      editorRef.current.innerHTML = slotsToEditor(renderDocument(selected.body_html, values));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editMode]);
 
   function openGen() {
-    setSentUrl(null);
+    setSentLinks(null);
     setError(null);
-    setCopied(false);
+    setCopied(null);
     setEditMode(false);
     setGenOpen(true);
   }
 
+  function setSigner(i: number, patch: Partial<SignerDraft>) {
+    setSigners((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
+  }
+
+  const canSend = selected && signers.length > 0 && signers.every((s) => s.signer_name.trim() && s.signer_email.trim());
+
   async function send() {
-    if (!selected) return;
+    if (!selected || !canSend) return;
     setBusy(true);
     setError(null);
     const res = await sendForSignature({
@@ -105,13 +147,17 @@ export function RecordDocuments({
       deal_id: link.dealId ?? null,
       values,
       body_html: editMode && editorRef.current ? normaliseEditedDocument(editorRef.current.innerHTML) : undefined,
-      signer_name: sName,
-      signer_email: sEmail,
+      signers: signers.map((s) => ({
+        slot_key: s.slot_key,
+        party_label: s.party_label,
+        signer_name: s.signer_name,
+        signer_email: s.signer_email,
+      })),
       path,
     });
     setBusy(false);
     if (!res.ok) return setError(res.error);
-    setSentUrl((res.data as { url: string }).url);
+    setSentLinks((res.data as { signers: { party_label: string; url: string }[] }).signers);
     router.refresh();
   }
 
@@ -122,8 +168,7 @@ export function RecordDocuments({
     setViewing({ title: d.title, html: d.html });
   }
 
-  // Open the signed copy as a printable A4 page so the user can save it as a
-  // PDF (or print it). The document is self-contained — no external assets.
+  // Open the fully-signed copy as a printable A4 page (save as PDF / print).
   async function download(id: string) {
     const res = await getSignatureDocument({ id });
     if (!res.ok) return window.alert(res.error);
@@ -133,9 +178,7 @@ export function RecordDocuments({
       window.alert("Please allow pop-ups to download the signed document.");
       return;
     }
-    const safeTitle = d.title.replace(/[<>&"]/g, (c) =>
-      ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c] ?? c,
-    );
+    const safeTitle = d.title.replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c] ?? c);
     win.document.write(
       `<!doctype html><html><head><meta charset="utf-8"><title>${safeTitle}</title>` +
         `<style>@page{size:A4;margin:22mm}*{box-sizing:border-box}` +
@@ -161,6 +204,12 @@ export function RecordDocuments({
     router.refresh();
   }
 
+  function copy(text: string, key: string) {
+    void navigator.clipboard.writeText(text);
+    setCopied(key);
+    window.setTimeout(() => setCopied((c) => (c === key ? null : c)), 1500);
+  }
+
   return (
     <Card>
       <CardHeader
@@ -181,62 +230,70 @@ export function RecordDocuments({
         />
       ) : (
         <ul className="divide-y divide-line">
-          {requests.map((r) => (
-            <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-semibold text-fg-1">{r.title}</span>
-                  <Badge tone={STATUS_TONE[r.status] ?? "neutral"}>{STATUS_LABEL[r.status] ?? r.status}</Badge>
+          {requests.map((r) => {
+            const active = r.status === "sent" || r.status === "viewed";
+            return (
+              <li key={r.id} className="flex flex-wrap items-start justify-between gap-3 px-5 py-3">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold text-fg-1">{r.title}</span>
+                    <Badge tone={STATUS_TONE[r.status] ?? "neutral"}>{STATUS_LABEL[r.status] ?? r.status}</Badge>
+                  </div>
+                  {r.signers.length > 0 ? (
+                    <p className="mt-0.5 text-xs text-fg-3">{r.signers.map(signerLine).join("  ·  ")}</p>
+                  ) : (
+                    <p className="mt-0.5 text-xs text-fg-3">{formatDate(r.created_at)}</p>
+                  )}
                 </div>
-                <p className="text-xs text-fg-3">
-                  {r.signer_name} · {r.status === "signed" && r.signed_at ? `signed ${formatDate(r.signed_at)}` : formatDate(r.created_at)}
-                </p>
-              </div>
-              <div className="flex shrink-0 items-center gap-1">
-                <Button variant="ghost" size="sm" onClick={() => view(r.id)} className="gap-1"><Eye size={13} /> View</Button>
-                {r.status === "signed" ? (
-                  <Button variant="ghost" size="sm" onClick={() => download(r.id)} className="gap-1"><Download size={13} /> Download</Button>
-                ) : null}
-                {r.status === "sent" || r.status === "viewed" ? (
-                  <>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        void navigator.clipboard.writeText(`${window.location.origin}/sign/${r.token}`);
-                      }}
-                      className="gap-1"
-                    >
-                      <Copy size={13} /> Link
-                    </Button>
+                <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => view(r.id)} className="gap-1"><Eye size={13} /> View</Button>
+                  {r.status === "signed" ? (
+                    <Button variant="ghost" size="sm" onClick={() => download(r.id)} className="gap-1"><Download size={13} /> Download</Button>
+                  ) : null}
+                  {active
+                    ? r.signers
+                        .filter((s) => s.status !== "signed")
+                        .map((s) => (
+                          <Button
+                            key={s.token}
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copy(`${window.location.origin}/sign/${s.token}`, `${r.id}-${s.token}`)}
+                            className="gap-1"
+                          >
+                            <Copy size={13} /> {copied === `${r.id}-${s.token}` ? "Copied" : `${s.party_label} link`}
+                          </Button>
+                        ))
+                    : null}
+                  {active ? (
                     <Button variant="ghost" size="sm" onClick={() => cancel(r.id)} className="text-fg-4 hover:text-danger">Cancel</Button>
-                  </>
-                ) : null}
-              </div>
-            </li>
-          ))}
+                  ) : null}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
 
       {/* Generate dialog */}
       <Dialog open={genOpen} onClose={() => setGenOpen(false)} title="Generate document" wide>
-        {sentUrl ? (
+        {sentLinks ? (
           <div className="space-y-4">
             <p className="text-sm text-fg-2">
-              Document created and ready to sign. Send this secure link to <span className="font-semibold text-fg-1">{sName}</span>:
+              Document created. Send each party their secure signing link — they can see each other&apos;s progress as it&apos;s signed.
             </p>
-            <div className="flex items-center gap-2 rounded-md border border-line bg-surface-2 p-2">
-              <code className="min-w-0 flex-1 truncate text-xs text-fg-2">{sentUrl}</code>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  void navigator.clipboard.writeText(sentUrl);
-                  setCopied(true);
-                }}
-              >
-                {copied ? "Copied" : "Copy"}
-              </Button>
+            <div className="space-y-2">
+              {sentLinks.map((s, i) => (
+                <div key={i} className="rounded-md border border-line bg-surface-2 p-2">
+                  <p className="mb-1 text-xs font-semibold text-fg-2">{s.party_label}</p>
+                  <div className="flex items-center gap-2">
+                    <code className="min-w-0 flex-1 truncate text-xs text-fg-2">{s.url}</code>
+                    <Button variant="outline" size="sm" onClick={() => copy(s.url, `link-${i}`)}>
+                      {copied === `link-${i}` ? "Copied" : "Copy"}
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
             <DialogFooter>
               <Button type="button" onClick={() => setGenOpen(false)}>Done</Button>
@@ -257,8 +314,8 @@ export function RecordDocuments({
                   ))}
                 </select>
               </Field>
-              <div className="max-h-64 space-y-2 overflow-auto pr-1">
-                {fields.map((f) => (
+              <div className="max-h-56 space-y-2 overflow-auto pr-1">
+                {visibleFields.map((f) => (
                   <Field key={f.key} label={f.label} htmlFor={`gd_${f.key}`}>
                     <Input
                       id={`gd_${f.key}`}
@@ -268,19 +325,26 @@ export function RecordDocuments({
                   </Field>
                 ))}
               </div>
-              <div className="grid grid-cols-1 gap-2 border-t border-line pt-3">
-                <Field label="Signer name" htmlFor="gd_sn">
-                  <Input id="gd_sn" value={sName} onChange={(e) => setSName(e.target.value)} required />
-                </Field>
-                <Field label="Signer email" htmlFor="gd_se">
-                  <Input id="gd_se" type="email" value={sEmail} onChange={(e) => setSEmail(e.target.value)} required />
-                </Field>
+              <div className="space-y-3 border-t border-line pt-3">
+                {signers.map((s, i) => (
+                  <div key={s.slot_key || i} className="space-y-2">
+                    {signers.length > 1 ? (
+                      <p className="text-xs font-bold uppercase tracking-wide text-fg-3">{s.party_label}</p>
+                    ) : null}
+                    <Field label={`${signers.length > 1 ? "" : "Signer "}Name`.trim()} htmlFor={`gd_sn_${i}`}>
+                      <Input id={`gd_sn_${i}`} value={s.signer_name} onChange={(e) => setSigner(i, { signer_name: e.target.value })} required />
+                    </Field>
+                    <Field label="Email" htmlFor={`gd_se_${i}`}>
+                      <Input id={`gd_se_${i}`} type="email" value={s.signer_email} onChange={(e) => setSigner(i, { signer_email: e.target.value })} required />
+                    </Field>
+                  </div>
+                ))}
               </div>
               {error ? <p className="text-sm font-medium text-danger">{error}</p> : null}
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={() => setGenOpen(false)}>Cancel</Button>
-                <Button type="button" onClick={send} disabled={busy || !sName || !sEmail || !selected}>
-                  {busy ? "Creating…" : "Send for signature"}
+                <Button type="button" onClick={send} disabled={busy || !canSend}>
+                  {busy ? "Creating…" : signers.length > 1 ? "Send to both parties" : "Send for signature"}
                 </Button>
               </DialogFooter>
             </div>
@@ -305,7 +369,7 @@ export function RecordDocuments({
               ) : (
                 <div className="max-h-[520px] overflow-auto rounded-md border border-line bg-white p-4" dangerouslySetInnerHTML={{ __html: previewHtml }} />
               )}
-              {editMode ? <p className="mt-1 text-[11px] text-fg-4">Edit the wording as needed. The signature box stays where it is.</p> : null}
+              {editMode ? <p className="mt-1 text-[11px] text-fg-4">Edit the wording as needed. The signature boxes stay where they are.</p> : null}
             </div>
           </div>
         )}
