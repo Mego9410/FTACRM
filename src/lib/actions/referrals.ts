@@ -38,6 +38,8 @@ export async function createReferral(input: unknown): Promise<ActionResult<{ id:
   if (error) return dbFail(error);
   await audit("referrals", data.id, me.id, [{ field: "created", oldValue: null, newValue: parsed.data.referred_on }]);
   revalidatePath("/reporting/referrals");
+  if (parsed.data.contact_id) revalidatePath(`/contacts/${parsed.data.contact_id}/referrals`);
+  if (parsed.data.practice_id) revalidatePath(`/practices/${parsed.data.practice_id}/referrals`);
   return ok({ id: data.id });
 }
 

@@ -10,7 +10,21 @@ import { formatDate, formatGBP } from "@/lib/utils";
 import type { ReferralRow } from "@/lib/referrals";
 import { createReferral, deleteReferral } from "@/lib/actions/referrals";
 
-export function ReferralsClient({ referrals, types }: { referrals: ReferralRow[]; types: LookupValue[] }) {
+/**
+ * Log referrals attached to a record (buyer/seller/practice). Any staff member
+ * can add them here; the back-end report reads them for the monthly figures.
+ */
+export function RecordReferrals({
+  referrals,
+  types,
+  contactId,
+  practiceId,
+}: {
+  referrals: ReferralRow[];
+  types: LookupValue[];
+  contactId?: string;
+  practiceId?: string;
+}) {
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
   const [open, setOpen] = React.useState(false);
@@ -28,6 +42,8 @@ export function ReferralsClient({ referrals, types }: { referrals: ReferralRow[]
       referred_on: String(f.get("referred_on")),
       value: rawValue === "" ? null : Number(rawValue),
       note: String(f.get("note") ?? "") || null,
+      contact_id: contactId ?? null,
+      practice_id: practiceId ?? null,
     });
     setBusy(false);
     if (!res.ok) return setError(res.error);
@@ -53,7 +69,7 @@ export function ReferralsClient({ referrals, types }: { referrals: ReferralRow[]
         }
       />
       {referrals.length === 0 ? (
-        <EmptyState className="m-4" title="No referrals logged" body="Log referrals to partners and services — they roll up in the monthly figures." />
+        <EmptyState className="m-4" title="No referrals logged" body="Log a referral you've made for this record — it feeds the monthly figures." />
       ) : (
         <ul className="divide-y divide-line">
           {referrals.map((r) => (
@@ -64,7 +80,6 @@ export function ReferralsClient({ referrals, types }: { referrals: ReferralRow[]
                   {r.value != null ? <span className="text-xs font-semibold text-gold-deep">{formatGBP(r.value)}</span> : null}
                   <span className="text-xs text-fg-3">{formatDate(r.referred_on)}</span>
                 </div>
-                {r.practice_title ? <p className="text-xs text-fg-3">{r.practice_title}</p> : null}
                 {r.note ? <p className="mt-0.5 text-xs text-fg-3">{r.note}</p> : null}
               </div>
               <Button variant="ghost" size="sm" onClick={() => remove(r.id)}>Delete</Button>

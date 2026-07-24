@@ -42,6 +42,7 @@ export default async function ContactLayout({
     ...(isBuyer ? [{ label: "Buyer profile", href: `${base}/buyer` }] : []),
     ...(isBuyer ? [{ label: "Introduction email", href: `${base}/intro` }] : []),
     { label: "Practices", href: `${base}/practices` },
+    { label: "Referrals", href: `${base}/referrals` },
     { label: "Tasks", href: `${base}/tasks` },
     { label: "Journal", href: `${base}/journal` },
     { label: "Documents", href: `${base}/documents` },

@@ -86,6 +86,7 @@ export default async function PracticeLayout({
           { label: "Viewings", href: `${base}/viewings` },
           { label: "Offers", href: `${base}/offers` },
           { label: "Matched buyers", href: `${base}/matched` },
+          { label: "Referrals", href: `${base}/referrals` },
           { label: "Tasks", href: `${base}/tasks` },
           { label: "Journal", href: `${base}/journal` },
           { label: "Documents", href: `${base}/documents` },
