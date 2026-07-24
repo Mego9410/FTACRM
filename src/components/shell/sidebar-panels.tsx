@@ -1,10 +1,14 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { SidebarData } from "@/lib/sidebar";
 
 const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
+const PANEL_HEIGHT_KEY = "aspen-sidebar-panel-h";
+const MIN_PANEL_H = 160;
+const MAX_PANEL_H = 620;
 
 function fmtDue(iso: string): string {
   const d = new Date(iso);
@@ -25,8 +29,82 @@ export function SidebarPanels({ data }: { data: SidebarData }) {
   const monthLabel = first.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
   const now = new Date();
 
+  // User-adjustable height for the task/calendar box. Null = natural height
+  // (default); once dragged, the box gets a fixed height and scrolls inside.
+  const [height, setHeight] = React.useState<number | null>(null);
+  const heightRef = React.useRef<number | null>(null);
+  const bodyRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(PANEL_HEIGHT_KEY);
+      if (stored) {
+        const n = Number(stored);
+        if (Number.isFinite(n)) {
+          const clamped = Math.min(Math.max(n, MIN_PANEL_H), MAX_PANEL_H);
+          heightRef.current = clamped;
+          setHeight(clamped);
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  function startResize(e: React.PointerEvent) {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startH = bodyRef.current?.offsetHeight ?? MIN_PANEL_H;
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "ns-resize";
+    function onMove(ev: PointerEvent) {
+      // Drag the handle up (smaller clientY) to grow the box.
+      const next = Math.min(Math.max(startH + (startY - ev.clientY), MIN_PANEL_H), MAX_PANEL_H);
+      heightRef.current = next;
+      setHeight(next);
+    }
+    function onUp() {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+      try {
+        if (heightRef.current != null) window.localStorage.setItem(PANEL_HEIGHT_KEY, String(heightRef.current));
+      } catch {
+        /* ignore */
+      }
+    }
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }
+
   return (
-    <div className="space-y-4 border-t border-line pt-3">
+    <div className="border-t border-line">
+      {/* Drag handle — resize the task/calendar box vertically */}
+      <div
+        onPointerDown={startResize}
+        onDoubleClick={() => {
+          heightRef.current = null;
+          setHeight(null);
+          try {
+            window.localStorage.removeItem(PANEL_HEIGHT_KEY);
+          } catch {
+            /* ignore */
+          }
+        }}
+        role="separator"
+        aria-orientation="horizontal"
+        aria-label="Resize task and calendar panel"
+        title="Drag to resize · double-click to reset"
+        className="group flex h-3.5 cursor-ns-resize touch-none items-center justify-center"
+      >
+        <span className="h-1 w-8 rounded-full bg-line transition-colors group-hover:bg-fg-4" />
+      </div>
+      <div
+        ref={bodyRef}
+        className="space-y-4 overflow-y-auto pb-4"
+        style={height != null ? { height } : undefined}
+      >
       {/* Mini task list */}
       <div>
         <div className="mb-1 flex items-center justify-between px-1">
@@ -92,6 +170,7 @@ export function SidebarPanels({ data }: { data: SidebarData }) {
             );
           })}
         </div>
+      </div>
       </div>
     </div>
   );
