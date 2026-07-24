@@ -16,7 +16,11 @@ insert into public.lookup_types (key, label, is_system) values
   ('task_category', 'Task categories', false),
   ('call_outcome', 'Call outcomes', false),
   ('withdrawal_reason', 'Withdrawal reasons', false),
-  ('fall_through_reason', 'Fall-through reasons', false)
+  ('fall_through_reason', 'Fall-through reasons', false),
+  ('valuation_kind', 'Valuation kinds', true),
+  ('membership_tier', 'Membership tiers', false),
+  ('principals_club_level', 'Principals Club levels', false),
+  ('referral_type', 'Referral types', false)
 on conflict (key) do nothing;
 
 -- ── Lookup values ────────────────────────────────────────────────────
@@ -90,7 +94,32 @@ join (values
   ('fall_through_reason', 'Seller withdrew', 2, null, null),
   ('fall_through_reason', 'Legal issue', 3, null, null),
   ('fall_through_reason', 'CQC / regulatory', 4, null, null),
-  ('fall_through_reason', 'Other', 5, null, null)
+  ('fall_through_reason', 'Other', 5, null, null),
+  ('valuation_kind', 'Valuation', 0, null, 'valuation'),
+  ('valuation_kind', 'Desktop', 1, null, 'desktop'),
+  ('valuation_kind', 'Update', 2, null, 'update'),
+  ('membership_tier', 'Partner', 0, null, 'partner'),
+  ('membership_tier', 'Affiliate', 1, null, 'affiliate'),
+  ('membership_tier', 'Associate Plus', 2, null, 'associate_plus'),
+  ('membership_tier', 'Associate', 3, null, 'associate'),
+  ('principals_club_level', 'General', 0, null, 'general'),
+  ('principals_club_level', 'Inner Circle', 1, null, 'inner_circle'),
+  ('referral_type', 'EPCs', 0, null, 'epcs'),
+  ('referral_type', 'Capital Allowances', 1, null, 'capital_allowances'),
+  ('referral_type', 'Mortgages', 2, null, 'mortgages'),
+  ('referral_type', 'CQC/Compliance', 3, null, 'cqc_compliance'),
+  ('referral_type', 'Wills/LPAs', 4, null, 'wills_lpas'),
+  ('referral_type', 'Insurances', 5, null, 'insurances'),
+  ('referral_type', 'Pensions/Tax Planning/Investment', 6, null, 'pensions_tax_investment'),
+  ('referral_type', 'Commercial Loans', 7, null, 'commercial_loans'),
+  ('referral_type', 'Membership Upgrades', 8, null, 'membership_upgrades'),
+  ('referral_type', 'Buxton & Coates', 9, null, 'buxton_coates'),
+  ('referral_type', 'Howman Solicitors', 10, null, 'howman_solicitors'),
+  ('referral_type', 'Shakespeare Martineau', 11, null, 'shakespeare_martineau'),
+  ('referral_type', 'Acuity Law', 12, null, 'acuity_law'),
+  ('referral_type', 'Berman', 13, null, 'berman'),
+  ('referral_type', 'Other Sols', 14, null, 'other_sols'),
+  ('referral_type', 'The Principals Club', 15, null, 'principals_club')
 ) as v(type_key, value, sort_order, color, system_key)
   on v.type_key = t.key
 on conflict (lookup_type_id, value) do nothing;
