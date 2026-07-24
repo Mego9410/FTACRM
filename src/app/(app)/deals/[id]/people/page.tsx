@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { contactName } from "@/lib/contact-helpers";
 import { Avatar, Card, CardHeader, EmptyState } from "@/components/ui/primitives";
+import { DealParties } from "./deal-parties";
 
 const ROLE_LABEL: Record<string, string> = {
   buyer_solicitor: "Buyer's solicitor",
@@ -38,24 +39,21 @@ export default async function DealPeoplePage({ params }: { params: Promise<{ id:
     .in("role", ["buyer_solicitor", "seller_solicitor", "accountant", "other"]);
 
   type C = { id: string; first_name: string | null; last_name: string | null; company_name: string | null; email: string | null; phone: string | null; mobile: string | null } | null;
-  const parties: { label: string; contact: C }[] = [
-    { label: "Buyer", contact: deal.buyer as unknown as C },
-    { label: "Seller", contact: deal.seller as unknown as C },
-    ...(advisers ?? []).map((a) => ({
-      label: ROLE_LABEL[a.role] ?? a.role,
-      contact: a.contacts as unknown as C,
-    })),
-  ].filter((p) => p.contact);
+  const toParty = (c: C) =>
+    c ? { id: c.id, name: contactName(c), sub: [c.email, c.mobile ?? c.phone].filter(Boolean).join(" · ") || null } : null;
+  const adviserList = (advisers ?? [])
+    .map((a) => ({ label: ROLE_LABEL[a.role] ?? a.role, contact: a.contacts as unknown as C }))
+    .filter((p) => p.contact);
 
   return (
     <div className="space-y-5">
-      <Card>
-        <CardHeader title="Parties" />
-        {parties.length === 0 ? (
-          <EmptyState className="m-4" title="No parties recorded" />
-        ) : (
+      <DealParties dealId={deal.id} buyer={toParty(deal.buyer as unknown as C)} seller={toParty(deal.seller as unknown as C)} />
+
+      {adviserList.length > 0 ? (
+        <Card>
+          <CardHeader title="Advisers (from the practice)" />
           <ul className="divide-y divide-line">
-            {parties.map((p) => (
+            {adviserList.map((p) => (
               <li key={`${p.label}-${p.contact!.id}`} className="flex items-center gap-3 px-5 py-3">
                 <Avatar name={contactName(p.contact!)} size={32} />
                 <div className="min-w-0 flex-1">
@@ -72,8 +70,8 @@ export default async function DealPeoplePage({ params }: { params: Promise<{ id:
               </li>
             ))}
           </ul>
-        )}
-      </Card>
+        </Card>
+      ) : null}
 
       <p className="text-sm text-fg-3">
         Solicitors and other advisers are managed on the{" "}

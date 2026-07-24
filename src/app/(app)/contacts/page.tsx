@@ -8,6 +8,9 @@ import { relativeTime } from "@/lib/utils";
 import { resolveSort, applySort, type SortOptions } from "@/lib/sort";
 import { SortHeader } from "@/components/ui/sortable";
 import { ContactFilters } from "./contact-filters";
+import { ContactsIo } from "./contacts-io";
+import { SavedViews } from "@/components/shell/saved-views";
+import { ContactSelection, RowCheck, SelectAll, BulkBar } from "./contact-bulk";
 
 export const metadata = { title: "Contacts" };
 
@@ -89,17 +92,15 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
   };
 
   const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
+  const contactIds = (contacts ?? []).map((c) => c.id);
 
   return (
+    <ContactSelection>
     <div>
       <PageHeader
         eyebrow="Relationships" title="Contacts"
         subtitle="Buyers, sellers, solicitors and everyone in between"
-        actions={
-          <Link href="/contacts/new">
-            <Button>New contact</Button>
-          </Link>
-        }
+        actions={<ContactsIo />}
       />
 
       <LinkTabs
@@ -112,7 +113,10 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         ]}
       />
 
-      <ContactFilters />
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <ContactFilters />
+        <SavedViews entity="contacts" />
+      </div>
 
       <Card className="mt-4 overflow-x-auto">
         {(contacts ?? []).length === 0 ? (
@@ -130,6 +134,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line bg-surface-2 text-left text-[10.5px] font-bold uppercase tracking-[0.08em] text-fg-4">
+                <th className="w-10 px-3 py-2.5"><SelectAll ids={contactIds} /></th>
                 <SortHeader label="Name" sortKey="name" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/contacts" className="px-4" />
                 <th className="px-3 py-2.5">Roles</th>
                 <SortHeader label="Contact" sortKey="contact" currentSort={sort.key} currentDir={sort.dir} params={params} basePath="/contacts" />
@@ -141,6 +146,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
               {(contacts ?? []).map((c) => {
                 return (
                   <tr key={c.id} className="cursor-pointer border-b border-line last:border-0 hover:bg-gold-tint">
+                    <td className="px-3 py-3"><RowCheck id={c.id} /></td>
                     <td className="px-4 py-3">
                       <Link href={`/contacts/${c.id}`} className="flex items-center gap-3">
                         <Avatar name={contactName(c)} size={34} />
@@ -196,6 +202,8 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           </div>
         ) : null}
       </Card>
+      <BulkBar />
     </div>
+    </ContactSelection>
   );
 }

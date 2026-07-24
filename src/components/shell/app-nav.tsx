@@ -9,6 +9,7 @@ import {
   CalendarDays,
   Handshake,
   LayoutDashboard,
+  LifeBuoy,
   ListTodo,
   LogOut,
   Menu as MenuIcon,
@@ -222,6 +223,7 @@ export function AppNav({
                 <MenuItem href="/contacts/new">New contact</MenuItem>
                 <MenuItem href="/practices/new">New practice</MenuItem>
                 <MenuItem href="/tasks?new=1">New task</MenuItem>
+                <MenuItem href="/tasks?new=1&kind=reminder">New reminder</MenuItem>
                 <MenuItem href="/calendar?new=1">New event</MenuItem>
               </Menu>
             </div>
@@ -244,6 +246,9 @@ export function AppNav({
               </MenuItem>
               <MenuItem href="/settings">
                 <User size={15} /> My settings
+              </MenuItem>
+              <MenuItem href="/help">
+                <LifeBuoy size={15} /> Help & support
               </MenuItem>
               {profile.role === "admin" ? (
                 <MenuItem href="/admin">

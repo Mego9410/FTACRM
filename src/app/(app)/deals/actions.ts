@@ -286,3 +286,27 @@ export async function updateDealFields(input: unknown): Promise<ActionResult> {
   revalidatePath(`/deals/${deal_id}`);
   return ok();
 }
+
+const PARTY_FIELDS = ["buyer_contact_id", "seller_contact_id", "buyer_solicitor_id", "seller_solicitor_id"] as const;
+
+/** Set (or clear) one of a deal's party contact links from the People tab. */
+export async function setDealParty(input: unknown): Promise<ActionResult> {
+  const me = await requireProfile();
+  await requirePermission(me, "deals.edit");
+  const parsed = z
+    .object({
+      deal_id: z.string().uuid(),
+      field: z.enum(PARTY_FIELDS),
+      contact_id: z.string().uuid().nullable(),
+    })
+    .safeParse(input);
+  if (!parsed.success) return fail("Invalid.");
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("deals")
+    .update({ [parsed.data.field]: parsed.data.contact_id, last_activity_at: new Date().toISOString() })
+    .eq("id", parsed.data.deal_id);
+  if (error) return dbFail(error);
+  revalidatePath(`/deals/${parsed.data.deal_id}/people`);
+  return ok();
+}

@@ -12,6 +12,7 @@ import { resolveSort, applySort, type SortOptions } from "@/lib/sort";
 import { PracticeMapDefs, PracticeMapUse } from "@/components/practices/practice-map";
 import { practiceLabel } from "@/lib/practice-helpers";
 import { PracticeFilters } from "./practice-filters";
+import { SavedViews } from "@/components/shell/saved-views";
 
 export const metadata = { title: "Practices" };
 
@@ -135,7 +136,10 @@ export default async function PracticesPage({ searchParams }: { searchParams: Pr
         ]}
       />
 
-      <PracticeFilters />
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <PracticeFilters />
+        <SavedViews entity="practices" />
+      </div>
 
       <div className="mt-4 flex items-center justify-end">
         <div className="inline-flex gap-1 rounded-[12px] bg-surface-2 p-1">
