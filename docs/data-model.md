@@ -421,6 +421,21 @@ surfaced back to the requester. A decision can be **revised** later (change the 
 note) — the linked calendar event is created or removed to match. UI: `/holidays` (my requests)
 and Control Centre → Holiday (`/admin/holidays`, the approval queue).
 
+### Monthly figures tracking (migrations 0026–0028)
+The End-of-Month figures report (`/reporting/monthly`, `lib/monthly-figures.ts`) aggregates
+existing data plus these additions:
+- `contacts.membership_tier_id`, `contacts.principals_club_id` — fk `lookup_values`
+  (`membership_tier`: Partner/Affiliate/Associate Plus/Associate; `principals_club_level`:
+  General/Inner Circle). Buyer membership counts. *(The Principals Club data points are turned
+  off in the UI/report for now; the column + lookup remain for easy re-enable.)*
+- `practices.loa_issued_at` / `loa_received_at` / `loa_lapsed_at`, `sales_particulars_sent_at`
+  (dates), `being_updated` / `hd_paid` (bool) — pre-market + on-market tracking.
+- `valuations.kind_id` — fk `lookup_values` (`valuation_kind`: Valuation/Desktop/Update);
+  existing rows default to Valuation.
+- **`referrals`** — `referral_type_id` (fk `lookup_values` `referral_type`), optional
+  `practice_id` / `contact_id`, `referred_on`, `value` (£), `note`, `created_by`. Permissive
+  RLS (business table). UI: `/referrals`. Rolled up per type per month in the report.
+
 Two-way sync rules (detail in `features/07-calendar.md`): CRM-created events push to the
 organiser's Outlook via Graph; Outlook-created/edited events pull via delta + webhook;
 `graph_event_id` + iCalUId dedupe; last-writer-wins on conflicts with an audit entry.

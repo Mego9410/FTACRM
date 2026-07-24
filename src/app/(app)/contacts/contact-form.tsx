@@ -100,7 +100,6 @@ export function ContactForm({
       status: String(f.get("status") ?? ""),
       source_id: String(f.get("source_id") ?? "") || null,
       membership_tier_id: String(f.get("membership_tier_id") ?? "") || null,
-      principals_club_id: String(f.get("principals_club_id") ?? "") || null,
       temperature: (String(f.get("temperature") ?? "") || null) as "hot" | "warm" | "cold" | null,
       notes: String(f.get("notes") ?? ""),
     };
@@ -248,14 +247,8 @@ export function ContactForm({
               ))}
             </Select>
           </Field>
-          <Field label="Principals Club" htmlFor="cf_club" hint="Principals Club level, if a member">
-            <Select id="cf_club" name="principals_club_id" defaultValue={initial?.principals_club_id ?? ""}>
-              <option value="">Not a member</option>
-              {principalsClubLevels.map((t) => (
-                <option key={t.id} value={t.id}>{t.value}</option>
-              ))}
-            </Select>
-          </Field>
+          {/* Principals Club field turned off for now — plumbing retained (props,
+              schema, column) so it can be re-enabled later. */}
           <Field label="Status" htmlFor="cf_status" className="sm:col-span-2">
             <Input id="cf_status" name="status" defaultValue={initial?.status ?? ""} placeholder="e.g. Active" />
           </Field>
