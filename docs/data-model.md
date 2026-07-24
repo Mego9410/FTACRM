@@ -399,6 +399,26 @@ thread don't duplicate journal spam: one journal entry per (message, contact).
 `event_id`, `profile_id nullable`, `contact_id nullable`, `response` (`none`, `accepted`,
 `declined`, `tentative`).
 
+### `holiday_requests` — staff annual-leave requests
+| column | type | notes |
+|---|---|---|
+| profile_id | uuid fk profiles | the requester |
+| start_date, end_date | date | inclusive range; `end_date >= start_date` enforced |
+| reason | text nullable | optional note from the requester |
+| status | text | `pending` \| `approved` \| `rejected` \| `cancelled` |
+| decision_note | text nullable | management's note — the "why" on a decline (or an approval comment) |
+| decided_by | uuid fk profiles | who approved/declined |
+| decided_at | timestamptz | |
+| calendar_event_id | uuid fk calendar_events on delete set null | the all-day event created on approval (event type `holiday`, organiser = requester); cleared/removed on cancel |
+
+Unlike the ordinary business tables (permissive RLS + server-action gating), this table is
+**RLS-restricted**: a row is readable only by the requester or an admin/manager (mirrors the
+`notifications` / `graph_connections` precedent). Server actions add the finer gate — only
+management may decide; a requester may only cancel their own request. Approving a request
+inserts the calendar event so leave shows on the team diary; declining stores the note that's
+surfaced back to the requester. UI: `/holidays` (my requests) and Control Centre → Holiday
+(`/admin/holidays`, the approval queue).
+
 Two-way sync rules (detail in `features/07-calendar.md`): CRM-created events push to the
 organiser's Outlook via Graph; Outlook-created/edited events pull via delta + webhook;
 `graph_event_id` + iCalUId dedupe; last-writer-wins on conflicts with an audit entry.

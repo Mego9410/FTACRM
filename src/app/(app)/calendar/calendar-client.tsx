@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { Palmtree } from "lucide-react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -179,6 +181,12 @@ export function CalendarClient({
         <Button className="w-full" onClick={() => openNew()}>
           Add event
         </Button>
+        <Link
+          href="/holidays"
+          className="flex w-full items-center justify-center gap-1.5 rounded-md border border-line px-3 py-2 text-[13px] font-semibold text-fg-2 hover:bg-surface-2 hover:text-fg-1"
+        >
+          <Palmtree size={14} /> Request holiday
+        </Link>
         <Card className="p-3">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-[13px] font-bold text-fg-1">Team</p>

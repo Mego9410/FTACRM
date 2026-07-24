@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/auth";
 const SECTIONS = [
   { label: "Reporting", href: "/reporting" },
   { label: "Users", href: "/admin/users" },
+  { label: "Holiday", href: "/admin/holidays" },
   { label: "Lookups", href: "/admin/lookups" },
   { label: "Checklists", href: "/admin/checklists" },
   { label: "Intro email blocks", href: "/admin/intro-blocks" },

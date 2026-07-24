@@ -11,6 +11,7 @@ import {
   ListTodo,
   LogOut,
   Menu as MenuIcon,
+  Palmtree,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
@@ -38,6 +39,7 @@ const NAV = [
   { label: "Practices", href: "/practices", icon: Building2 },
   { label: "Sales progression", href: "/deals", icon: Handshake },
   { label: "Launches", href: "/launches", icon: Rocket },
+  { label: "My holiday", href: "/holidays", icon: Palmtree },
 ];
 
 function Wordmark() {
