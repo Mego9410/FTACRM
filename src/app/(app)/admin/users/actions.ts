@@ -107,6 +107,9 @@ const updateSchema = z.object({
   role: z.enum(["admin", "manager", "agent"]),
   calendar_color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   is_active: z.boolean(),
+  phone: z.string().max(40).nullable().optional(),
+  job_title: z.string().max(120).nullable().optional(),
+  manager_id: z.string().uuid().nullable().optional(),
 });
 
 export async function updateUser(input: unknown): Promise<ActionResult> {

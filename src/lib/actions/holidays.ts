@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireProfile, requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { notify } from "@/lib/notify";
 import { audit } from "@/lib/audit";
 import { ok, fail, type ActionResult, dbFail } from "@/lib/action-result";
 
@@ -61,13 +62,7 @@ export async function createHolidayRequest(input: unknown): Promise<ActionResult
   const label = start_date === end_date ? formatDate(start_date) : `${formatDate(start_date)} – ${formatDate(end_date)}`;
   for (const m of managers ?? []) {
     if (m.id === me.id) continue;
-    await admin.from("notifications").insert({
-      profile_id: m.id,
-      kind: "holiday_request",
-      title: "Holiday request to review",
-      body: `${me.full_name} — ${label}`,
-      link_url: "/admin/holidays",
-    });
+    await notify(m.id, { kind: "holiday_request", title: "Holiday request to review", body: `${me.full_name} — ${label}`, link_url: "/admin/holidays" });
   }
 
   await audit("holiday_requests", data.id, me.id, [{ field: "created", oldValue: null, newValue: label }]);
@@ -168,9 +163,7 @@ export async function decideHolidayRequest(input: unknown): Promise<ActionResult
   if (error) return dbFail(error);
 
   // Let the requester know the outcome (or the revised one).
-  const admin = createAdminClient();
-  await admin.from("notifications").insert({
-    profile_id: req.profile_id,
+  await notify(req.profile_id, {
     kind: "holiday_decision",
     title: decision === "approved" ? "Holiday approved" : "Holiday declined",
     body:
@@ -216,14 +209,7 @@ export async function cancelHolidayRequest(input: unknown): Promise<ActionResult
 
   // If a manager cancelled someone else's approved leave, tell them.
   if (req.profile_id !== me.id) {
-    const admin = createAdminClient();
-    await admin.from("notifications").insert({
-      profile_id: req.profile_id,
-      kind: "holiday_decision",
-      title: "Holiday cancelled",
-      body: `${me.full_name} cancelled a holiday booking.`,
-      link_url: "/holidays",
-    });
+    await notify(req.profile_id, { kind: "holiday_decision", title: "Holiday cancelled", body: `${me.full_name} cancelled a holiday booking.`, link_url: "/holidays" });
   }
 
   await audit("holiday_requests", req.id, me.id, [{ field: "status", oldValue: req.status, newValue: "cancelled" }]);

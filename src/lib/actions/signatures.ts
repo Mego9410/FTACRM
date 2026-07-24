@@ -8,6 +8,7 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { systemJournal } from "@/lib/actions/journal";
+import { notify } from "@/lib/notify";
 import {
   renderDocument,
   applySignatureSlots,
@@ -307,13 +308,7 @@ export async function submitSignature(input: unknown): Promise<ActionResult> {
       `${req.title} fully signed by all parties.`,
     );
     if (req.created_by) {
-      await admin.from("notifications").insert({
-        profile_id: req.created_by,
-        kind: "document_signed",
-        title: "Document fully signed",
-        body: `${req.title} — signed by all parties.`,
-        link_url: link,
-      });
+      await notify(req.created_by, { kind: "document_signed", title: "Document fully signed", body: `${req.title} — signed by all parties.`, link_url: link });
     }
   } else {
     await admin
@@ -326,8 +321,7 @@ export async function submitSignature(input: unknown): Promise<ActionResult> {
       `${req.title} signed by ${parsed.data.signer_name} (${signer.party_label}). ${remaining} signature(s) outstanding.`,
     );
     if (req.created_by) {
-      await admin.from("notifications").insert({
-        profile_id: req.created_by,
+      await notify(req.created_by, {
         kind: "document_signed",
         title: "Document signed",
         body: `${req.title} — signed by ${parsed.data.signer_name} (${signer.party_label}). ${remaining} outstanding.`,

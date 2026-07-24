@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { notify } from "@/lib/notify";
 import { aiConfigured } from "@/lib/ai/client";
 import { analyseCallTranscript } from "@/lib/ai/call-analysis";
 import { transcribeAudio, transcriptionConfigured } from "@/lib/transcription/deepgram";
@@ -143,8 +144,7 @@ export async function analyseOneCall(call: PendingCall): Promise<void> {
   }
 
   if (call.profile_id) {
-    await admin.from("notifications").insert({
-      profile_id: call.profile_id,
+    await notify(call.profile_id, {
       kind: "call_analysed",
       title: "Call analysed",
       body: `${contactName ?? "A call"} — ${analysis.tasks.length} suggested task${analysis.tasks.length === 1 ? "" : "s"} to review`,

@@ -6,7 +6,7 @@ import { Avatar, Badge, Button, Card, CardHeader, Field, Input, Select } from "@
 import { SortTh, useClientSort } from "@/components/ui/sortable";
 import { Dialog, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
-import { createUser, updateUser } from "./actions";
+import { createUser, updateUser, resetUserPassword } from "./actions";
 
 type UserRow = {
   id: string;
@@ -15,6 +15,9 @@ type UserRow = {
   role: string;
   calendar_color: string;
   is_active: boolean;
+  phone: string | null;
+  job_title: string | null;
+  manager_id: string | null;
 };
 
 // A shared starting password for new accounts. The admin can change it per user;
@@ -93,6 +96,9 @@ export function UsersClient({ users }: { users: UserRow[] }) {
       role: String(f.get("role")),
       calendar_color: String(f.get("calendar_color")),
       is_active: f.get("is_active") === "on",
+      phone: String(f.get("phone")) || null,
+      job_title: String(f.get("job_title")) || null,
+      manager_id: String(f.get("manager_id")) || null,
     });
     setBusy(false);
     if (!res.ok) {
@@ -103,6 +109,19 @@ export function UsersClient({ users }: { users: UserRow[] }) {
     setEditing(null);
     toast.success("User updated.");
     router.refresh();
+  }
+
+  async function resetPassword(u: UserRow) {
+    const pw = window.prompt(
+      `Set a new temporary password for ${u.full_name}. They'll be asked to change it on next sign-in.`,
+      DEFAULT_TEMP_PASSWORD,
+    );
+    if (!pw) return;
+    const res = await resetUserPassword({ id: u.id, temp_password: pw });
+    if (!res.ok) return toast.error(res.error);
+    const emailed = (res.data as { emailed?: boolean } | undefined)?.emailed ?? false;
+    toast.success(emailed ? `Password reset — emailed to ${u.email}.` : `Password reset. Share it with ${u.full_name}.`);
+    if (!emailed) window.alert(`New temporary password for ${u.email}:\n\n${pw}\n\nShare this with them.`);
   }
 
   return (
@@ -223,6 +242,22 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                 <option value="admin">Administrator</option>
               </Select>
             </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Job title" htmlFor="ed_job">
+                <Input id="ed_job" name="job_title" defaultValue={editing.job_title ?? ""} />
+              </Field>
+              <Field label="Phone" htmlFor="ed_phone">
+                <Input id="ed_phone" name="phone" defaultValue={editing.phone ?? ""} />
+              </Field>
+            </div>
+            <Field label="Line manager" htmlFor="ed_mgr">
+              <Select id="ed_mgr" name="manager_id" defaultValue={editing.manager_id ?? ""}>
+                <option value="">— None —</option>
+                {users.filter((u) => u.id !== editing.id).map((u) => (
+                  <option key={u.id} value={u.id}>{u.full_name}</option>
+                ))}
+              </Select>
+            </Field>
             <div className="grid grid-cols-2 items-end gap-3">
               <Field label="Calendar colour" htmlFor="ed_color">
                 <Input id="ed_color" name="calendar_color" type="color" defaultValue={editing.calendar_color} className="h-9.5 p-1" />
@@ -234,6 +269,9 @@ export function UsersClient({ users }: { users: UserRow[] }) {
             </div>
             {error ? <p className="text-sm font-medium text-danger">{error}</p> : null}
             <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => { const u = editing; setEditing(null); if (u) void resetPassword(u); }} className="mr-auto text-fg-3">
+                Reset password
+              </Button>
               <Button type="button" variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
               <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save"}</Button>
             </DialogFooter>

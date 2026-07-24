@@ -42,3 +42,18 @@ export async function saveChecklistTemplate(input: unknown): Promise<ActionResul
   revalidatePath("/admin/checklists");
   return ok();
 }
+
+/** Permanently delete a checklist template (and its items) so unused ones don't
+ * pile up. Existing checklist instances already copied their items, so this
+ * doesn't affect checklists in progress. */
+export async function deleteChecklistTemplate(input: unknown): Promise<ActionResult> {
+  await requireRole("admin");
+  const parsed = z.object({ id: z.string().uuid() }).safeParse(input);
+  if (!parsed.success) return fail("Invalid.");
+  const admin = createAdminClient();
+  await admin.from("checklist_template_items").delete().eq("template_id", parsed.data.id);
+  const { error } = await admin.from("checklist_templates").delete().eq("id", parsed.data.id);
+  if (error) return dbFail(error);
+  revalidatePath("/admin/checklists");
+  return ok();
+}
